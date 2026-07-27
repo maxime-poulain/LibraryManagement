@@ -1,0 +1,18 @@
+<Project>
+
+    <PropertyGroup>
+        <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+        <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageVersion Include="Ardalis.SmartEnum" Version="8.2.0" />
+        <PackageVersion Include="Mediator.Abstractions" Version="3.1.0-rc.1" />
+    </ItemGroup>
+
+    <ItemGroup Label="Analyzers applied to every project">
+        <GlobalPackageReference Include="Roslynator.Analyzers" Version="4.15.0" />
+        <GlobalPackageReference Include="SonarAnalyzer.CSharp" Version="10.30.0.144632" />
+    </ItemGroup>
+
+</Project>
