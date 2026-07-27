@@ -97,6 +97,12 @@ charset = utf-8-bom
 # SYSLIB1054: Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
 dotnet_diagnostic.SYSLIB1054.severity = warning
 
+# CA1000: Do not declare static members on generic types
+# The rule's concern is that callers must name the type argument. It does not materialise here:
+# `EntityId<T>.Create` / `Generate` are reached as `BookId.Create(guid)` through static
+# inheritance, and the `Result<T>` factories are the very shape of that type.
+dotnet_diagnostic.CA1000.severity = silent
+
 # CA1018: Mark attributes with AttributeUsageAttribute
 dotnet_diagnostic.CA1018.severity = warning
 
@@ -120,6 +126,21 @@ dotnet_diagnostic.CA1512.severity = warning
 
 # CA1513: Use ObjectDisposedException throw helper
 dotnet_diagnostic.CA1513.severity = warning
+
+# CA1711: Identifiers should not have incorrect suffix
+# Reserves suffixes such as `Collection`, `EventHandler` or `Exception` for types that actually
+# honour the matching framework contract. Our domain vocabulary reuses some of them for unrelated
+# concepts — `IDomainEventHandler` is DDD/CQRS naming and has nothing to do with the .NET event
+# pattern — so the rule reports naming collisions rather than defects.
+dotnet_diagnostic.CA1711.severity = silent
+
+# CA1716: Identifiers should not match keywords
+# Flags identifiers colliding with a keyword reserved in another .NET language (VB, C++/CLI):
+# here the `Shared` namespace segment, and the `Error` type and parameter. This codebase is C#
+# only and will not be consumed from those languages, so the rule reports nothing actionable.
+# Kept at `silent` rather than `none` so the analyzer still runs and the IDE can surface it on
+# demand, without adding noise to the build.
+dotnet_diagnostic.CA1716.severity = silent
 
 # CA1725: Parameter names should match base declaration
 dotnet_diagnostic.CA1725.severity = suggestion
@@ -334,3 +355,19 @@ dotnet_diagnostic.IDE0200.severity = warning
 # IDE2000: Disallow multiple blank lines
 dotnet_style_allow_multiple_blank_lines_experimental = false
 dotnet_diagnostic.IDE2000.severity = warning
+
+##########################################
+# SonarAnalyzer rules deliberately muted
+##########################################
+
+# S3875: Remove this overload of 'operator =='
+# Targets reference types where `==` misleads by comparing references. The opposite applies here:
+# overloading `==` is what gives entities comparison by identity and value objects comparison by
+# structure. Fires on Entity<TEntityId> and ValueObject.
+dotnet_diagnostic.S3875.severity = silent
+
+# S4035: Seal class or implement 'IEqualityComparer<T>' instead
+# Fires on Entity<TEntityId>, EntityId<TEntityId> and ValueObject<TSelf> — all abstract base
+# classes, so sealing contradicts their purpose. The rule cannot see the `GetType()` check each
+# of them performs, which is what keeps equality correct across the hierarchy.
+dotnet_diagnostic.S4035.severity = silent
