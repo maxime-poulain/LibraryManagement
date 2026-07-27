@@ -1,0 +1,21 @@
+# Set default behavior to automatically normalize line endings.
+# Everything is stored as LF in the repository and checked out with the endings
+# native to the platform, so the result no longer depends on each contributor's
+# core.autocrlf setting.
+* text=auto
+
+# Files whose line endings matter on checkout, whatever the platform.
+# A shell script with CRLF fails on its shebang line; batch files want CRLF.
+*.sh  text eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Use git's built-in C# hunk-header driver, so a diff shows the enclosing member
+# rather than just line numbers.
+*.cs text diff=csharp
+
+# Never normalize these.
+*.png binary
+*.jpg binary
+*.ico binary
+*.snk binary
