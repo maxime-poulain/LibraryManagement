@@ -371,3 +371,17 @@ dotnet_diagnostic.S3875.severity = silent
 # classes, so sealing contradicts their purpose. The rule cannot see the `GetType()` check each
 # of them performs, which is what keeps equality correct across the hierarchy.
 dotnet_diagnostic.S4035.severity = silent
+
+# S6966: Awaitable method should be used
+# Fires wherever an async method returns a Result built with `Result.Failure` or `Result.Success`,
+# because an asynchronous factory of the same name exists. It is systematically wrong against this
+# API: `FailureAsync` exists for *non*-async callers that must hand back a `ValueTask<Result>` over
+# a value they already have. Inside an async method, awaiting it would allocate a completed
+# ValueTask only for the compiler to unwrap it again.
+# It fires on tests for the same reason: they build a value with `Result.Success()` and then
+# exercise an asynchronous member on it, which is the point of the test rather than an accident.
+# Every async handler that reports a failure hits this, so suppressing it at each site would put a
+# pragma in every handler the codebase will ever have. The cost of muting it is that a genuine
+# sync-over-async call — File.ReadAllText inside an async method — no longer surfaces through this
+# rule; CA1849 covers that ground for the BCL and stays enabled.
+dotnet_diagnostic.S6966.severity = silent

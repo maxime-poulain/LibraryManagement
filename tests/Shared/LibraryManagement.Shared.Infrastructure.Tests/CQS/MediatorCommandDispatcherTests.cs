@@ -12,17 +12,21 @@ public sealed class MediatorCommandDispatcherTests
 {
     private readonly RecordingTransactionManager _transactions = new();
     private readonly RecordingCommandValidator _validator = RecordingCommandValidator.Accepting();
+    private readonly FixedTransactionManagerResolver _transactionManagers;
+
+    public MediatorCommandDispatcherTests()
+        => _transactionManagers = new FixedTransactionManagerResolver(_transactions);
 
     private MediatorCommandDispatcher DispatcherReturning(Result result)
-        => new(RecordingSender.Returning(result), _transactions, _validator);
+        => new(RecordingSender.Returning(result), _transactionManagers, _validator);
 
     private MediatorCommandDispatcher DispatcherThrowing(Exception exception)
-        => new(RecordingSender.Throwing(exception), _transactions, _validator);
+        => new(RecordingSender.Throwing(exception), _transactionManagers, _validator);
 
     private MediatorCommandDispatcher DispatcherRejecting(params Error[] errors)
         => new(
             RecordingSender.Returning(Result.Success()),
-            _transactions,
+            _transactionManagers,
             RecordingCommandValidator.Rejecting(errors));
 
     private static Result AFailure()
@@ -54,6 +58,20 @@ public sealed class MediatorCommandDispatcherTests
     }
 
     [Fact]
+    public async Task DispatchAsync_OpensTheTransactionOfTheCommandsOwnModule()
+    {
+        // Every module owns its own store, and the dispatcher is shared by all of them. It asks
+        // which transaction manager belongs to the command it was handed rather than taking one by
+        // type, which several modules would each claim to satisfy.
+        var command = new TestCommand();
+
+        await DispatcherReturning(Result.Success())
+            .DispatchAsync(command, TestContext.Current.CancellationToken);
+
+        _transactionManagers.LastCommand.ShouldBeSameAs(command);
+    }
+
+    [Fact]
     public async Task DispatchAsync_WhenTheCommandSucceeds_CommitsTheTransaction()
     {
         await DispatcherReturning(Result.Success())
@@ -75,7 +93,7 @@ public sealed class MediatorCommandDispatcherTests
     public async Task DispatchAsync_ForwardsTheCommandAndTheCancellationTokenToTheSender()
     {
         var sender = RecordingSender.Returning(Result.Success());
-        var dispatcher = new MediatorCommandDispatcher(sender, _transactions, _validator);
+        var dispatcher = new MediatorCommandDispatcher(sender, _transactionManagers, _validator);
         var command = new TestCommand();
         using var cts = new CancellationTokenSource();
 
@@ -126,7 +144,7 @@ public sealed class MediatorCommandDispatcherTests
         var sender = RecordingSender.Returning(Result.Success());
         var dispatcher = new MediatorCommandDispatcher(
             sender,
-            _transactions,
+            _transactionManagers,
             RecordingCommandValidator.Rejecting(AFieldError()));
 
         await dispatcher.DispatchAsync(new TestCommand(), TestContext.Current.CancellationToken);

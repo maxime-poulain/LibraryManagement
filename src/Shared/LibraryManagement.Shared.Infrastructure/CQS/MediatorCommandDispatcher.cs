@@ -34,7 +34,7 @@ namespace LibraryManagement.Shared.Infrastructure.CQS;
 /// </remarks>
 public sealed class MediatorCommandDispatcher(
     ISender sender,
-    ITransactionManager transactionManager,
+    ITransactionManagerResolver transactionManagers,
     ICommandValidator validator) : ICommandDispatcher
 {
     /// <inheritdoc/>
@@ -50,12 +50,12 @@ public sealed class MediatorCommandDispatcher(
 
         if (validationErrors.HasErrors)
         {
-            // S6966 suggests Result.FailureAsync here. Inside an async method that would wrap the
-            // failure in a ValueTask only for the compiler to unwrap it again.
-#pragma warning disable S6966
             return Result.Failure(validationErrors);
-#pragma warning restore S6966
         }
+
+        // The command's own module owns the store its transaction belongs to. Resolving before the
+        // try block keeps a wiring mistake an exception rather than a concurrency conflict.
+        var transactionManager = transactionManagers.Resolve(command);
 
         try
         {
