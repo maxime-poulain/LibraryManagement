@@ -14,3 +14,10 @@ dotnet_diagnostic.CA1707.severity = silent
 # point of those tests, not an accidental sync-over-async: rewriting them around `SuccessAsync`
 # would add an await that hides what is under test.
 dotnet_diagnostic.S6966.severity = silent
+
+# CA2007: Consider calling ConfigureAwait on the awaited task
+# The rule guards against deadlocks when a captured synchronization context resumes a continuation.
+# A test host has no synchronization context, so there is nothing to capture and nothing to
+# deadlock: the call would be ceremony on every await. It stays enabled for production code, where
+# the concern is real.
+dotnet_diagnostic.CA2007.severity = silent

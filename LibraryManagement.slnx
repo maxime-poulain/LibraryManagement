@@ -8,9 +8,11 @@
   <Folder Name="/src/Shared/">
     <Project Path="src/Shared/LibraryManagement.Shared.Application/LibraryManagement.Shared.Application.csproj" />
     <Project Path="src/Shared/LibraryManagement.Shared.Domain/LibraryManagement.Shared.Domain.csproj" />
+    <Project Path="src/Shared/LibraryManagement.Shared.Infrastructure/LibraryManagement.Shared.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/Tests/" />
   <Folder Name="/Tests/Shared/">
     <Project Path="tests/Shared/LibraryManagement.Shared.Domain.Tests/LibraryManagement.Shared.Domain.Tests.csproj" />
+    <Project Path="tests/Shared/LibraryManagement.Shared.Infrastructure.Tests/LibraryManagement.Shared.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>
