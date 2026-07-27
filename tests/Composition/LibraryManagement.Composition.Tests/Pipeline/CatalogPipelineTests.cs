@@ -1,0 +1,162 @@
+using LibraryManagement.Catalog.Application.Authors.RegisterAuthor;
+using LibraryManagement.Catalog.Application.Works.GetWorkById;
+using LibraryManagement.Catalog.Domain;
+using LibraryManagement.Catalog.Domain.Authors;
+using LibraryManagement.Catalog.Infrastructure.Extensions;
+using LibraryManagement.Catalog.Infrastructure.Persistence;
+using LibraryManagement.Shared.Application.CQS;
+using LibraryManagement.Shared.Application.Errors;
+using LibraryManagement.Shared.Domain.Errors;
+using LibraryManagement.Shared.Infrastructure.Extensions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace LibraryManagement.Composition.Tests.Pipeline;
+
+/// <summary>
+/// A command and a query through the whole thing: the real mediator, the real behaviors, the real
+/// module, a real SQL Server.
+/// </summary>
+/// <remarks>
+/// Nothing exercised this before. The dispatchers were tested against a fake sender, the behaviors
+/// against a fake next, the repositories against a database with no pipeline in front of them —
+/// each half proven, the seam between them assumed.
+/// </remarks>
+[Collection(SqlServerCollection.Name)]
+public sealed class CatalogPipelineTests(SqlServerFixture sqlServer) : IAsyncLifetime
+{
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
+
+    private ServiceProvider _provider = null!;
+
+    public async ValueTask InitializeAsync()
+    {
+        _provider = new ServiceCollection()
+            .AddMediator()
+            .AddSharedInfrastructure()
+            .AddCatalogModule(options => options.UseSqlServer(sqlServer.ConnectionString))
+            .BuildServiceProvider();
+
+        await using var scope = _provider.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
+        await context.Database.EnsureDeletedAsync(Token);
+        await context.Database.EnsureCreatedAsync(Token);
+    }
+
+    public async ValueTask DisposeAsync() => await _provider.DisposeAsync();
+
+    private async Task<T> InScopeAsync<T>(Func<IServiceProvider, Task<T>> work)
+    {
+        await using var scope = _provider.CreateAsyncScope();
+        return await work(scope.ServiceProvider);
+    }
+
+    private static RegisterAuthorCommand ARegistration(string name = "Ernaux, Annie")
+        => new(Guid.CreateVersion7(), name, 1940, null);
+
+    private async Task<Author?> FindAsync(Guid authorId)
+        => await InScopeAsync(async services =>
+        {
+            var repository = services.GetRequiredService<IAuthorRepository>();
+            return await repository.GetByIdAsync(AuthorId.Create(authorId), Token);
+        });
+
+    // --- A well-formed command is handled, and written -----------------------------------------------
+
+    [Fact]
+    public async Task AValidCommand_Succeeds()
+    {
+        var command = ARegistration();
+
+        var result = await InScopeAsync(async services =>
+            await services.GetRequiredService<ICommandDispatcher>().DispatchAsync(command, Token));
+
+        result.Match(() => "success", errors => errors[0].ToString()).ShouldBe("success");
+    }
+
+    [Fact]
+    public async Task AValidCommand_ReachesTheDatabase()
+    {
+        // Nothing in the handler saves. The unit of work behavior does, after the handler reported
+        // success — and this is the first test that proves the two are actually connected.
+        var command = ARegistration("Deleuze, Gilles");
+
+        await InScopeAsync(async services =>
+            await services.GetRequiredService<ICommandDispatcher>().DispatchAsync(command, Token));
+
+        var author = await FindAsync(command.AuthorId);
+
+        author.ShouldNotBeNull();
+        author.AuthorizedName.Value.ShouldBe("Deleuze, Gilles");
+    }
+
+    // --- A malformed command is stopped before it can write ------------------------------------------
+
+    [Fact]
+    public async Task AnInvalidCommand_FailsWithAValidationError()
+    {
+        var command = ARegistration(name: "   ");
+
+        var result = await InScopeAsync(async services =>
+            await services.GetRequiredService<ICommandDispatcher>().DispatchAsync(command, Token));
+
+        result.Match<ErrorCode?>(() => null, errors => errors[0].ErrorCode)
+            .ShouldBe(SharedErrorCodes.ValidationFailed);
+    }
+
+    [Fact]
+    public async Task AnInvalidCommand_WritesNothing()
+    {
+        // The order of the two behaviors, observed from the outside: validation runs first, so the
+        // unit of work is never reached. Register them the other way round and this is the test
+        // that notices.
+        var command = ARegistration(name: "");
+
+        await InScopeAsync(async services =>
+            await services.GetRequiredService<ICommandDispatcher>().DispatchAsync(command, Token));
+
+        (await FindAsync(command.AuthorId)).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ACommandTheDomainRefuses_WritesNothing()
+    {
+        // Past the validator, refused by the domain: a year of death before the year of birth. The
+        // handler reports a failure and the unit of work leaves the store untouched — the guarantee
+        // the explicit transaction used to provide.
+        var command = new RegisterAuthorCommand(Guid.CreateVersion7(), "Someone, Real", 1944, 1900);
+
+        var result = await InScopeAsync(async services =>
+            await services.GetRequiredService<ICommandDispatcher>().DispatchAsync(command, Token));
+
+        result.Match<ErrorCode?>(() => null, errors => errors[0].ErrorCode)
+            .ShouldBe(CatalogErrorCodes.InvalidLifeYears);
+        (await FindAsync(command.AuthorId)).ShouldBeNull();
+    }
+
+    // --- A query goes through validation and nothing else --------------------------------------------
+
+    [Fact]
+    public async Task AQueryForSomethingAbsent_FailsWithNotFound()
+    {
+        var result = await InScopeAsync(async services =>
+            await services.GetRequiredService<IQueryDispatcher>()
+                .DispatchAsync(new GetWorkByIdQuery(Guid.CreateVersion7()), Token));
+
+        result.Match<ErrorCode?>(_ => null, errors => errors[0].ErrorCode)
+            .ShouldBe(CatalogErrorCodes.WorkNotFound);
+    }
+
+    [Fact]
+    public async Task AMalformedQuery_FailsValidationRatherThanReportingNotFound()
+    {
+        // The distinction the query validator exists to draw: "you asked badly" is not "there is no
+        // such work". Before it existed, the handler answered WorkNotFound for both.
+        var result = await InScopeAsync(async services =>
+            await services.GetRequiredService<IQueryDispatcher>()
+                .DispatchAsync(new GetWorkByIdQuery(Guid.Empty), Token));
+
+        result.Match<ErrorCode?>(_ => null, errors => errors[0].ErrorCode)
+            .ShouldBe(SharedErrorCodes.ValidationFailed);
+    }
+}

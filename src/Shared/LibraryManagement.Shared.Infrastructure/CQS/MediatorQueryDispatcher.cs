@@ -10,11 +10,12 @@ namespace LibraryManagement.Shared.Infrastructure.CQS;
 /// <summary>
 /// Implements <see cref="IQueryDispatcher"/> over Mediator.
 /// </summary>
+/// <param name="sender">Routes the query through the pipeline to its handler.</param>
 /// <remarks>
-/// Unlike <see cref="MediatorCommandDispatcher"/>, this one opens no transaction and translates no
-/// exception: a query changes nothing, so it has nothing to commit and nothing to contend for.
-/// The asymmetry between the two dispatchers is command-query separation made visible in the
-/// infrastructure rather than merely asserted in the abstractions.
+/// Identical in shape to <see cref="MediatorCommandDispatcher"/>, and for the same reason: the
+/// concerns that used to distinguish them are pipeline behaviors now. The asymmetry survives where
+/// it belongs — <c>UnitOfWorkBehavior</c> is constrained to commands, so a query passes through
+/// validation and nothing else.
 /// </remarks>
 public sealed class MediatorQueryDispatcher(ISender sender) : IQueryDispatcher
 {

@@ -12,18 +12,16 @@ namespace LibraryManagement.Shared.Domain;
 ///
 /// <para>
 /// In a modular architecture, where several bounded contexts exist, each bounded context
-/// handles a specific domain area. For example, in a library system, a 'Lending' bounded
-/// context could handle all functionality related to loans.
-/// In such a scenario, a Loan entity might raise a 'LoanOverdue' Domain Event to signify
-/// that a borrowed copy passed its due date. Components within the 'Lending' bounded context
-/// can then react to the 'LoanOverdue' event as needed.
+/// handles a specific domain area. Here, the Circulation bounded context handles everything
+/// related to loans: a Loan aggregate raises a 'LoanBecameOverdue' domain event to signify
+/// that a borrowed copy passed its due date, and components within Circulation react to it.
 /// </para>
 ///
 /// <para>
 /// However, for communicating state changes across different bounded contexts, Integration Events
 /// are utilized. These are special kinds of events that convey information meaningful to
-/// multiple bounded contexts. For instance, a 'FinePaid' Integration Event from a 'Billing'
-/// bounded context could trigger actions in a 'Lending' bounded context.
+/// multiple bounded contexts. For instance, a 'MemberDebtCleared' integration event from the
+/// Charges bounded context lets Circulation know the member may act again.
 /// </para>
 /// <para>
 /// By employing Domain Events and Integration Events, modular architectures achieve improved

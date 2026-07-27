@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <!-- xUnit v3 runs on Microsoft.Testing.Platform: a test project is a standalone executable. -->
+        <OutputType>Exe</OutputType>
+        <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+        <RootNamespace>LibraryManagement.Composition.Tests</RootNamespace>
+        <!-- MSG0005: message without any registered handler.
+             It fires on every domain event, and it is wrong to do so. An event announces that
+             something happened; the aggregate that raised it does not know or care who listens, and
+             nobody listening is a legitimate state rather than a missing registration. The rule is
+             right about commands and queries, which the generator reports through MSG0004 and
+             MSG0001 instead — those stay on. -->
+        <NoWarn>$(NoWarn);MSG0005</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="xunit.v3" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="Shouldly" />
+        <PackageReference Include="coverlet.collector" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+        <!-- A composition root chooses the provider; the modules never name one. -->
+        <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+        <PackageReference Include="Testcontainers.MsSql" />
+        <!-- The source generator lives here and nowhere else. It insists on a coherent set of
+             handlers — one per message, one for every message — and what it registers it resolves:
+             the first Send builds every handler the container knows about. Both are true of a
+             composition root and false of the architecture tests, whose fixtures are handlers
+             written to be wrong on purpose and never meant to run. -->
+        <PackageReference Include="Mediator.SourceGenerator" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\src\Catalog\LibraryManagement.Catalog.Infrastructure\LibraryManagement.Catalog.Infrastructure.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Shouldly" />
+        <Using Include="Xunit" />
+    </ItemGroup>
+
+</Project>

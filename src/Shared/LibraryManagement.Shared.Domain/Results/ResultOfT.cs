@@ -9,7 +9,7 @@ namespace LibraryManagement.Shared.Domain.Results;
 /// can be chained together, and errors are propagated without interrupting the flow.
 /// </summary>
 /// <typeparam name="TValue">The type of the value in case of a successful result.</typeparam>
-public abstract class Result<TValue>
+public abstract class Result<TValue> : IFailable<Result<TValue>>
 {
     /// <summary>
     /// Indicates whether this result is a failure.

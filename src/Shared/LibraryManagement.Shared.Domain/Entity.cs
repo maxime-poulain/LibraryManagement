@@ -33,10 +33,8 @@ public abstract class Entity<TEntityId> : Entity, IAuditable
     /// </summary>
     public DateTimeOffset CreatedOn { get; }
 
-    /// <summary>
-    /// Gets the identifier of the user who created the entity.
-    /// </summary>
-    public string CreatedBy { get; } = string.Empty;
+    /// <inheritdoc cref="IAuditable.CreatedBy"/>
+    public string? CreatedBy { get; }
 
     /// <summary>
     /// Gets the date and time at which the entity was last modified, if any.
@@ -168,9 +166,16 @@ public interface IAuditable
     public DateTimeOffset CreatedOn { get; }
 
     /// <summary>
-    /// Gets the identifier of the user who created the entity.
+    /// Gets the identifier of the user who created the entity, or <see langword="null"/> when the
+    /// creation is attributable to no one.
     /// </summary>
-    public string CreatedBy { get; }
+    /// <remarks>
+    /// Nullable for the same reason <see cref="ModifiedBy"/> is. A migration, a seeding script or a
+    /// nightly job acts on nobody's behalf, and so does every command until Staff Access exists. An
+    /// empty string in its place would be a value someone invented, and a column of invented values
+    /// reads, at a glance, exactly like a column of real ones.
+    /// </remarks>
+    public string? CreatedBy { get; }
 
     /// <summary>
     /// Gets the date and time at which the entity was last modified, if any.

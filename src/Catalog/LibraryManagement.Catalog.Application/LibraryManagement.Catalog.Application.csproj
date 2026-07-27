@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <PackageReference Include="FluentValidation" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Shared\LibraryManagement.Shared.Application\LibraryManagement.Shared.Application.csproj" />
+        <ProjectReference Include="..\LibraryManagement.Catalog.Domain\LibraryManagement.Catalog.Domain.csproj" />
+    </ItemGroup>
+
+</Project>

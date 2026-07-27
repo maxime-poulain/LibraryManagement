@@ -17,5 +17,5 @@ public interface IDomainEventPublisher
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
     ValueTask PublishAsync(
         IEnumerable<IHasDomainEvents> havingDomainEvents,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken = default);
 }

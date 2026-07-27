@@ -74,10 +74,11 @@ term is what a librarian actually says, and it is the authority when the two dis
 | `Work` | Œuvre | An intellectual creation, independent of any printing. *Le Petit Prince* is one work. |
 | `Edition` | Édition | One published form of a work, identified by an ISBN. Gallimard 2015 paperback. |
 | `Author` | Auteur | A person or body responsible for a work. |
+| `AuthorizedName` | Vedette | The heading a person is filed under. The profession's prose says *heading*; the code says `AuthorizedName`; they are one concept, and this row is what keeps the synonym from becoming two. |
 | `Publisher` | Éditeur | Note the false friend: `Editor` is *not* the French *éditeur*. |
 | `Series` | Collection | A named publisher's series an edition belongs to. |
 | `Subject` | Sujet | A subject heading assigned to a work. |
-| `Shelfmark` | Cote | The classification code that decides where a copy stands. |
+| `Classification` | Indice | The class number derived from subject analysis — Dewey, UDC. Bibliographic: the same for every library using the scheme. What it feeds — the shelfmark on each copy — is a Holdings fact. |
 
 ### Holdings
 
@@ -85,6 +86,7 @@ term is what a librarian actually says, and it is the authority when the two dis
 |---|---|---|
 | `Copy` | Exemplaire | One physical object the library owns, of one edition. |
 | `Barcode` | Code-barres | The label that identifies a copy at the desk. Unique in the library. |
+| `Shelfmark` | Cote | The call number that decides where *this copy* stands. Per copy, not per edition: one copy of a title may live in the children's section and another in the reserve. Built from the classification Catalog assigns, owned here. |
 | `Condition` | État | The physical state of a copy: good, worn, damaged. |
 | `Withdrawn` | Désherbé | Removed from the collection **on purpose**. *Désherbage* is the librarian's word for weeding: routine work, not a loss. |
 | `Lost` | Perdu | Unaccounted for. Distinct from withdrawn — nobody decided it. |
@@ -106,7 +108,8 @@ term is what a librarian actually says, and it is the authority when the two dis
 | `Trapped` | Mis de côté | A returned copy set aside for the first hold instead of being shelved. |
 | `PickupDeadline` | Délai de retrait | How long a trapped copy waits before the claim lapses. |
 | `Borrower` | Emprunteur | A member, seen as circulation sees them: an identity, a category, a current load, a standing. |
-| `LoanPolicy` | Règles de prêt | How many, how long, how often — per member category and material type. |
+| `CirculationPolicy` | Règles de circulation | How many, how long, how often — and what a debt forbids. It governs holds and pickup deadlines as much as loans, which is why it is not called a loan policy. |
+| `Standing` | Situation | Whether what a borrower owes forbids borrowing, renewing or placing a hold. Judged **here**, from the balance Charges exposes: Charges states an amount and never the consequence. |
 
 ### Members
 
@@ -117,14 +120,14 @@ term is what a librarian actually says, and it is the authority when the two dis
 | `MemberCategory` | Catégorie | Adult, child, student. Decides what circulation allows, but is not itself a circulation concept. |
 | `LibraryCard` | Carte | What the member presents at the desk. |
 
-### Fines
+### Charges
 
 | Code | Métier | Meaning |
 |---|---|---|
 | `OverdueFine` | Amende de retard | Charged for time. Small, frequent, often waived. |
 | `ReplacementCharge` | Frais de remplacement | Charged for an item that will not come back. Large, rare, a different decision entirely. |
 | `Waiver` | Remise gracieuse | A charge cancelled by a decision rather than by payment. |
-| `Standing` | Situation | Whether a member owes enough to lose the right to borrow. |
+| `Balance` | Solde | What a member currently owes, every charge and payment netted. A statement of money, never of rights: what a balance forbids is Circulation's judgement, recorded there as `Standing`. |
 
 ## 5. Subdomains
 
@@ -148,7 +151,7 @@ spine is ours alone.
 **Supporting — Members.** Who is entitled to borrow, and until when. The rules concern the
 subscription — when it starts, when it lapses, what category it grants. Not what a category may do.
 
-**Supporting — Fines.** Money owed to the library, and the decisions that create, cancel or settle
+**Supporting — Charges.** Money owed to the library, and the decisions that create, cancel or settle
 it.
 
 **Generic — Staff access, Notifications.** Nothing about libraries. Authentication for employees,
@@ -161,17 +164,28 @@ refuses to own.
 
 ### Catalog
 
-**Owns.** Work, Edition, Author, Publisher, Series, Subject, Shelfmark.
+**Owns.** Work, Edition, Author, Publisher, Series, Subject, Classification.
 
 **Refuses.** How many copies exist, where they stand, whether one can be borrowed. A catalog is
-meaningful for a library that owns nothing.
+meaningful for a library that owns nothing. The shelfmark went with the copies: the *classification*
+of a work is bibliographic, the *call number* built from it belongs to each copy, and two copies of
+one edition may stand in two sections.
 
 **Publishes.** An `EditionId` and a bibliographic summary — enough for another context to name an
 edition without reproducing its description.
 
+**Fed by import, not by typing.** This is the reason the subdomain is supporting: a record for a
+given ISBN is the same everywhere, so records come from an upstream bibliographic supplier — a
+national library, a union catalogue — in a MARC-family format. That upstream is external and does
+not negotiate, so the relationship is Conformist and the translation is an anticorruption layer at
+the border: nothing shaped like MARC crosses into the model. The manual commands remain as the
+fallback for what no supplier describes — local grey literature, self-published works — not as the
+main flow. The import pipeline is future work; it is named here so nobody mistakes the fallback for
+the design.
+
 ### Holdings
 
-**Owns.** Copy, barcode, shelfmark placement, acquisition date, condition, and the copy's own
+**Owns.** Copy, barcode, shelfmark, acquisition date, condition, and the copy's own
 status: on the shelf, in repair, lost, withdrawn, reference-only.
 
 **Refuses.** The bibliographic description — it holds an `EditionId` and nothing more. And who
@@ -185,13 +199,15 @@ the two and is computed by whoever asks, never stored twice.
 
 ### Circulation — core
 
-**Owns.** Loan, renewal, return, hold, hold queue, trapping, pickup deadline, and the loan policy.
+**Owns.** Loan, renewal, return, hold, hold queue, trapping, pickup deadline, and the circulation
+policy.
 
 **Refuses.** The copy's physical description and the member's address. It needs neither.
 
 **Depends on.** Holdings, to know a copy exists and may be lent. Members, to know a person is
-entitled to borrow and in which category. Fines, for one question only: is this member in good
-standing?
+entitled to borrow and in which category. Charges, for one question only: how much does this member
+owe? What that amount forbids — the borrower's *standing* — is judged here, by the circulation
+policy, never by the context that states the amount.
 
 **Holds live here, not in a context of their own.** When a copy comes back, one decision has to be
 made in one breath: the loan closes, and the copy is either shelved or trapped for the first hold,
@@ -205,10 +221,10 @@ returns, renewals and holds together. And the limit on how much a member may hav
 usually counts loans and holds as one number, which a boundary between them would make
 unenforceable.
 
-**The loan policy lives here, not in Members.** Members owns what category a member is; Circulation
-owns what that category may do. "An adult may hold ten items for twenty-one days" is a circulation
-rule that happens to be indexed by a membership concept. Putting it in Members would make the loan
-rules change every time the subscription rules did.
+**The circulation policy lives here, not in Members.** Members owns what category a member is;
+Circulation owns what that category may do. "An adult may hold ten items for twenty-one days" is a
+circulation rule that happens to be indexed by a membership concept. Putting it in Members would make
+the lending rules change every time the subscription rules did.
 
 **The policy is data, not code.** Durations and quotas per member category and material type change
 by a decision of the library, not of the developers. Written into the aggregates, every such decision
@@ -229,13 +245,14 @@ starts copying fields, the boundary has failed.
 employee is an *access* concept: they authenticate and act. Conflating them is a common mistake, and
 it is the employee — not the member — that `IAuditable.CreatedBy` must name.
 
-### Fines
+### Charges
 
-**Owns.** Overdue fines, replacement charges, waivers, payments, and a member's standing.
+**Owns.** Overdue fines, replacement charges, waivers, payments, and a member's balance.
 
 **Refuses.** Deciding whether a return was late — that is a circulation fact. And deciding what a
 debt forbids: "a member owing more than ten euros may not borrow" is a circulation rule that consults
-a fines fact, exactly as the category rule consults a members fact.
+a charges fact, exactly as the category rule consults a members fact. The vocabulary follows: this
+context knows a `Balance`, and `Standing` — the judgement — is a Circulation word.
 
 **Depends on.** Circulation, for the events that create a charge.
 
@@ -247,13 +264,16 @@ a desk librarian handling documents against a till handling cash; and the tariff
 schedule, by amnesty or exemption, without the loan rules moving.
 
 **Who decides the amount matters.** Circulation publishes `LoanReturnedLate(loanId, memberId,
-daysLate)` and Fines decides what it costs. If Circulation computed the amount, the tariff would have
-moved into lending.
+daysLate)` and Charges decides what it costs. If Circulation computed the amount, the tariff would
+have moved into lending.
 
 **`OverdueFine` and `ReplacementCharge` are not the same type.** One is charged for time and is small,
 frequent and often waived. The other is charged for an item that will not come back, and is a
 different decision at a different order of magnitude. A single `Fine` with an enum would merge two
-policies that have nothing in common.
+policies that have nothing in common — and it is why the context is called Charges rather than Fines:
+a context named after one of its two concepts bends every later one toward it, and a replacement
+charge is not a fine, as this paragraph exists to insist. The librarian's own umbrella word is
+*frais*, and Charges is its English.
 
 ### Staff access, Notifications — generic
 
@@ -281,20 +301,22 @@ invariant.** Only the write side owes them anything.
 
 ```mermaid
 flowchart TD
+    SUP["Bibliographic supplier<br/><i>external</i>"]
     CAT["<b>Catalog</b><br/><i>supporting</i>"]
     HLD["<b>Holdings</b><br/><i>supporting</i>"]
     MEM["<b>Members</b><br/><i>supporting</i>"]
     CIR["<b>Circulation</b><br/><i>core</i>"]
-    FIN["<b>Fines</b><br/><i>supporting</i>"]
+    CHG["<b>Charges</b><br/><i>supporting</i>"]
     NOT["<b>Notifications</b><br/><i>generic</i>"]
     RM["Search &amp; statistics<br/><i>read model</i>"]
 
+    SUP -->|"Conformist + ACL<br/>MARC records in"| CAT
     CAT -->|"Published Language<br/>EditionId + summary"| HLD
     HLD -->|"Customer / Supplier<br/>may this copy be lent?"| CIR
     MEM -->|"Customer / Supplier + ACL<br/>Member → Borrower"| CIR
-    CIR -->|"events<br/>returned late, declared lost"| FIN
-    FIN -->|"event<br/>this member now owes money"| CIR
-    FIN -.->|"is this member<br/>in good standing?"| CIR
+    CIR -->|"events<br/>returned late, declared lost"| CHG
+    CHG -->|"event<br/>this member now owes money"| CIR
+    CHG -.->|"how much does this<br/>member owe?"| CIR
     CIR -->|"integration events"| NOT
     MEM -.->|"how to reach them"| NOT
     CAT -.->|"what the item is called"| NOT
@@ -311,12 +333,13 @@ are queries and projections: they carry no authority and change nothing.
 
 | Upstream | Downstream | Pattern | Why |
 |---|---|---|---|
+| Bibliographic supplier | Catalog | Conformist + ACL | The format is theirs — MARC does not negotiate. The ACL keeps its shape at the border, and the manual commands stay as the fallback for what no supplier describes. |
 | Catalog | Holdings | Published Language | Holdings needs to name an edition, not describe it. Identifier plus summary is all that crosses. |
 | Holdings | Circulation | Customer / Supplier | A loan cannot start on a copy that does not exist or may not be lent. |
 | Members | Circulation | Customer / Supplier + ACL | Same, plus a translation: `Member` becomes `Borrower`, and most of the member is dropped on the way. |
-| Circulation | Fines | Published Language, via events | Circulation announces facts. Fines prices them. |
-| Fines | Circulation | Published Language, via events | A new debt cancels the borrower's holds. |
-| Fines | Circulation | Open Host Service | One question, one answer: may this member borrow? |
+| Circulation | Charges | Published Language, via events | Circulation announces facts. Charges prices them. |
+| Charges | Circulation | Published Language, via events | A new debt cancels the borrower's holds. |
+| Charges | Circulation | Open Host Service | One question, one answer: how much does this member owe? The threshold that turns the amount into a refusal stays in Circulation. |
 | Circulation | Notifications | Published Language, via events | Circulation does not know anyone is listening. |
 | Members, Catalog | Notifications | Open Host Service | A message needs an address and a title. Circulation supplies neither, and must not learn either. |
 
@@ -324,19 +347,26 @@ Everything is Customer/Supplier rather than Conformist because one team owns all
 context that finds a contract awkward can have it changed, and should say so rather than work around
 it.
 
-**The Circulation ↔ Fines pair is the one cycle in the map, and it is deliberate.** Circulation is
+**The Circulation ↔ Charges pair is the one cycle in the map, and it is deliberate.** Circulation is
 upstream for the facts — returned late, declared lost — and downstream for what those facts cost it.
 Two flows run the other way, and the boundary test separates them:
 
 * **A new debt cancels the borrower's holds.** Can "this member owes money" and "their holds are
   gone" disagree for a few seconds unnoticed? Yes — nobody is at the desk when a fine is assessed.
   An event, asynchronous.
-* **May this member borrow?** Asked at the counter, with the member standing there having possibly
-  just paid. A projection lag would be visible. A query, synchronous.
+* **How much does this member owe?** Asked at the counter, with the member standing there having
+  possibly just paid. A projection lag would be visible. A query, synchronous — and it answers with
+  an amount, never with a verdict: the judgement of what the amount forbids stays on the asking side.
 
-The cycle stays out of the assembly graph by inversion: **Circulation declares the port, Fines
+The cycle stays out of the assembly graph by inversion: **Circulation declares the port, Charges
 implements it.** The anticorruption layer belongs to the downstream context, which for that one
 question is Circulation.
+
+These synchronous desk-time queries — the balance from Charges, the lendability of a copy from
+Holdings — are also an architectural fact worth recording: they sit on the most frequent write path
+of the system, and they are in-process calls only because this is a monolith. Extracting Circulation
+into a service would put network hops inside every checkout. The concentration of synchronous edges
+on the core's write path is a documented reason the deployment stays monolithic.
 
 **Notifications is downstream of three contexts and authoritative over none.** A message needs a
 circulation fact, a way to reach the member, and the title of the item — which come from Circulation,
@@ -361,7 +391,7 @@ copy declared lost — it touches four contexts at once.
 |---|---|
 | **Circulation** | The loan ends, but not by a return. A terminal state of its own, or the loan statistics start lying. |
 | **Holdings** | The copy becomes `Lost`. It leaves the lendable stock, but it is **not withdrawn**: nobody decided to part with it. |
-| **Fines** | A `ReplacementCharge`, not an `OverdueFine`. Different amount, different reason, different waiver rules. |
+| **Charges** | A `ReplacementCharge`, not an `OverdueFine`. Different amount, different reason, different waiver rules. |
 | **Circulation** | Holds queuing on that edition must be reassigned or told. |
 | **Catalog** | **Nothing.** The work still exists, and so does the edition. |
 
@@ -379,7 +409,7 @@ src/
   Holdings/
   Circulation/
   Members/
-  Fines/
+  Charges/
 ```
 
 One database, one schema per module. **No foreign key crosses a schema.** A module referencing
@@ -390,20 +420,50 @@ and that is the point: an integrity constraint across modules is a coupling the 
 with five schemas would compile, and one `DbSet<Copy>` referenced from a Circulation handler would
 end the separation without anything failing.
 
-That settles the question left open when the shared infrastructure was written:
-**`ITransactionManager` cannot be resolved by type alone**, because five modules will register five
-implementations and the last one wins. A command belongs to exactly one module — the rule that a
-command never dispatches another command guarantees it — so the dispatcher must resolve the
-transaction manager of *that* module. It is a design task for the first module, not for the kernel.
+That settled the question left open when the shared infrastructure was written: **a unit of work
+cannot be resolved by type alone**, because five modules register five implementations of one
+interface and the last one answers for all of them. A command belongs to exactly one module — the
+rule that a command never dispatches another command guarantees it — so the pipeline resolves the
+unit of work of *that* module, keyed by the assembly its commands are declared in. It was a design
+task for the first module, and it was done there.
+
+**There is no explicit transaction.** Repositories only track, so nothing reaches the database before
+the save, and one save is already atomic. `IUnitOfWork` records the condition that would earn a
+transaction back — a command writing twice — and none does.
+
+**No invariant rides on an event handler.** Today a domain event handler runs inside the same save as
+the command that raised it, and what it changes joins that save. The planned outbox ends this: events
+will be written as rows, drained by a scheduler, and handled later in transactions of their own.
+Anything that must be true in the same instant as the command is therefore written in the command
+handler, on the aggregates, directly — the way a return closes the loan and traps the copy in one
+breath. A handler that quietly relied on joining the save would change behaviour, silently, the day
+the outbox lands.
+
+**The read side crosses at the SQL level, never at the assembly level.** That the read side may cross
+module boundaries is settled in §7; *how* it crosses is settled here. A cross-module projection —
+Search, the statistics — reads other modules' schemas through views or plain SQL, and references no
+module's domain or persistence assemblies: referencing another module's `DbContext` would carry its
+domain along, and the separation would end through the read side, where nobody is watching for it. A
+view over another module's schema is deployment coupling with that schema's migrations — acceptable,
+but accepted explicitly at each use, never by accident.
 
 ## 11. Open questions
 
 * Whether `Work` is an aggregate root holding its editions, or `Edition` is a root of its own.
   Depends on whether an edition can be catalogued before its work is known, and on whether the
-  library ever needs "all editions of this work" transactionally. Tactical design, Catalog.
+  library ever needs "all editions of this work" transactionally. One argument is already settled by
+  the hold model and weighs heavily: queues key on `EditionId`, so an edition must be independently
+  addressable whichever way this falls — which leans toward a root of its own, holding a `WorkId`.
+  Tactical design, Catalog.
+* Where a translation's contributors live. A translator or an illustrator is an edition-level fact
+  in a three-level model — FRBR would put them on the Expression this model deliberately lacks — and
+  `Work.Title` is then the *uniform title* while each edition carries the title on its own title
+  page. To settle when Edition is designed. A body among the authors raises a question of the same
+  kind: `LifeYears` is a person's fact, and a corporate author simply carries `Unknown`.
 * Whether a hold may be placed on a *work* — any edition will do — as well as on an edition. Members
   ask for both, and the queue rules differ.
 * Whether a copy's loan history stays in Circulation forever or is archived. It is the only thing in
   the system that grows without bound.
 * Whether a member may be blocked by something other than money — too many overdues, a lost card.
-  If so, `Standing` is a circulation concept that consults fines, not a fines concept.
+  `Standing` is already a circulation judgement derived from the balance Charges exposes, so a
+  non-monetary block would be one more input to that judgement, not a concept changing hands.

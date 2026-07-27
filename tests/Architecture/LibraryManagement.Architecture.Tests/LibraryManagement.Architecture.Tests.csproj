@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <!-- xUnit v3 runs on Microsoft.Testing.Platform: a test project is a standalone executable. -->
+        <OutputType>Exe</OutputType>
+        <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+        <RootNamespace>LibraryManagement.Architecture.Tests</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="xunit.v3" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="Shouldly" />
+        <PackageReference Include="coverlet.collector" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Every module, one reference at a time as each lands. A rule protects only what its scan
+             can see, and the scan reads whatever this project puts in its output directory. -->
+        <ProjectReference Include="..\..\..\src\Catalog\LibraryManagement.Catalog.Infrastructure\LibraryManagement.Catalog.Infrastructure.csproj" />
+    </ItemGroup>
+
+    <!-- Deliberately no Mediator.SourceGenerator, which is what separates this project from the
+         composition tests. The generator demands one handler per message and eagerly resolves every
+         handler it registered; the fixtures here are handlers written to be wrong on purpose, and
+         nothing is ever meant to run them. Shaping them to satisfy a generator would shape them to
+         something other than the violation each is supposed to embody. -->
+
+    <ItemGroup>
+        <Using Include="Shouldly" />
+        <Using Include="Xunit" />
+    </ItemGroup>
+
+</Project>

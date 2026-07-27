@@ -5,12 +5,28 @@
     <File Path=".editorconfig" />
   </Folder>
   <Folder Name="/src/" />
+  <Folder Name="/src/Catalog/">
+    <Project Path="src/Catalog/LibraryManagement.Catalog.Application/LibraryManagement.Catalog.Application.csproj" />
+    <Project Path="src/Catalog/LibraryManagement.Catalog.Domain/LibraryManagement.Catalog.Domain.csproj" />
+    <Project Path="src/Catalog/LibraryManagement.Catalog.Infrastructure/LibraryManagement.Catalog.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/src/Shared/">
     <Project Path="src/Shared/LibraryManagement.Shared.Application/LibraryManagement.Shared.Application.csproj" />
     <Project Path="src/Shared/LibraryManagement.Shared.Domain/LibraryManagement.Shared.Domain.csproj" />
     <Project Path="src/Shared/LibraryManagement.Shared.Infrastructure/LibraryManagement.Shared.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/Tests/" />
+  <Folder Name="/Tests/Architecture/">
+    <Project Path="tests/Architecture/LibraryManagement.Architecture.Tests/LibraryManagement.Architecture.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Composition/">
+    <Project Path="tests/Composition/LibraryManagement.Composition.Tests/LibraryManagement.Composition.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Catalog/">
+    <Project Path="tests/Catalog/LibraryManagement.Catalog.Application.Tests/LibraryManagement.Catalog.Application.Tests.csproj" />
+    <Project Path="tests/Catalog/LibraryManagement.Catalog.Domain.Tests/LibraryManagement.Catalog.Domain.Tests.csproj" />
+    <Project Path="tests/Catalog/LibraryManagement.Catalog.Infrastructure.Tests/LibraryManagement.Catalog.Infrastructure.Tests.csproj" />
+  </Folder>
   <Folder Name="/Tests/Shared/">
     <Project Path="tests/Shared/LibraryManagement.Shared.Domain.Tests/LibraryManagement.Shared.Domain.Tests.csproj" />
     <Project Path="tests/Shared/LibraryManagement.Shared.Infrastructure.Tests/LibraryManagement.Shared.Infrastructure.Tests.csproj" />

@@ -57,9 +57,11 @@ The last line is not a courtesy. A block that prevents returning creates the opp
 the one intended — the borrower keeps the item because there is nothing else to do with it — and it
 is often the return itself that settles the debt.
 
-The threshold lives here, in the loan policy, not in Fines. Fines owns *what is owed*; Circulation
-owns *what being owed forbids*. Fines exposes the amount; if it exposed `IsBlocked`, the rule would
-have moved into the wrong context.
+The threshold lives here, in the circulation policy, not in Charges. Charges owns *what is owed*;
+Circulation owns *what being owed forbids*. Charges exposes the balance; if it exposed `IsBlocked`,
+the rule would have moved into the wrong context. The vocabulary keeps the two apart: `Balance` is
+the Charges word for the amount, `Standing` is the Circulation word for the judgement, and neither
+context ever utters the other's.
 
 ### A debt cancels existing holds
 
@@ -73,7 +75,7 @@ This produces an invariant stronger than the rule that creates it:
 It is checkable at any instant, and it is what keeps a queue honest continuously rather than only at
 the moment someone reaches the front.
 
-The cancellation is driven by an event from Fines, not by a synchronous call. Apply the boundary
+The cancellation is driven by an event from Charges, not by a synchronous call. Apply the boundary
 test: *can "this borrower owes money" and "their holds are gone" disagree for a few seconds without a
 librarian noticing?* Yes — nobody is at the desk when a fine is assessed. Eventual consistency is
 correct here.
@@ -131,11 +133,11 @@ the shelf.
 ```
 HoldQueue
   EditionId       identity — one queue per edition
-  Holds           ordered
+  Holds           ordered, and only the live ones
     HoldId
     BorrowerId
     PlacedOn
-    Status        Queued | AwaitingPickup | Fulfilled | Expired | Cancelled
+    Status        Queued | AwaitingPickup
     TrappedCopyId?
     PickupDeadline?
 ```
@@ -160,6 +162,13 @@ can do that.
 The cost is one lock per edition. Two holds placed on the same popular title serialise. At library
 scale that is invisible: holds arrive a few per minute, not a few per millisecond.
 
+**A hold that ends leaves the aggregate.** Fulfilled, expired or cancelled, its outcome is published
+as an event and kept by a history projection; the queue itself holds only what its invariants govern,
+and every invariant above concerns live holds. This is not only purity: the queue is loaded on every
+return of its edition — the most frequent operation of the day — and an aggregate that kept its own
+past would grow without bound precisely on the hottest path. The history stays queryable where
+history belongs, in a read model fed by the events.
+
 **Refusals at placement.**
 
 * Not on an edition the borrower already has on loan.
@@ -169,21 +178,21 @@ scale that is invisible: holds arrive a few per minute, not a few per millisecon
 * Not while the borrower owes money.
 * Not while at the five-item cap.
 
-## 5. The three moments
+## 5. The moments
 
 ### Checkout
 
 Preconditions, in order — cheapest and most likely to fail first:
 
-1. The borrower is in good standing (query to Fines).
+1. The borrower is in good standing (their balance, queried from Charges, judged here).
 2. The borrower is below the cap.
 3. The copy exists and may be lent (query to Holdings: not reference-only, not in repair, not lost,
    not withdrawn).
 4. The copy is not already on loan.
 5. If the copy is trapped for a hold, it is trapped for *this* borrower.
 
-Then: `Loan` is created, and if this checkout fulfils a hold, that hold becomes `Fulfilled` and
-leaves the queue.
+Then: `Loan` is created, and if this checkout fulfils a hold, that hold is fulfilled and leaves the
+queue — the outcome travels in the event, not in a status the queue keeps.
 
 Step 5 is what stops a walk-in from being handed a copy someone is waiting for.
 
@@ -226,12 +235,32 @@ at every instant: a copy shelved that was promised, or a hold announced ready fo
 aside, are both visible at the desk, to the member. Crossing two aggregates *inside one context* is a
 considered choice. Crossing a context boundary in a transaction is not.
 
+Both change in the command handler, on the aggregates, directly — never across an event handler. An
+event may be handled later; once the outbox exists, it always will be; and an invariant that waits is
+not an invariant.
+
 Step 3 skips blocked borrowers rather than removing them, because at this point the debt event may
 simply not have arrived yet. The removal is the debt handler's job.
 
+### Cancelling a hold
+
+A borrower changes their mind, at the desk. It is the ordinary exit from a queue, and it must exist:
+a hold occupies one of the five places the cap counts, so a borrower who cannot free a place is
+punished for having reserved at all.
+
+1. A queued hold is removed, and the gap behind it closes — the same contiguity the debt rule
+   exercises constantly.
+2. A hold awaiting pickup is removed, and its trapped copy is released back to the queue, offered to
+   the next borrower in good standing — exactly as an expiry releases it.
+3. `HoldCancelled` is published. In the terms of §8 it is informational — the confirmation of an act
+   the borrower chose — unlike `HoldsCancelledForDebt`, which announces a consequence they did not
+   choose and always goes out.
+
+No penalty attaches, for the same reasons §9 declines to punish the no-show.
+
 ### A debt is incurred
 
-Circulation reacts to `MemberDebtIncurred` from Fines:
+Circulation reacts to `MemberDebtIncurred` from Charges:
 
 1. Every queued hold of that borrower is cancelled.
 2. Every hold of theirs awaiting pickup is cancelled, and its trapped copy is released back to the
@@ -259,7 +288,7 @@ job but five queries, each idempotent — running it twice must change nothing a
 |---|---|
 | Loans due in 3 days, courtesy reminder not sent | `LoanDueSoon` |
 | Loans overdue by 1, 7 or 14 days, that reminder not sent | `LoanBecameOverdue` |
-| Loans overdue by 30 days | Declare lost: loan terminal, copy `Lost` in Holdings, `ReplacementCharge` in Fines |
+| Loans overdue by 30 days | Declare lost: loan terminal, copy `Lost` in Holdings, `ReplacementCharge` in Charges |
 | Trapped holds expiring tomorrow | `HoldExpiringSoon` |
 | Trapped holds past their deadline | Expire, release the copy, promote the next in queue |
 
@@ -282,21 +311,22 @@ moves.
 |---|---|
 | `LoanCheckedOut` | read model |
 | `LoanRenewed` | read model, Notifications |
-| `LoanReturned(…, daysLate)` | Fines, read model |
+| `LoanReturned(…, daysLate)` | Charges, read model |
 | `LoanDueSoon` | Notifications |
 | `LoanBecameOverdue` | Notifications |
-| `LoanDeclaredLost` | Holdings, Fines, Notifications |
+| `LoanDeclaredLost` | Holdings, Charges, Notifications |
 | `RenewalRefused(…, reason)` | Notifications |
 | `RenewalGranted(…, newDueDate)` | Notifications, read model |
 | `HoldPlaced` | read model |
 | `HoldReadyForPickup(…, pickupDeadline)` | Notifications |
 | `HoldExpiringSoon` | Notifications |
 | `HoldExpired` | Notifications |
+| `HoldCancelled` | read model, Notifications |
 | `HoldsCancelledForDebt` | Notifications |
 
 `LoanReturned` carries `daysLate` and not a price. Whether a return was late is a circulation fact;
-what lateness costs is a money question, and Fines answers it. A `daysLate` of zero is published all
-the same — Fines decides there is nothing to charge.
+what lateness costs is a money question, and Charges answers it. A `daysLate` of zero is published
+all the same — Charges decides there is nothing to charge.
 
 `RenewalRefused` carries the reason, and it is not optional. There are three — the limit is reached,
 the borrower owes money, someone is waiting — and they call for three different things from the
@@ -311,8 +341,8 @@ days before a due date on an edition with a queue, the useful message is not *"r
 
 | Event | From | Effect |
 |---|---|---|
-| `MemberDebtIncurred` | Fines | Cancel the borrower's holds |
-| `MemberDebtCleared` | Fines | Nothing in the model — the borrower is simply able to act again |
+| `MemberDebtIncurred` | Charges | Cancel the borrower's holds |
+| `MemberDebtCleared` | Charges | Nothing in the model — the borrower is simply able to act again |
 
 ## 8. Notifications
 
@@ -339,8 +369,8 @@ them. Some libraries count no-shows and suspend the right to place holds after t
 Nothing is done about it, for three reasons. It is almost always forgetfulness rather than abuse, and
 the *expiring tomorrow* reminder already addresses that. Charging for it would be wildly out of
 proportion here: an uncollected hold would create a debt, which blocks the borrower, which cancels
-every other hold they have — a forgotten errand costing them everything. And deferring is free: an
-expired hold keeps its `Expired` status in the history, so the day a librarian reports the problem
+every other hold they have — a forgotten errand costing them everything. And deferring is free: every
+expiry is published and the history projection keeps it, so the day a librarian reports the problem
 the count is already there, measured rather than guessed.
 
 This is a rule to write when someone asks for it.

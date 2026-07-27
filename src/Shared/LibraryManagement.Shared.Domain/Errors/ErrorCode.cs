@@ -13,16 +13,17 @@ namespace LibraryManagement.Shared.Domain.Errors;
 /// class owned by the context:
 /// </para>
 /// <code>
-/// public static class BookErrorCodes
+/// public static class CatalogErrorCodes
 /// {
-///     public static readonly ErrorCode NotFound = new("Book.NotFound");
-///     public static readonly ErrorCode InvalidIsbn = new("Book.InvalidIsbn");
+///     public static readonly ErrorCode WorkNotFound = new("Catalog.WorkNotFound");
+///     public static readonly ErrorCode InvalidTitle = new("Catalog.InvalidTitle");
 /// }
 /// </code>
 /// <para>
-/// Prefix every code with the name of the owning context (<c>"Book.NotFound"</c>,
-/// <c>"Loan.NotFound"</c>). Nothing enforces this, but it is what keeps two contexts from
-/// claiming the same code, and it makes a code self-describing wherever it surfaces.
+/// Prefix every code with the name of the owning context (<c>"Catalog.WorkNotFound"</c>,
+/// <c>"Circulation.LoanNotFound"</c>) — the context, not the aggregate, because the context is
+/// the namespace that guarantees no two owners claim the same code, and it makes a code
+/// self-describing wherever it surfaces.
 /// </para>
 /// </remarks>
 public sealed class ErrorCode : ValueObject<ErrorCode>

@@ -9,8 +9,24 @@ namespace LibraryManagement.Shared.Domain.Results;
 /// can be chained together, and errors are propagated without interrupting the flow.
 /// Unlike the <see cref="Result{TValue}"/> class, this class does not hold a value in case of a successful result.
 /// </summary>
-public abstract class Result
+public abstract class Result : IFailable<Result>
 {
+    /// <summary>
+    /// Indicates whether this result is a failure.
+    /// </summary>
+    /// <returns>
+    /// <see langword="true"/> if this result carries errors; <see langword="false"/> otherwise.
+    /// </returns>
+    /// <remarks>
+    /// Prefer <see cref="Match{TResult}"/>: it forces both outcomes to be handled and gives access
+    /// to the errors, whereas this method only answers the question and leaves the caller to reach
+    /// for one side unguarded. It exists for code that is generic over the result type and cannot
+    /// supply the two branches <see cref="Match{TResult}"/> asks for.
+    /// </remarks>
+    public bool HasErrors() => Match(
+        () => false,
+        _ => true);
+
     /// <summary>
     /// Chains computations by applying the provided function.
     /// If the current result is a failure, the computation is skipped, and the error is propagated.

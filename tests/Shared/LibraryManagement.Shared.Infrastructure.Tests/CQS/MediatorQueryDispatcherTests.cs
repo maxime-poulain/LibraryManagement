@@ -1,4 +1,3 @@
-using LibraryManagement.Shared.Application;
 using LibraryManagement.Shared.Domain.Errors;
 using LibraryManagement.Shared.Domain.Results;
 using LibraryManagement.Shared.Infrastructure.CQS;
@@ -10,13 +9,14 @@ public sealed class MediatorQueryDispatcherTests
 {
     private static readonly ErrorCode NotFound = new("Test.NotFound");
 
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
+
     [Fact]
     public async Task DispatchAsync_ReturnsWhatTheHandlerProduced()
     {
-        var dispatcher = new MediatorQueryDispatcher(
-            RecordingSender.Returning(Result<string>.Success("the answer")));
-
-        var result = await dispatcher.DispatchAsync(new TestQuery("anything"), TestContext.Current.CancellationToken);
+        var result = await new MediatorQueryDispatcher(
+                RecordingSender.Returning(Result<string>.Success("the answer")))
+            .DispatchAsync(new TestQuery("anything"), Token);
 
         result.Match(value => value, _ => "unreachable").ShouldBe("the answer");
     }
@@ -24,12 +24,11 @@ public sealed class MediatorQueryDispatcherTests
     [Fact]
     public async Task DispatchAsync_ReturnsTheFailureTheHandlerProduced()
     {
-        // A query that finds nothing is an expected answer, not an exception. The dispatcher
-        // carries the failure through untouched rather than translating it.
-        var dispatcher = new MediatorQueryDispatcher(
-            RecordingSender.Returning(Result<string>.Failure(NotFound, "No record matches that term.")));
-
-        var result = await dispatcher.DispatchAsync(new TestQuery("anything"), TestContext.Current.CancellationToken);
+        // A query that finds nothing is an expected answer, not an exception. The dispatcher carries
+        // the failure through untouched rather than translating it.
+        var result = await new MediatorQueryDispatcher(
+                RecordingSender.Returning(Result<string>.Failure(NotFound, "No record matches that term.")))
+            .DispatchAsync(new TestQuery("anything"), Token);
 
         result.HasErrors().ShouldBeTrue();
         result.Match(_ => [], errors => errors.Select(error => error.ErrorCode).ToArray())
@@ -40,11 +39,10 @@ public sealed class MediatorQueryDispatcherTests
     public async Task DispatchAsync_ForwardsTheQueryAndTheCancellationTokenToTheSender()
     {
         var sender = RecordingSender.Returning(Result<string>.Success("the answer"));
-        var dispatcher = new MediatorQueryDispatcher(sender);
         var query = new TestQuery("anything");
         using var cts = new CancellationTokenSource();
 
-        await dispatcher.DispatchAsync(query, cts.Token);
+        await new MediatorQueryDispatcher(sender).DispatchAsync(query, cts.Token);
 
         sender.SendCount.ShouldBe(1);
         sender.LastMessage.ShouldBeSameAs(query);
@@ -55,10 +53,10 @@ public sealed class MediatorQueryDispatcherTests
     public async Task DispatchAsync_LetsAnExceptionThrough()
     {
         var boom = new InvalidOperationException("handler blew up");
-        var dispatcher = new MediatorQueryDispatcher(RecordingSender.Throwing(boom));
 
         var thrown = await Should.ThrowAsync<InvalidOperationException>(
-            async () => await dispatcher.DispatchAsync(new TestQuery("anything"), TestContext.Current.CancellationToken));
+            async () => await new MediatorQueryDispatcher(RecordingSender.Throwing(boom))
+                .DispatchAsync(new TestQuery("anything"), Token));
 
         thrown.ShouldBeSameAs(boom);
     }
@@ -66,24 +64,38 @@ public sealed class MediatorQueryDispatcherTests
     [Fact]
     public async Task DispatchAsync_WithANullQuery_Throws()
     {
-        var dispatcher = new MediatorQueryDispatcher(
-            RecordingSender.Returning(Result<string>.Success("the answer")));
-
         await Should.ThrowAsync<ArgumentNullException>(
-            async () => await dispatcher.DispatchAsync<string>(null!, TestContext.Current.CancellationToken));
+            async () => await new MediatorQueryDispatcher(
+                    RecordingSender.Returning(Result<string>.Success("the answer")))
+                .DispatchAsync<string>(null!, Token));
     }
 
     [Fact]
-    public void TheQueryDispatcher_TakesNoTransactionManager()
+    public void TheQueryDispatcher_NeverSeesAUnitOfWork()
     {
-        // A query changes nothing, so it has nothing to commit. The asymmetry with the command
-        // dispatcher is command-query separation expressed in the dependencies themselves.
-        var parameters = typeof(MediatorQueryDispatcher)
+        // A query changes nothing, so it has nothing to write. The asymmetry that used to be
+        // expressed in this type's dependencies now lives in a constraint —
+        // UnitOfWorkBehavior accepts only commands — but the property is the same and still worth
+        // pinning here.
+        typeof(MediatorQueryDispatcher)
             .GetConstructors()
             .Single()
-            .GetParameters();
+            .GetParameters()
+            .Select(parameter => parameter.ParameterType)
+            .ShouldBe([typeof(Mediator.ISender)]);
+    }
 
-        parameters.ShouldNotContain(p => p.ParameterType == typeof(ITransactionManager));
+    [Fact]
+    public void BothDispatchers_AreTheSameShape()
+    {
+        // Once the cross-cutting concerns became behaviors, nothing distinguishes the two but the
+        // contract they implement. If one of them grows a dependency again, a concern has leaked
+        // back out of the pipeline.
+        static Type[] DependenciesOf(Type dispatcher)
+            => [.. dispatcher.GetConstructors().Single().GetParameters().Select(p => p.ParameterType)];
+
+        DependenciesOf(typeof(MediatorQueryDispatcher))
+            .ShouldBe(DependenciesOf(typeof(MediatorCommandDispatcher)));
     }
 
     [Fact]
