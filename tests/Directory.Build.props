@@ -1,0 +1,20 @@
+<Project>
+
+  <!--
+    MSBuild only picks up the nearest Directory.Build.props, so the repository-wide one has to be
+    imported explicitly. Without this, test projects lose the target framework, nullable context,
+    analyzers and every other repository-wide setting.
+  -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup Label="Test projects">
+    <IsPackable>false</IsPackable>
+    <!--
+      Test classes and methods are public but carry no API contract, so CS1591 is pure noise here.
+      Suppressed outright rather than by turning GenerateDocumentationFile off: the compiler needs
+      that property enabled to run IDE0005 (unused usings), which is worth keeping.
+    -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,16 @@
+; Settings scoped to test projects. Inherits everything from the repository root .editorconfig.
+
+[*.cs]
+
+# CA1707: Identifiers should not contain underscores
+# Test methods are named Member_Scenario_ExpectedOutcome. The underscores are what makes a failing
+# test readable in a run report, so the rule works against the convention rather than for it.
+# Kept at `silent` rather than `none`, consistent with how CA1716 and CA1711 are handled.
+dotnet_diagnostic.CA1707.severity = silent
+
+# S6966: Awaitable method should be used
+# Fires wherever a test builds a value with the synchronous factory (`Result.Success()`) and then
+# exercises an asynchronous member on it (`MatchAsync`, `SwitchAsync`). That combination is the
+# point of those tests, not an accidental sync-over-async: rewriting them around `SuccessAsync`
+# would add an await that hides what is under test.
+dotnet_diagnostic.S6966.severity = silent

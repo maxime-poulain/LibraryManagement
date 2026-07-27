@@ -4,8 +4,13 @@
     <File Path="Directory.Packages.props" />
     <File Path=".editorconfig" />
   </Folder>
-  <Folder Name="/Shared/">
+  <Folder Name="/src/" />
+  <Folder Name="/src/Shared/">
     <Project Path="src/Shared/LibraryManagement.Shared.Application/LibraryManagement.Shared.Application.csproj" />
     <Project Path="src/Shared/LibraryManagement.Shared.Domain/LibraryManagement.Shared.Domain.csproj" />
+  </Folder>
+  <Folder Name="/Tests/" />
+  <Folder Name="/Tests/Shared/">
+    <Project Path="tests/Shared/LibraryManagement.Shared.Domain.Tests/LibraryManagement.Shared.Domain.Tests.csproj" />
   </Folder>
 </Solution>
