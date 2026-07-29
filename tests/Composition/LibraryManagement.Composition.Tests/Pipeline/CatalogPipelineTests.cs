@@ -4,12 +4,13 @@ using LibraryManagement.Catalog.Domain;
 using LibraryManagement.Catalog.Domain.Authors;
 using LibraryManagement.Catalog.Infrastructure.Extensions;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
+using LibraryManagement.Composition.Tests.Logging;
 using LibraryManagement.Shared.Application.CQS;
 using LibraryManagement.Shared.Application.Errors;
 using LibraryManagement.Shared.Domain.Errors;
-using LibraryManagement.Shared.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace LibraryManagement.Composition.Tests.Pipeline;
 
@@ -27,15 +28,21 @@ public sealed class CatalogPipelineTests(SqlServerFixture sqlServer) : IAsyncLif
 {
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
+    private readonly RecordedLogs _logs = new();
+
     private ServiceProvider _provider = null!;
 
     public async ValueTask InitializeAsync()
     {
-        // Scoped for the reason OutboxTests gives: a singleton mediator would hand every handler
-        // the root scope's dependencies, and two scopes would silently share one DbContext.
-        _provider = new ServiceCollection()
-            .AddMediator(options => options.ServiceLifetime = ServiceLifetime.Scoped)
-            .AddSharedInfrastructure()
+        // The mediator, its pipeline and its scoped lifetime come from the assembly's one
+        // AddMediator call — see CompositionRoot.
+        _provider = CompositionRoot.Services()
+            // Only the solution's own lines reach the recorder: EF Core narrates every SQL command
+            // at Information, and these tests assert our narration, not its.
+            .AddLogging(logging => logging
+                .AddProvider(_logs)
+                .AddFilter<RecordedLogs>((category, _) =>
+                    category?.StartsWith("LibraryManagement", StringComparison.Ordinal) == true))
             .AddCatalogModule(options => options.UseSqlServer(sqlServer.ConnectionString))
             .BuildServiceProvider();
 
@@ -147,6 +154,42 @@ public sealed class CatalogPipelineTests(SqlServerFixture sqlServer) : IAsyncLif
 
         result.Match<ErrorCode?>(_ => null, errors => errors[0].ErrorCode)
             .ShouldBe(CatalogErrorCodes.WorkNotFound);
+    }
+
+    // --- Every outcome is a line in the log ----------------------------------------------------------
+
+    [Fact]
+    public async Task ACommandValidationRefuses_IsStillALineInTheLog()
+    {
+        // Logging is the outermost behavior, which is exactly what this asserts: register it
+        // inside validation and the refusal returns before the logger ever runs — and this is the
+        // test that notices. The line names the command and the code, never the fields.
+        await InScopeAsync(async services =>
+            await services.GetRequiredService<ICommandDispatcher>()
+                .DispatchAsync(ARegistration(name: "   "), Token));
+
+        var line = _logs.Lines.ShouldHaveSingleItem();
+        line.Category.ShouldBe(typeof(RegisterAuthorCommand).FullName);
+        line.Level.ShouldBe(LogLevel.Warning);
+        line.Message.ShouldContain(nameof(RegisterAuthorCommand));
+        line.Message.ShouldContain(SharedErrorCodes.ValidationFailed.Value);
+    }
+
+    [Fact]
+    public async Task ACommandThatSucceeds_IsAnInformationLine()
+    {
+        var command = ARegistration("Perec, Georges");
+
+        await InScopeAsync(async services =>
+            await services.GetRequiredService<ICommandDispatcher>().DispatchAsync(command, Token));
+
+        var line = _logs.Lines.ShouldHaveSingleItem();
+        line.Level.ShouldBe(LogLevel.Information);
+
+        // The line carries the command's name and never its contents: what an employee typed into
+        // a form has no business in a log file.
+        line.Message.ShouldContain(nameof(RegisterAuthorCommand));
+        line.Message.ShouldNotContain("Perec");
     }
 
     [Fact]

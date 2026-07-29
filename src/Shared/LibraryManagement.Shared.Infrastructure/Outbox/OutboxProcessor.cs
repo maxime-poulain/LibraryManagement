@@ -1,6 +1,7 @@
 using LibraryManagement.Shared.Application.DomainEvents;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace LibraryManagement.Shared.Infrastructure.Outbox;
 
@@ -9,6 +10,7 @@ namespace LibraryManagement.Shared.Infrastructure.Outbox;
 /// </summary>
 /// <typeparam name="TContext">The module's context, which owns the table being drained.</typeparam>
 /// <param name="scopes">Creates one scope per message, so each delivery gets fresh dependencies.</param>
+/// <param name="logger">Where the drain reports what it delivered and what blocked it.</param>
 /// <remarks>
 /// <para>
 /// A plain class with no scheduler in it. Whatever triggers a run — Hangfire in the composition
@@ -34,6 +36,12 @@ namespace LibraryManagement.Shared.Infrastructure.Outbox;
 /// already has what it needs; retrying the head is just draining again.
 /// </para>
 /// <para>
+/// A failure is also a <em>log line</em> — Warning while attempts remain, Error when the message
+/// dies — carrying the message id, the event id and the type, never the payload. The row records
+/// the failure, but nobody watches a table: the line is what an operator's alerting hooks, and the
+/// event id in it is the correlation token that follows an event across the asynchronous boundary.
+/// </para>
+/// <para>
 /// Delivery is at-least-once — a crash between the handler's save and nothing (they are the same
 /// save) cannot lose a message, but a redelivery after a partial failure elsewhere remains
 /// possible, and <c>IDomainEvent.EventId</c> is what a handler deduplicates by.
@@ -43,7 +51,9 @@ namespace LibraryManagement.Shared.Infrastructure.Outbox;
 /// scheduler that will own it.
 /// </para>
 /// </remarks>
-public sealed class OutboxProcessor<TContext>(IServiceScopeFactory scopes)
+public sealed class OutboxProcessor<TContext>(
+    IServiceScopeFactory scopes,
+    ILogger<OutboxProcessor<TContext>> logger)
     where TContext : DbContext
 {
     /// <summary>
@@ -114,11 +124,36 @@ public sealed class OutboxProcessor<TContext>(IServiceScopeFactory scopes)
                 var blockage = await RecordFailureAsync(message.Id, exception, cancellationToken)
                     .ConfigureAwait(false);
 
+                if (blockage.Dead)
+                {
+                    OutboxLog.MessageDead(
+                        logger, message.Id, message.EventId, message.Type, blockage.Attempts, exception);
+                }
+                else
+                {
+                    OutboxLog.HeadBlocked(
+                        logger, message.Id, message.EventId, message.Type, blockage.Attempts, MaxAttempts, exception);
+                }
+
+                ReportDelivered(processed);
+
                 return new OutboxDrainOutcome(processed, blockage);
             }
         }
 
+        ReportDelivered(processed);
+
         return new OutboxDrainOutcome(processed, Blockage: null);
+    }
+
+    // An idle tick says nothing: the drain runs every minute forever, and a line per silence would
+    // bury the lines that matter.
+    private void ReportDelivered(int processed)
+    {
+        if (processed > 0)
+        {
+            OutboxLog.Drained(logger, processed);
+        }
     }
 
     // On a fresh scope, deliberately: the scope the handler failed in may hold half of that
@@ -155,4 +190,29 @@ public sealed class OutboxProcessor<TContext>(IServiceScopeFactory scopes)
     private static IQueryable<OutboxMessage> PendingOf(TContext context)
         => context.Set<OutboxMessage>()
             .Where(message => message.ProcessedOn == null && message.DeadOn == null);
+}
+
+/// <summary>
+/// The drain's log lines, source-generated. A companion type because the processor is generic and
+/// the <see cref="LoggerMessageAttribute"/> generator does not reach into generic types.
+/// </summary>
+internal static partial class OutboxLog
+{
+    [LoggerMessage(EventId = 1, Level = LogLevel.Information,
+        Message = "Outbox drained: {Delivered} message(s) delivered.")]
+    public static partial void Drained(ILogger logger, int delivered);
+
+    [LoggerMessage(EventId = 2, Level = LogLevel.Warning,
+        Message = "Outbox delivery failed and the head blocks the queue: message {MessageId}, "
+                  + "event {EventId} ({EventType}), attempt {Attempt} of {MaxAttempts}.")]
+    public static partial void HeadBlocked(
+        ILogger logger, long messageId, Guid eventId, string eventType, int attempt, int maxAttempts,
+        Exception exception);
+
+    [LoggerMessage(EventId = 3, Level = LogLevel.Error,
+        Message = "Outbox message is dead after {Attempts} attempts: message {MessageId}, "
+                  + "event {EventId} ({EventType}). The queue moves on; the row keeps the failure.")]
+    public static partial void MessageDead(
+        ILogger logger, long messageId, Guid eventId, string eventType, int attempts,
+        Exception exception);
 }

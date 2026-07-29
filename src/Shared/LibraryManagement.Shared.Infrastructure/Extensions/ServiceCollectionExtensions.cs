@@ -3,13 +3,11 @@ using LibraryManagement.Shared.Application;
 using LibraryManagement.Shared.Application.CQS;
 using LibraryManagement.Shared.Application.DomainEvents;
 using LibraryManagement.Shared.Infrastructure.Auditing;
-using LibraryManagement.Shared.Infrastructure.Behaviors;
 using LibraryManagement.Shared.Infrastructure.CQS;
 using LibraryManagement.Shared.Infrastructure.DomainEvents;
 using LibraryManagement.Shared.Infrastructure.Outbox;
 using LibraryManagement.Shared.Infrastructure.UnitOfWork;
 using LibraryManagement.Shared.Infrastructure.Validation;
-using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -22,19 +20,23 @@ namespace LibraryManagement.Shared.Infrastructure.Extensions;
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the dispatchers, the pipeline behaviors every message goes through, the message
-    /// validator, and the resolver that finds a command's module unit of work.
+    /// Registers the dispatchers, the message validator, the resolver that finds a command's
+    /// module unit of work, and everything else the pipeline behaviors depend on.
     /// </summary>
     /// <param name="services">The service collection to add to.</param>
     /// <returns>The same collection, so calls can be chained.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="services"/> is null.</exception>
     /// <remarks>
     /// <para>
-    /// <strong>The order of the two behaviors is the guarantee.</strong> Validation is registered
-    /// first, so it runs first: a command rejected for a missing field never reaches the store.
-    /// Register them the other way round and everything still compiles, every other test still
-    /// passes, and the only thing that changes is that malformed commands start writing. A test
-    /// pins the order for exactly that reason.
+    /// <strong>The pipeline itself is not registered here.</strong> The behaviors are declared to
+    /// <c>AddMediator</c> (<c>options.PipelineBehaviors</c>), inline at the composition root,
+    /// because that is the mediator's own surface for them: the source generator parses that very
+    /// syntax and emits one closed registration per message and behavior, honouring each
+    /// behavior's constraints. An open generic added here would run beside the generated
+    /// registrations, and every behavior would execute twice per message. The order the root must
+    /// declare — logging, validation, unit of work — is recorded on
+    /// <see cref="Behaviors.LoggingBehavior{TMessage, TResponse}"/> with its reasons, and the
+    /// composition tests pin it from the outside.
     /// </para>
     /// <para>
     /// Deliberately registers nothing module-specific. A module owns its own <c>DbContext</c>, its
@@ -46,13 +48,16 @@ public static class ServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        // Logging itself, so a logger always resolves. No provider is added here: which sinks
+        // exist — console, a collector, none at all — is the host's decision, and AddLogging
+        // composes with whatever it chooses.
+        services.AddLogging();
+
         return services
             .AddScoped<ICommandDispatcher, MediatorCommandDispatcher>()
             .AddScoped<IQueryDispatcher, MediatorQueryDispatcher>()
             .AddScoped<IMessageValidator, FluentValidationMessageValidator>()
-            .AddScoped<IUnitOfWorkResolver, ModuleUnitOfWorkResolver>()
-            .AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>))
-            .AddTransient(typeof(IPipelineBehavior<,>), typeof(UnitOfWorkBehavior<,>));
+            .AddScoped<IUnitOfWorkResolver, ModuleUnitOfWorkResolver>();
     }
 
     /// <summary>
@@ -109,6 +114,10 @@ public static class ServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configureStore);
+
+        // Idempotent, like everything below: the processor registered here logs, and a container
+        // wiring a module without the shared pipeline must still resolve that logger.
+        services.AddLogging();
 
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddScoped<ICurrentUser, UnattributedUser>();

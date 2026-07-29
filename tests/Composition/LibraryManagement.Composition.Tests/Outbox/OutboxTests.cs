@@ -3,13 +3,14 @@ using LibraryManagement.Catalog.Domain.Authors;
 using LibraryManagement.Catalog.Infrastructure.Extensions;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
 using LibraryManagement.Catalog.Infrastructure.Search;
+using LibraryManagement.Composition.Tests.Logging;
 using LibraryManagement.Shared.Application.CQS;
 using LibraryManagement.Shared.Application.DomainEvents;
 using LibraryManagement.Shared.Domain.Results;
-using LibraryManagement.Shared.Infrastructure.Extensions;
 using LibraryManagement.Shared.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace LibraryManagement.Composition.Tests.Outbox;
 
@@ -27,19 +28,21 @@ public sealed class OutboxTests(SqlServerFixture sqlServer) : IAsyncLifetime
 {
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
+    private readonly RecordedLogs _logs = new();
+
     private ServiceProvider _provider = null!;
 
     public async ValueTask InitializeAsync()
     {
         EchoedRegistrations.Reset();
 
-        // Scoped, not the default singleton. A singleton mediator resolves every handler from the
-        // root provider, so a handler's "scoped" DbContext is the root's — and the processor, which
-        // opens a real scope per message, would save a context its handlers never touched. Scoped
-        // is what makes "one message, one scope, one save" include the handler's own writes.
-        _provider = new ServiceCollection()
-            .AddMediator(options => options.ServiceLifetime = ServiceLifetime.Scoped)
-            .AddSharedInfrastructure()
+        // The mediator, its pipeline and its scoped lifetime all come from the assembly's one
+        // AddMediator call — see CompositionRoot for the reasons, this fixture included.
+        _provider = CompositionRoot.Services()
+            .AddLogging(logging => logging
+                .AddProvider(_logs)
+                .AddFilter<RecordedLogs>((category, _) =>
+                    category?.StartsWith("LibraryManagement", StringComparison.Ordinal) == true))
             .AddCatalogModule(options => options.UseSqlServer(sqlServer.ConnectionString))
             .BuildServiceProvider();
 
@@ -117,6 +120,11 @@ public sealed class OutboxTests(SqlServerFixture sqlServer) : IAsyncLifetime
         (await RowsAsync()).ShouldAllBe(row => row.ProcessedOn != null);
         EchoedRegistrations.Seen.Count.ShouldBe(2);
         (await FindAsync(EchoedRegistrations.Companion.ShouldNotBeNull())).ShouldNotBeNull();
+
+        // The drain says what it did — and an idle run says nothing, so this line only exists
+        // because messages moved.
+        _logs.Lines.ShouldContain(line =>
+            line.Level == LogLevel.Information && line.Message.Contains("Outbox drained: 2"));
     }
 
     [Fact]
@@ -182,6 +190,13 @@ public sealed class OutboxTests(SqlServerFixture sqlServer) : IAsyncLifetime
         rows[0].ProcessedOn.ShouldBeNull();
         rows[1].ProcessedOn.ShouldBeNull();
         EchoedRegistrations.Seen.ShouldNotContain(name => name.Value == "Waiting, Behind");
+
+        // The row records the failure, but nobody watches a table: the Warning line is the
+        // alerting hook, and it names the event so an operator can follow it — never the payload.
+        var warning = _logs.Lines.Single(line => line.Level == LogLevel.Warning);
+        warning.Message.ShouldContain("blocks the queue");
+        warning.Message.ShouldContain(rows[0].EventId.ToString());
+        warning.Exception.ShouldNotBeNull();
     }
 
     [Fact]
@@ -202,6 +217,12 @@ public sealed class OutboxTests(SqlServerFixture sqlServer) : IAsyncLifetime
         var rows = await RowsAsync();
         rows[0].Attempts.ShouldBe(OutboxProcessor<CatalogDbContext>.MaxAttempts);
         rows[0].DeadOn.ShouldNotBeNull();
+
+        // Death is an Error line where a retryable failure is only a Warning — the level is what
+        // separates "the cron will handle it" from "a person must look".
+        var death = _logs.Lines.Single(line => line.Level == LogLevel.Error);
+        death.Message.ShouldContain("dead");
+        death.Message.ShouldContain(rows[0].EventId.ToString());
 
         // A dead letter is an operator's problem now; the borrowers behind it are not.
         (await DrainAsync()).Delivered.ShouldBe(1);

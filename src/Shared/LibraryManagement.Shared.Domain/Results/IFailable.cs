@@ -21,7 +21,7 @@ namespace LibraryManagement.Shared.Domain.Results;
 /// <see cref="IEntityId{TSelf}"/> already uses for <c>FromValue</c>.
 /// </para>
 /// <para>
-/// Neither member is new: both types already declare them with these exact signatures. This
+/// None of these members is new: both types already declare them with these exact signatures. This
 /// interface only makes them reachable from a generic.
 /// </para>
 /// </remarks>
@@ -47,4 +47,16 @@ public interface IFailable<TSelf>
     /// the two branches <c>Match</c> asks for.
     /// </remarks>
     bool HasErrors();
+
+    /// <summary>
+    /// Executes the provided action if the result is a failure, then returns the same result.
+    /// </summary>
+    /// <param name="onFailure">An action to execute if the result is a failure, taking the error collection as a parameter.</param>
+    /// <returns>The current result instance, enabling fluent chaining.</returns>
+    /// <remarks>
+    /// What <see cref="Failure"/> is to building a failure generically, this is to reading one: code
+    /// that cannot name the concrete type — the logging behavior, reporting the codes a message was
+    /// refused with — can still be handed the errors when there are any.
+    /// </remarks>
+    TSelf TapError(Action<IReadOnlyErrorCollection> onFailure);
 }

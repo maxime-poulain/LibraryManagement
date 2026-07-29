@@ -41,6 +41,26 @@ public sealed class FailableTests
             .ShouldBe([Code]);
     }
 
+    [Fact]
+    public void TheErrors_AreReadableWithoutNamingTheResultType()
+    {
+        // What the logging behavior stands on: reporting the codes a message was refused with,
+        // without knowing which of the two result types it holds — and reading nothing at all from
+        // a success.
+        CodesOf(Result.Failure([AnError()])).ShouldBe("Test.Failed");
+        CodesOf(Result<string>.Failure(AnError())).ShouldBe("Test.Failed");
+        CodesOf(Result.Success()).ShouldBeEmpty();
+    }
+
+    private static string CodesOf<TResult>(TResult result)
+        where TResult : IFailable<TResult>
+    {
+        var codes = string.Empty;
+        result.TapError(errors => codes = string.Join(", ", errors.Select(error => error.ErrorCode)));
+
+        return codes;
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

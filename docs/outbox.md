@@ -84,6 +84,14 @@ problem that vanished is not solved.
 The bookkeeping of a failure is written from a **fresh scope**: the scope the handler failed in may
 hold half of that handler's changes, and saving the report there would save the half along with it.
 
+Both failure moments also leave as **log lines** — a Warning while attempts remain, an Error when
+the message dies — carrying the message id, the `EventId` and the type, never the payload. The
+table records the failure, but nobody watches a table: the line is what an operator's alerting
+hooks, and the `EventId` in it is the correlation token that follows an event across the
+asynchronous boundary. A drain that delivered something says so once at Information; an idle tick
+says nothing, because the drain runs every minute forever and a line per silence would bury the
+lines that matter.
+
 ## 6. The retry is the heartbeat — a decision record
 
 The drain is a recurring Hangfire job per module, `Cron.Minutely()`, and that tick is also the
@@ -115,11 +123,31 @@ whole surface is `OutboxJobs` — one method per module, `[DisableConcurrentExec
 a late run never drain the same table at once — plus the storage configuration, in the `hangfire`
 schema beside the module schemas, owned by infrastructure the way `sys` is.
 
-One consequence binds every future host, discovered the hard way: **the mediator must be registered
-scoped** (`AddMediator(options => options.ServiceLifetime = ServiceLifetime.Scoped)`). The default
+Two consequences bind every future host. **The mediator must be registered scoped**
+(`options.ServiceLifetime = ServiceLifetime.Scoped`), discovered the hard way: the default
 singleton resolves every handler from the root scope, which worked by accident while everything
 shared one scope and breaks the drain's one-scope-per-message save — the handler would write to a
-context nobody saves.
+context nobody saves. And **the pipeline is declared in the same call**, as the mediator's own
+ordered array:
+
+```csharp
+options.PipelineBehaviors =
+[
+    typeof(LoggingBehavior<,>),
+    typeof(ValidationBehavior<,>),
+    typeof(UnitOfWorkBehavior<,>),
+];
+```
+
+Inline, because the source generator parses that very syntax and emits one closed registration per
+message and behavior, honouring each behavior's constraints — and once per assembly, because a
+second `AddMediator` carrying a different array would leave the generator to pick a winner. The
+order is the guarantee: logging outermost so refusals still leave a line, validation before the
+unit of work so a malformed command never writes.
+
+The host also chooses the log sinks. The modules only speak `ILogger`: the shared registration
+calls `AddLogging()` so a logger always resolves, and adds no provider — console, a collector,
+OpenTelemetry are host decisions, exactly as the storage is.
 
 ## 8. Rules this imposes on handlers
 

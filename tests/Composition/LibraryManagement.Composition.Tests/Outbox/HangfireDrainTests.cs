@@ -4,7 +4,6 @@ using LibraryManagement.Catalog.Application.Authors.RegisterAuthor;
 using LibraryManagement.Catalog.Infrastructure.Extensions;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
 using LibraryManagement.Shared.Application.CQS;
-using LibraryManagement.Shared.Infrastructure.Extensions;
 using LibraryManagement.Shared.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,11 +26,9 @@ public sealed class HangfireDrainTests(SqlServerFixture sqlServer) : IAsyncLifet
     {
         EchoedRegistrations.Reset();
 
-        // Scoped for the reason OutboxTests gives: the drain's handlers must share the scope the
-        // processor saves.
-        _provider = new ServiceCollection()
-            .AddMediator(options => options.ServiceLifetime = ServiceLifetime.Scoped)
-            .AddSharedInfrastructure()
+        // The mediator, its pipeline and its scoped lifetime come from the assembly's one
+        // AddMediator call — see CompositionRoot.
+        _provider = CompositionRoot.Services()
             .AddCatalogModule(options => options.UseSqlServer(sqlServer.ConnectionString))
             .AddTransient<OutboxJobs>()
             .BuildServiceProvider();

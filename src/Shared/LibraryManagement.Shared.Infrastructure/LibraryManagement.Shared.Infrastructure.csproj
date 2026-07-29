@@ -12,6 +12,11 @@
              which are relational concepts. Which database serves them stays the host's decision. -->
         <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+        <!-- Logging proper for AddLogging, so a logger always resolves and the host only adds
+             sinks; the abstractions are referenced directly as well because the LoggerMessage
+             source generator ships in that package and generators do not flow transitively. -->
+        <PackageReference Include="Microsoft.Extensions.Logging" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     </ItemGroup>
 
     <ItemGroup>

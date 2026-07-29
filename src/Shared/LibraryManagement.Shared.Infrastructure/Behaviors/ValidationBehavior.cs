@@ -25,9 +25,10 @@ namespace LibraryManagement.Shared.Infrastructure.Behaviors;
 /// factory without lending a hierarchy.
 /// </para>
 /// <para>
-/// Registered before <see cref="UnitOfWorkBehavior{TMessage, TResponse}"/>, and the order is the
-/// guarantee rather than a preference: a command rejected for a missing field must never reach the
-/// store. Nothing else would report the two being registered the wrong way round.
+/// Placed before <see cref="UnitOfWorkBehavior{TMessage, TResponse}"/> in the pipeline the
+/// composition root declares, and the order is the guarantee rather than a preference: a command
+/// rejected for a missing field must never reach the store. Nothing else would report the two
+/// standing the wrong way round.
 /// </para>
 /// </remarks>
 public sealed class ValidationBehavior<TMessage, TResponse>(IMessageValidator validator)

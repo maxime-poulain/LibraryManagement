@@ -1,6 +1,5 @@
 using LibraryManagement.Shared.Application;
 using LibraryManagement.Shared.Application.CQS;
-using LibraryManagement.Shared.Infrastructure.Behaviors;
 using LibraryManagement.Shared.Infrastructure.CQS;
 using LibraryManagement.Shared.Infrastructure.Extensions;
 using LibraryManagement.Shared.Infrastructure.Tests.TestDoubles;
@@ -57,16 +56,16 @@ public sealed class ServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AddSharedInfrastructure_RegistersValidationBeforeTheUnitOfWork()
+    public void AddSharedInfrastructure_RegistersNoPipelineBehavior()
     {
-        // The order is the guarantee. Registered the other way round, everything still compiles and
-        // every other test still passes — the only thing that changes is that a command rejected
-        // for a missing field starts writing to the store. Nothing else would report it.
+        // The pipeline belongs to AddMediator: options.PipelineBehaviors, declared inline at the
+        // composition root, from which the generator emits one closed registration per message.
+        // An open generic added here would run beside those, and every behavior would execute
+        // twice per message. The order — logging, validation, unit of work — is pinned by the
+        // composition tests, where the real pipeline runs.
         new ServiceCollection()
             .AddSharedInfrastructure()
-            .Where(service => service.ServiceType == typeof(Mediator.IPipelineBehavior<,>))
-            .Select(service => service.ImplementationType)
-            .ShouldBe([typeof(ValidationBehavior<,>), typeof(UnitOfWorkBehavior<,>)]);
+            .ShouldNotContain(service => service.ServiceType == typeof(Mediator.IPipelineBehavior<,>));
     }
 
     [Fact]
@@ -74,7 +73,13 @@ public sealed class ServiceCollectionExtensionsTests
     {
         // A module owns its own DbContext, repositories, validators and IUnitOfWork. Shared
         // infrastructure that registered anything module-specific would defeat the separation.
-        new ServiceCollection().AddSharedInfrastructure().Count.ShouldBe(6);
+        // Counted over the solution's own surface: AddLogging brings the framework's bookkeeping
+        // — a logger factory, its options — which is Microsoft's to shape, not this test's to pin.
+        new ServiceCollection()
+            .AddSharedInfrastructure()
+            .Count(service =>
+                service.ServiceType.Namespace?.StartsWith("LibraryManagement", StringComparison.Ordinal) == true)
+            .ShouldBe(4);
     }
 
     [Fact]

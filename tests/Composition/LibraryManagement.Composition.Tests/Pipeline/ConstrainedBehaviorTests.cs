@@ -1,6 +1,8 @@
 using LibraryManagement.Catalog.Infrastructure.Extensions;
+using LibraryManagement.Shared.Application;
 using LibraryManagement.Shared.Application.CQS;
 using LibraryManagement.Shared.Domain.Results;
+using LibraryManagement.Shared.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,22 +17,32 @@ namespace LibraryManagement.Composition.Tests.Pipeline;
 /// command and is skipped for a query, rather than failing to close or throwing.
 /// </summary>
 /// <remarks>
+/// <para>
 /// Validation applies to every message; the unit of work applies to commands alone. If the
-/// container could not honour that constraint, the unit of work would have to stay in a dispatcher
-/// and the migration would be pointless.
+/// constraint were not honoured, the unit of work would have to stay in a dispatcher and the
+/// migration would be pointless. The generator honours it at compile time — the generated
+/// registrations close a command-constrained behavior over no query — and the container honours
+/// it for behaviors added through DI, which is the path the fixtures below take.
+/// </para>
+/// <para>
+/// The fixtures record only themselves, but they no longer run alone: the assembly's own pipeline
+/// — declared once in <see cref="CompositionRoot"/> — wraps every message here too, fixture
+/// commands included. That is why the fixture container carries a unit of work for this very
+/// assembly: the real pipeline saves for every command of the module that declared it.
+/// </para>
 /// </remarks>
 public sealed class ConstrainedBehaviorTests
 {
     private static readonly List<string> Seen = [];
 
-    // AddMediator registers every handler the generator found, Catalog's included, so the module
-    // that owns their dependencies has to be registered too. That is what a composition root is,
-    // and assembling one here is the point of this project.
+    // The generator registers every handler it found, Catalog's included, so the module that owns
+    // their dependencies has to be registered too. That is what a composition root is, and
+    // assembling one here is the point of this project.
     private static ISender SenderWith(params Type[] behaviorsInOrder)
     {
-        var services = new ServiceCollection()
-            .AddMediator(options => options.ServiceLifetime = ServiceLifetime.Scoped)
-            .AddCatalogModule(options => options.UseSqlServer("Server=unused"));
+        var services = CompositionRoot.Services()
+            .AddCatalogModule(options => options.UseSqlServer("Server=unused"))
+            .AddModuleUnitOfWork<NoOpUnitOfWork>(typeof(PingCommand).Assembly);
 
         foreach (var behavior in behaviorsInOrder)
         {
@@ -38,6 +50,14 @@ public sealed class ConstrainedBehaviorTests
         }
 
         return services.BuildServiceProvider().GetRequiredService<ISender>();
+    }
+
+    // Nothing to save: the fixture commands change nothing, and the store their "module" would
+    // write to does not exist.
+    private sealed class NoOpUnitOfWork : IUnitOfWork
+    {
+        public ValueTask SaveChangesAsync(CancellationToken cancellationToken = default)
+            => ValueTask.CompletedTask;
     }
 
     [Fact]
