@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using LibraryManagement.Catalog.Domain.Authors;
+using LibraryManagement.Catalog.Domain.Editions;
 using LibraryManagement.Catalog.Domain.Works;
 
 namespace LibraryManagement.Catalog.Infrastructure.Serialization;
@@ -63,6 +64,35 @@ public sealed class TitleJsonConverter : JsonConverter<Title>
 
     /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, Title value, JsonSerializerOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+
+        writer.WriteStringValue(value.Value);
+    }
+}
+
+/// <summary>
+/// Serializes <see cref="Isbn"/> as the normalized number itself.
+/// </summary>
+public sealed class IsbnJsonConverter : JsonConverter<Isbn>
+{
+    /// <inheritdoc/>
+    public override Isbn Read(
+        ref Utf8JsonReader reader,
+        Type typeToConvert,
+        JsonSerializerOptions options)
+    {
+        var value = reader.GetString();
+
+        return Isbn.Create(value).Match(
+            isbn => isbn,
+            _ => throw new InvalidOperationException(
+                $"The outbox holds '{value}' as an ISBN, which is not a valid one."));
+    }
+
+    /// <inheritdoc/>
+    public override void Write(Utf8JsonWriter writer, Isbn value, JsonSerializerOptions options)
     {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);

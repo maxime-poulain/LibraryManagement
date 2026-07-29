@@ -39,4 +39,7 @@ public enum CatalogueEntryKind
 
     /// <summary>The line leads to a work.</summary>
     Work,
+
+    /// <summary>The line leads to an edition, found by its ISBN.</summary>
+    Edition,
 }

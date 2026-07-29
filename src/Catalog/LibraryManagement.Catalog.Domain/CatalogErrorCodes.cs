@@ -20,6 +20,9 @@ public static class CatalogErrorCodes
     /// <summary>Birth and death years that cannot both be true of one person.</summary>
     public static readonly ErrorCode InvalidLifeYears = new("Catalog.InvalidLifeYears");
 
+    /// <summary>A value that is not an ISBN: wrong shape, wrong prefix, or a failed check digit.</summary>
+    public static readonly ErrorCode InvalidIsbn = new("Catalog.InvalidIsbn");
+
     /// <summary>The name is already recorded for this author, as the heading or as a variant.</summary>
     public static readonly ErrorCode DuplicateName = new("Catalog.DuplicateName");
 

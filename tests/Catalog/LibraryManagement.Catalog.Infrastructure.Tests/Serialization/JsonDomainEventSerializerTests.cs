@@ -1,4 +1,5 @@
 using LibraryManagement.Catalog.Domain.Authors;
+using LibraryManagement.Catalog.Domain.Editions;
 using LibraryManagement.Catalog.Domain.Works;
 using LibraryManagement.Catalog.Infrastructure.Serialization;
 using LibraryManagement.Shared.Domain;
@@ -17,7 +18,7 @@ namespace LibraryManagement.Catalog.Infrastructure.Tests.Serialization;
 public sealed class JsonDomainEventSerializerTests
 {
     private static JsonDomainEventSerializer Serializer()
-        => new([new PersonNameJsonConverter(), new TitleJsonConverter()]);
+        => new([new PersonNameJsonConverter(), new TitleJsonConverter(), new IsbnJsonConverter()]);
 
     private static PersonName Name(string value)
         => PersonName.Create(value).Match(name => name, _ => throw new InvalidOperationException());
@@ -63,6 +64,27 @@ public sealed class JsonDomainEventSerializerTests
     public void AWorkRegistration_RoundTrips()
     {
         var original = new WorkRegistered(WorkId.Generate(), TitleOf("Le Petit Prince"));
+
+        RoundTrip(original).ShouldBe(original);
+    }
+
+    [Fact]
+    public void AnEditionRegistration_RoundTripsItsIsbn()
+    {
+        var original = new EditionRegistered(
+            EditionId.Generate(),
+            WorkId.Generate(),
+            Isbn.Create("978-2-07-061275-8").Match(isbn => isbn, _ => throw new InvalidOperationException()));
+
+        RoundTrip(original).ShouldBe(original);
+    }
+
+    [Fact]
+    public void AnEditionRegistrationWithoutAnIsbn_RoundTripsTheAbsence()
+    {
+        // Null is part of the contract: the projection reads the absence from the payload, so the
+        // payload must be able to say it.
+        var original = new EditionRegistered(EditionId.Generate(), WorkId.Generate(), Isbn: null);
 
         RoundTrip(original).ShouldBe(original);
     }

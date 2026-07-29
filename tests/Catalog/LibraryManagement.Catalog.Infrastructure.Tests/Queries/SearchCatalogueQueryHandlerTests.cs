@@ -154,6 +154,21 @@ public sealed class SearchCatalogueQueryHandlerTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public async Task AnIsbn_LeadsToItsEdition()
+    {
+        // The third kind of line the index carries, mapped to the contract's own enum: an ISBN is
+        // an access point exactly as a heading or a title is.
+        var stem = AStem();
+        var editionId = Guid.CreateVersion7();
+        await SeedAsync(APoint(AccessPointKind.Edition, editionId, $"{stem}9782070612758", authorized: true));
+
+        var entry = (await SearchAsync(stem)).ShouldHaveSingleItem();
+
+        entry.Kind.ShouldBe(CatalogueEntryKind.Edition);
+        entry.RecordId.ShouldBe(editionId);
+    }
+
+    [Fact]
     public async Task TheMatch_IsCaseInsensitive()
     {
         // The collation's decision, not this handler's — and this test is what pins it, so a

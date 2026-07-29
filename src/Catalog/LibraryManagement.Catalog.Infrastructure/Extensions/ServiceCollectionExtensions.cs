@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using FluentValidation;
 using LibraryManagement.Catalog.Application.Authors.RegisterAuthor;
 using LibraryManagement.Catalog.Domain.Authors;
+using LibraryManagement.Catalog.Domain.Editions;
 using LibraryManagement.Catalog.Domain.Works;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
 using LibraryManagement.Catalog.Infrastructure.Serialization;
@@ -48,6 +49,7 @@ public static class ServiceCollectionExtensions
         // mediator, so the read side has nothing to register here.
         services.AddScoped<IAuthorRepository, AuthorRepository>();
         services.AddScoped<IWorkRepository, WorkRepository>();
+        services.AddScoped<IEditionRepository, EditionRepository>();
 
         // The module's validators, from the assembly that declares its commands and queries. The
         // shared validation behavior resolves them by the message's concrete type, so a validator
@@ -66,6 +68,7 @@ public static class ServiceCollectionExtensions
         // EntityId factory covers them all.
         services.AddSingleton<JsonConverter, PersonNameJsonConverter>();
         services.AddSingleton<JsonConverter, TitleJsonConverter>();
+        services.AddSingleton<JsonConverter, IsbnJsonConverter>();
 
         return services;
     }

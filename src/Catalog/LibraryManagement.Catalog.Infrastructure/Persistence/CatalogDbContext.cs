@@ -1,4 +1,5 @@
 using LibraryManagement.Catalog.Domain.Authors;
+using LibraryManagement.Catalog.Domain.Editions;
 using LibraryManagement.Catalog.Domain.Works;
 using LibraryManagement.Shared.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +32,8 @@ public sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> options)
     internal DbSet<Author> Authors => Set<Author>();
 
     internal DbSet<Work> Works => Set<Work>();
+
+    internal DbSet<Edition> Editions => Set<Edition>();
 
     /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)

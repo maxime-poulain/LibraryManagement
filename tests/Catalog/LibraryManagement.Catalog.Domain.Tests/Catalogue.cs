@@ -1,4 +1,5 @@
 using LibraryManagement.Catalog.Domain.Authors;
+using LibraryManagement.Catalog.Domain.Editions;
 using LibraryManagement.Catalog.Domain.Works;
 using LibraryManagement.Shared.Domain.Errors;
 using LibraryManagement.Shared.Domain.Results;
@@ -12,6 +13,8 @@ internal static class Catalogue
     public static PersonName Name(string value) => Unwrap(PersonName.Create(value));
 
     public static Title TitleOf(string value) => Unwrap(Title.Create(value));
+
+    public static Isbn AnIsbn(string value = "9782070612758") => Unwrap(Isbn.Create(value));
 
     public static LifeYears Years(int? birth, int? death) => Unwrap(LifeYears.Create(birth, death));
 

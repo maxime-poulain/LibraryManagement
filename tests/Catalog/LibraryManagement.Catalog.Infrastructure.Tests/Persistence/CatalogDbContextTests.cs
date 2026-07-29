@@ -1,4 +1,5 @@
 using LibraryManagement.Catalog.Domain.Authors;
+using LibraryManagement.Catalog.Domain.Editions;
 using LibraryManagement.Catalog.Domain.Works;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -25,12 +26,13 @@ public sealed class CatalogDbContextTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
-    public void TheModel_MapsBothAggregates()
+    public void TheModel_MapsEveryAggregate()
     {
         var model = Model();
 
         model.FindEntityType(typeof(Author)).ShouldNotBeNull();
         model.FindEntityType(typeof(Work)).ShouldNotBeNull();
+        model.FindEntityType(typeof(Edition)).ShouldNotBeNull();
     }
 
     [Fact]
@@ -103,7 +105,7 @@ public sealed class CatalogDbContextTests(SqlServerFixture sqlServer)
         // Two employees acting on the same record at the same moment is expected in a library, and
         // the token is what turns it into a failed Result instead of a silent overwrite. SQL Server
         // maintains a rowversion itself, so no application code can forget to move it.
-        foreach (var type in new[] { typeof(Author), typeof(Work) })
+        foreach (var type in new[] { typeof(Author), typeof(Work), typeof(Edition) })
         {
             var rowVersion = Model().FindEntityType(type)!.FindProperty("RowVersion");
 

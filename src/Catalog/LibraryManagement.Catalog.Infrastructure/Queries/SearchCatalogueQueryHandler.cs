@@ -88,6 +88,7 @@ public sealed class SearchCatalogueQueryHandler(CatalogDbContext context)
         {
             AccessPointKind.Author => CatalogueEntryKind.Author,
             AccessPointKind.Work => CatalogueEntryKind.Work,
+            AccessPointKind.Edition => CatalogueEntryKind.Edition,
             _ => throw new InvalidOperationException($"Unknown access point kind '{kind}'."),
         };
 }

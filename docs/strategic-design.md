@@ -291,7 +291,9 @@ Made a context, it would own nothing and duplicate everything. Put in Catalog, i
 to know about availability, and the cleanest boundary in the model would fall.
 
 **Search is a read model.** A projection fed by events from the three, and on one database it can be
-a view. Loan statistics — on which a library's budget depends — are the same case.
+a view. Loan statistics — on which a library's budget depends — are the same case. A page of
+*detail* is not: one member's file starts from an identifier already in hand and composes each
+module's published query at the edge, never needing the SQL below — §10 records the rules.
 
 This is where strict command-query separation stops being a matter of style and becomes structural:
 **the read side may cross boundaries precisely because it changes nothing and can therefore break no
@@ -449,19 +451,40 @@ domain along, and the separation would end through the read side, where nobody i
 view over another module's schema is deployment coupling with that schema's migrations — acceptable,
 but accepted explicitly at each use, never by accident.
 
+**A page is composed at the edge, and decides nothing.** A read that starts from an identifier
+already in hand — a member's file: who they are, their loans and holds, what they owe — does not
+need even the SQL level. The host's endpoint dispatches each module's published query and
+assembles a view model of its own: the member from Members, the circulation file from Circulation
+— loans and holds live in one context, so that is a single question — the balance from Charges.
+The composer references the modules' application contracts alone, queries and DTOs; the page's
+shape belongs to the presentation, and no module carries a DTO shaped like somebody's screen; and
+the composer assembles without deciding — whether a member may still borrow is `Standing`, judged
+by Circulation and displayed as given, because a rule that slips into a composer is a rule no
+module's invariants cover. No module answers a page by calling another module's query: the
+composition lives above the modules, or the coupling returns through the read side. The queries
+run synchronously and sequentially — a desk wants the present tense, and the scoped contexts are
+not thread-safe — and each answers with a `Result`, so the page chooses its own degradation when
+one module cannot answer, which no join would have offered.
+
+An anticorruption layer has no place on this path: it protects a model where a foreign context's
+concepts feed decisions — `Member` becoming `Borrower`, MARC staying at the border — and a page
+has no model and makes none. The division of labour on the read side follows the question's shape:
+an identifier in hand composes published queries at the edge; a criterion that crosses modules —
+search, statistics — goes through the views above. And the day the modules become services, the
+composition point is the backend-for-frontend, already standing where it belongs.
+
 ## 11. Open questions
 
-* Whether `Work` is an aggregate root holding its editions, or `Edition` is a root of its own.
-  Depends on whether an edition can be catalogued before its work is known, and on whether the
-  library ever needs "all editions of this work" transactionally. One argument is already settled by
-  the hold model and weighs heavily: queues key on `EditionId`, so an edition must be independently
-  addressable whichever way this falls — which leans toward a root of its own, holding a `WorkId`.
-  Tactical design, Catalog.
-* Where a translation's contributors live. A translator or an illustrator is an edition-level fact
-  in a three-level model — FRBR would put them on the Expression this model deliberately lacks — and
-  `Work.Title` is then the *uniform title* while each edition carries the title on its own title
-  page. To settle when Edition is designed. A body among the authors raises a question of the same
-  kind: `LifeYears` is a person's fact, and a corporate author simply carries `Unknown`.
+* Where a translation's contributors live. `Edition` itself is settled — a root of its own holding
+  a `WorkId`, because hold queues key on an edition and it must therefore be independently
+  addressable; registering one requires the work already catalogued, the same cross-aggregate rule
+  crediting an author follows — but it is deliberately thin: an identity, its work, the ISBN it
+  bears when it bears one. A translator or an illustrator is an edition-level fact in a three-level
+  model — FRBR would put them on the Expression this model deliberately lacks — and `Work.Title` is
+  then the *uniform title* while each edition carries the title on its own title page. To settle
+  when the edition grows those facts, alongside the publisher and the format. A body among the
+  authors raises a question of the same kind: `LifeYears` is a person's fact, and a corporate
+  author simply carries `Unknown`.
 * Whether a hold may be placed on a *work* — any edition will do — as well as on an edition. Members
   ask for both, and the queue rules differ.
 * Whether a copy's loan history stays in Circulation forever or is archived. It is the only thing in

@@ -21,6 +21,16 @@ public sealed class WorkRepository(CatalogDbContext context) : IWorkRepository
     }
 
     /// <inheritdoc/>
+    public async ValueTask<bool> ExistsAsync(WorkId id, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+
+        return await context.Works
+            .AnyAsync(work => work.Id == id, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
     /// <remarks>
     /// <c>Add</c> and not <c>DbSet.AddAsync</c>, for the reason given on
     /// <see cref="AuthorRepository.Add"/>.

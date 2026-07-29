@@ -1,4 +1,6 @@
 using LibraryManagement.Catalog.Application.Authors.RegisterAuthor;
+using LibraryManagement.Catalog.Application.Editions.RegisterEdition;
+using LibraryManagement.Catalog.Application.Works.RegisterWork;
 using LibraryManagement.Catalog.Domain.Authors;
 using LibraryManagement.Catalog.Infrastructure.Extensions;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
@@ -156,6 +158,24 @@ public sealed class OutboxTests(SqlServerFixture sqlServer) : IAsyncLifetime
         var accessPoint = (await AccessPointsAsync("Ndiaye, Marie")).ShouldHaveSingleItem();
         accessPoint.IsAuthorized.ShouldBeTrue();
         accessPoint.Kind.ShouldBe(AccessPointKind.Author);
+    }
+
+    [Fact]
+    public async Task AnEditionsIsbn_BecomesAnAccessPointThroughTheDrain()
+    {
+        // End to end through the real container, deliberately: the ISBN rides the outbox as a
+        // value object, so this is the one test that fails if its JSON converter is forgotten.
+        var workId = Guid.CreateVersion7();
+        await InScopeAsync(async services => await services.GetRequiredService<ICommandDispatcher>()
+            .DispatchAsync(new RegisterWorkCommand(workId, "Le Petit Prince", []), Token));
+        await InScopeAsync(async services => await services.GetRequiredService<ICommandDispatcher>()
+            .DispatchAsync(new RegisterEditionCommand(Guid.CreateVersion7(), workId, "978-2-07-061275-8"), Token));
+
+        await DrainAsync();
+
+        var accessPoint = (await AccessPointsAsync("9782070612758")).ShouldHaveSingleItem();
+        accessPoint.Kind.ShouldBe(AccessPointKind.Edition);
+        accessPoint.IsAuthorized.ShouldBeTrue();
     }
 
     private Task<List<AccessPoint>> AccessPointsAsync(string form)

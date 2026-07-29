@@ -2,6 +2,7 @@ using LibraryManagement.Catalog.Application.Works.GetWorkById;
 using LibraryManagement.Catalog.Domain;
 using LibraryManagement.Shared.Domain.Errors;
 using LibraryManagement.Catalog.Domain.Authors;
+using LibraryManagement.Catalog.Domain.Editions;
 using LibraryManagement.Catalog.Domain.Works;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
 using LibraryManagement.Catalog.Infrastructure.Queries;
@@ -221,6 +222,62 @@ public sealed class CatalogPersistenceTests(SqlServerFixture sqlServer)
         await Should.ThrowAsync<ArgumentException>(
             async () => await new GetWorkByIdQueryHandler(reader)
                 .Handle(new GetWorkByIdQuery(Guid.Empty), Token));
+    }
+
+    // --- Editions ----------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task AnEdition_ComesBackWithItsWorkAndItsIsbn()
+    {
+        var work = AWork(TitleOf("Le Petit Prince"));
+        var edition = Edition.Register(
+            EditionId.Generate(),
+            work.Id,
+            Isbn.Create("978-2-07-061275-8").Match(isbn => isbn, _ => throw new InvalidOperationException()));
+
+        await SaveAsync(context =>
+        {
+            new WorkRepository(context).Add(work);
+            new EditionRepository(context).Add(edition);
+        });
+
+        await using var reader = sqlServer.NewContext();
+        var found = await new EditionRepository(reader).GetByIdAsync(edition.Id, Token);
+
+        found.ShouldNotBeNull();
+        found.WorkId.ShouldBe(work.Id);
+        found.Isbn.ShouldNotBeNull().Value.ShouldBe("9782070612758");
+    }
+
+    [Fact]
+    public async Task AnEditionWithoutAnIsbn_ComesBackWithoutOne()
+    {
+        // Null survives the round trip as the fact it is, not as an empty string in disguise.
+        var work = AWork(TitleOf("Un pamphlet local"));
+        var edition = Edition.Register(EditionId.Generate(), work.Id, isbn: null);
+
+        await SaveAsync(context =>
+        {
+            new WorkRepository(context).Add(work);
+            new EditionRepository(context).Add(edition);
+        });
+
+        await using var reader = sqlServer.NewContext();
+        (await new EditionRepository(reader).GetByIdAsync(edition.Id, Token))
+            .ShouldNotBeNull().Isbn.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task AWorksExistence_IsAnsweredWithoutLoadingIt()
+    {
+        var work = AWork(TitleOf("Mille plateaux"));
+        await SaveAsync(context => new WorkRepository(context).Add(work));
+
+        await using var reader = sqlServer.NewContext();
+        var works = new WorkRepository(reader);
+
+        (await works.ExistsAsync(work.Id, Token)).ShouldBeTrue();
+        (await works.ExistsAsync(WorkId.Generate(), Token)).ShouldBeFalse();
     }
 
     private async Task SaveAsync(Action<CatalogDbContext> work)

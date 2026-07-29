@@ -1,4 +1,5 @@
 using LibraryManagement.Catalog.Domain.Authors;
+using LibraryManagement.Catalog.Domain.Editions;
 using LibraryManagement.Catalog.Domain.Works;
 using LibraryManagement.Catalog.Infrastructure.Search;
 using Microsoft.EntityFrameworkCore;
@@ -170,6 +171,43 @@ public sealed class AccessPointProjectionTests(SqlServerFixture sqlServer)
 
         var form = (await FormsOfAsync(workId.Value)).ShouldHaveSingleItem();
         form.Form.ShouldBe("A Thousand Plateaus");
+    }
+
+    // --- Editions --------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task ARegisteredEdition_IsFindableByItsIsbn()
+    {
+        var editionId = EditionId.Generate();
+        var isbn = Isbn.Create("9782070612758").Match(value => value, _ => throw new InvalidOperationException());
+
+        await using (var context = sqlServer.NewContext())
+        {
+            await new EditionRegisteredProjector(context)
+                .Handle(new EditionRegistered(editionId, WorkId.Generate(), isbn), Token);
+            await context.SaveChangesAsync(Token);
+        }
+
+        var form = (await FormsOfAsync(editionId.Value)).ShouldHaveSingleItem();
+        form.Form.ShouldBe("9782070612758");
+        form.IsAuthorized.ShouldBeTrue();
+        form.Kind.ShouldBe(AccessPointKind.Edition);
+    }
+
+    [Fact]
+    public async Task AnEditionWithoutAnIsbn_AddsNothing()
+    {
+        // No form to answer to is a fact about the edition, not an error of the projector.
+        var editionId = EditionId.Generate();
+
+        await using (var context = sqlServer.NewContext())
+        {
+            await new EditionRegisteredProjector(context)
+                .Handle(new EditionRegistered(editionId, WorkId.Generate(), Isbn: null), Token);
+            await context.SaveChangesAsync(Token);
+        }
+
+        (await FormsOfAsync(editionId.Value)).ShouldBeEmpty();
     }
 
     // --- At-least-once ---------------------------------------------------------------------------

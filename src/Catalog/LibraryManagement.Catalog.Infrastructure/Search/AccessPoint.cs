@@ -46,4 +46,7 @@ public enum AccessPointKind
 
     /// <summary>The form leads to a work.</summary>
     Work,
+
+    /// <summary>The form leads to an edition — an ISBN.</summary>
+    Edition,
 }
