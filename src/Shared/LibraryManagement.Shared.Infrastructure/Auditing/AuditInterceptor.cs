@@ -23,10 +23,11 @@ namespace LibraryManagement.Shared.Infrastructure.Auditing;
 /// audit metadata is a fact about the write, not about the business, and no rule ever reads it.
 /// </para>
 /// <para>
-/// Runs in <c>SavingChanges</c>, after <see cref="DomainEvents.DomainEventInterceptor"/>. Order is
-/// the guarantee, not a preference: a domain event handler is entitled to change another aggregate,
-/// and those changes are still untracked when the first interceptor starts. Stamping first would
-/// leave them with no audit at all.
+/// Runs in <c>SavingChanges</c>, after <see cref="Outbox.OutboxInterceptor"/>. The order stopped
+/// carrying a guarantee when events became rows — nothing runs during the save anymore, so nothing
+/// can add trackable work between the two — and the outbox rows themselves are not
+/// <see cref="IAuditable"/>: the row says when it was stored, and who caused the event is a fact
+/// about the aggregate's own audit columns, not about the envelope.
 /// </para>
 /// <para>
 /// The clock is a <see cref="TimeProvider"/> rather than <c>DateTimeOffset.UtcNow</c> so a test can

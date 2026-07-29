@@ -29,7 +29,7 @@ public sealed class ConstrainedBehaviorTests
     private static ISender SenderWith(params Type[] behaviorsInOrder)
     {
         var services = new ServiceCollection()
-            .AddMediator()
+            .AddMediator(options => options.ServiceLifetime = ServiceLifetime.Scoped)
             .AddCatalogModule(options => options.UseSqlServer("Server=unused"));
 
         foreach (var behavior in behaviorsInOrder)

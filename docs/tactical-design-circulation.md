@@ -236,8 +236,8 @@ aside, are both visible at the desk, to the member. Crossing two aggregates *ins
 considered choice. Crossing a context boundary in a transaction is not.
 
 Both change in the command handler, on the aggregates, directly — never across an event handler. An
-event may be handled later; once the outbox exists, it always will be; and an invariant that waits is
-not an invariant.
+event is always handled later — the outbox stores it and a scheduler drains it — and an invariant
+that waits is not an invariant. See [outbox.md](outbox.md).
 
 Step 3 skips blocked borrowers rather than removing them, because at this point the debt event may
 simply not have arrived yet. The removal is the debt handler's job.

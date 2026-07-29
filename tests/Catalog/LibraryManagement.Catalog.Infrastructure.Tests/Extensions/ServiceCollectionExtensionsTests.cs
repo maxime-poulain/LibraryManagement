@@ -4,8 +4,6 @@ using LibraryManagement.Catalog.Domain.Works;
 using LibraryManagement.Catalog.Infrastructure.Extensions;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
 using LibraryManagement.Shared.Application;
-using LibraryManagement.Shared.Application.DomainEvents;
-using LibraryManagement.Shared.Domain;
 using LibraryManagement.Shared.Infrastructure.Extensions;
 using LibraryManagement.Shared.Infrastructure.UnitOfWork;
 using Microsoft.EntityFrameworkCore;
@@ -48,12 +46,11 @@ public sealed class ServiceCollectionExtensionsTests
         descriptor.KeyedImplementationType.ShouldBe(typeof(CatalogUnitOfWork));
     }
 
-    // Building the module's store now builds its interceptors, and one of them publishes. The
-    // mediator implementation of that port needs a mediator, which only a project hosting the source
-    // generator has — so this stands in for it, registered first so the shared TryAdd steps aside.
+    // Building the module's store builds its interceptors, and neither needs a mediator anymore:
+    // the outbox interceptor serializes instead of publishing, and delivery happens in the drain,
+    // which nothing here ever runs.
     private static ServiceProvider ModuleInAContainer()
         => new ServiceCollection()
-            .AddScoped<IDomainEventPublisher, SilentDomainEventPublisher>()
             .AddSharedInfrastructure()
             .AddCatalogModule(options => options.UseSqlServer("Server=unused"))
             .BuildServiceProvider();
@@ -93,12 +90,4 @@ public sealed class ServiceCollectionExtensionsTests
             .ImplementationType
             .ShouldBe(typeof(ModuleUnitOfWorkResolver));
     }
-}
-
-// These tests resolve the store; none of them saves through it, so nothing here is ever published.
-internal sealed class SilentDomainEventPublisher : IDomainEventPublisher
-{
-    public ValueTask PublishAsync(
-        IEnumerable<IHasDomainEvents> havingDomainEvents,
-        CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
 }

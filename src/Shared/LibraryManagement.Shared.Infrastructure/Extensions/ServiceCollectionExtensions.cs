@@ -6,6 +6,7 @@ using LibraryManagement.Shared.Infrastructure.Auditing;
 using LibraryManagement.Shared.Infrastructure.Behaviors;
 using LibraryManagement.Shared.Infrastructure.CQS;
 using LibraryManagement.Shared.Infrastructure.DomainEvents;
+using LibraryManagement.Shared.Infrastructure.Outbox;
 using LibraryManagement.Shared.Infrastructure.UnitOfWork;
 using LibraryManagement.Shared.Infrastructure.Validation;
 using Mediator;
@@ -69,32 +70,34 @@ public static class ServiceCollectionExtensions
     /// <para>
     /// A module calls this instead of <c>AddDbContext</c> so that attaching the interceptors is not
     /// something a module can forget. A module that forgot would save perfectly well and silently
-    /// publish nothing, which is the kind of omission that surfaces months later as "the notification
-    /// never went out".
+    /// record no events at all, which is the kind of omission that surfaces months later as "the
+    /// notification never went out".
     /// </para>
     /// <para>
-    /// <strong>The order of the two interceptors is the guarantee.</strong> Domain events are
-    /// published first, so what a handler changes is tracked before the audit interceptor walks the
-    /// change tracker; register them the other way round and a handler's writes reach the store
-    /// stamped with nothing.
+    /// Two interceptors ride every save: <see cref="OutboxInterceptor"/> turns the events the
+    /// aggregates raised into outbox rows in the same save, and <see cref="AuditInterceptor"/>
+    /// stamps the rows being written. Their order no longer carries a guarantee — nothing runs
+    /// during the save anymore, so nothing can add trackable work between them — but it stays fixed
+    /// because a deterministic pipeline is easier to reason about than an accidental one.
     /// </para>
     /// <para>
-    /// The <see cref="IServiceProvider"/> overload of <c>AddDbContext</c> is what makes this
-    /// possible: the interceptors are scoped — one holds the publisher for the current scope, the
-    /// other the staff member acting in it — and only that overload can reach a scope to resolve
-    /// them. It also makes the options themselves scoped rather than singleton, which is required
-    /// here rather than incidental: singleton options would capture one scope's interceptors and hand
-    /// them to every request for the life of the process.
+    /// The drain side is registered here too: the module's <see cref="OutboxProcessor{TContext}"/>,
+    /// and the <see cref="IDomainEventPublisher"/> it delivers through. Nothing schedules the
+    /// processor — that is the host's decision, exactly as the database provider is, which is also
+    /// why no scheduler is named anywhere in a module.
     /// </para>
     /// <para>
-    /// The cost is one options object built per scope instead of one for the whole process, which is
-    /// an allocation rather than a query. What it does not do is defeat EF Core's internal service
-    /// provider cache: the shape of the options is identical every time and only the interceptor
-    /// instances differ, so nothing forces a second provider to be built.
+    /// The <see cref="IServiceProvider"/> overload of <c>AddDbContext</c> is what lets the
+    /// interceptors come from the container: the audit one is scoped — it holds the staff member
+    /// acting — so the options are scoped too rather than singleton, which is required rather than
+    /// incidental: singleton options would capture one scope's interceptor and hand it to every
+    /// request for the life of the process. The cost is one options object per scope, an allocation
+    /// rather than a query, and EF Core's internal provider cache is unaffected because the shape of
+    /// the options never changes.
     /// </para>
     /// <para>
-    /// Everything the interceptors need is registered with <c>TryAdd</c>, because five modules will
-    /// each call this and only the first call should take effect. It is also what lets a host replace
+    /// Everything shared is registered with <c>TryAdd</c>, because five modules will each call this
+    /// and only the first call should take effect. It is also what lets a host replace
     /// <see cref="ICurrentUser"/> with a real implementation without having to remove the placeholder
     /// first.
     /// </para>
@@ -109,16 +112,21 @@ public static class ServiceCollectionExtensions
 
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddScoped<ICurrentUser, UnattributedUser>();
-        services.TryAddScoped<IDomainEventPublisher, MediatorDomainEventPublisher>();
-        services.TryAddScoped<DomainEventInterceptor>();
+        services.TryAddSingleton<IDomainEventSerializer, JsonDomainEventSerializer>();
+        services.TryAddSingleton<OutboxInterceptor>();
         services.TryAddScoped<AuditInterceptor>();
+
+        // The drain: the processor for this module's table, and the delivery port it publishes
+        // through, resolved per message from the scope the processor opens.
+        services.TryAddScoped<IDomainEventPublisher, MediatorDomainEventPublisher>();
+        services.TryAddSingleton<OutboxProcessor<TContext>>();
 
         services.AddDbContext<TContext>((serviceProvider, options) =>
         {
             configureStore(options);
 
             options.AddInterceptors(
-                serviceProvider.GetRequiredService<DomainEventInterceptor>(),
+                serviceProvider.GetRequiredService<OutboxInterceptor>(),
                 serviceProvider.GetRequiredService<AuditInterceptor>());
         });
 

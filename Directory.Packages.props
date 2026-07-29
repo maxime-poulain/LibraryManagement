@@ -28,6 +28,16 @@
              and they are exactly what a stand-in engine does not have. -->
         <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
         <PackageVersion Include="Testcontainers.MsSql" Version="4.13.0" />
+        <!-- The outbox drain's scheduler. Referenced by the composition root alone — today the
+             composition tests, the host later. No module names a scheduler, exactly as none names
+             a database provider: the processor is a plain class, and what triggers it is the
+             host's decision. -->
+        <PackageVersion Include="Hangfire.Core" Version="1.8.24" />
+        <PackageVersion Include="Hangfire.SqlServer" Version="1.8.24" />
+        <PackageVersion Include="Hangfire.NetCore" Version="1.8.24" />
+        <!-- Not referenced directly by anything. Hangfire depends on 11.0.1, which NuGet audit
+             flags (GHSA-5crp-9r3c-p9vr); transitive pinning lifts it to a patched version. -->
+        <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
     </ItemGroup>
 
     <ItemGroup Label="Analyzers applied to every project">

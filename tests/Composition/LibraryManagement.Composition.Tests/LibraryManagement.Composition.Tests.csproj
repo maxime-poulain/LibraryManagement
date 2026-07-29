@@ -24,6 +24,11 @@
         <!-- A composition root chooses the provider; the modules never name one. -->
         <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
         <PackageReference Include="Testcontainers.MsSql" />
+        <!-- The same principle, applied to the scheduler: Hangfire exists here and nowhere in
+             src/. The drain is a plain class; this project is what puts it on a clock. -->
+        <PackageReference Include="Hangfire.Core" />
+        <PackageReference Include="Hangfire.SqlServer" />
+        <PackageReference Include="Hangfire.NetCore" />
         <!-- The source generator lives here and nowhere else. It insists on a coherent set of
              handlers — one per message, one for every message — and what it registers it resolves:
              the first Send builds every handler the container knows about. Both are true of a

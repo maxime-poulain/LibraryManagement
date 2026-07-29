@@ -431,13 +431,15 @@ task for the first module, and it was done there.
 the save, and one save is already atomic. `IUnitOfWork` records the condition that would earn a
 transaction back — a command writing twice — and none does.
 
-**No invariant rides on an event handler.** Today a domain event handler runs inside the same save as
-the command that raised it, and what it changes joins that save. The planned outbox ends this: events
-will be written as rows, drained by a scheduler, and handled later in transactions of their own.
-Anything that must be true in the same instant as the command is therefore written in the command
-handler, on the aggregates, directly — the way a return closes the loan and traps the copy in one
-breath. A handler that quietly relied on joining the save would change behaviour, silently, the day
-the outbox lands.
+**No invariant rides on an event handler.** A domain event is not executed but written down: an
+outbox row in the module's own schema, inserted by the same save as the change that raised it — one
+transaction, so the store can never hold the fact without the announcement nor the announcement
+without the fact. A scheduler drains the table and delivers each event later, in a transaction of
+its own, at least once. Anything that must be true in the same instant as the command is therefore
+written in the command handler, on the aggregates, directly — the way a return closes the loan and
+traps the copy in one breath. What triggers the drain is the host's decision, exactly as the
+database provider is; no module names a scheduler. The mechanics, the delivery guarantees and the
+decisions behind them are recorded in [outbox.md](outbox.md).
 
 **The read side crosses at the SQL level, never at the assembly level.** That the read side may cross
 module boundaries is settled in §7; *how* it crosses is settled here. A cross-module projection —

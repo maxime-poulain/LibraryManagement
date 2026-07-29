@@ -31,8 +31,10 @@ public sealed class CatalogPipelineTests(SqlServerFixture sqlServer) : IAsyncLif
 
     public async ValueTask InitializeAsync()
     {
+        // Scoped for the reason OutboxTests gives: a singleton mediator would hand every handler
+        // the root scope's dependencies, and two scopes would silently share one DbContext.
         _provider = new ServiceCollection()
-            .AddMediator()
+            .AddMediator(options => options.ServiceLifetime = ServiceLifetime.Scoped)
             .AddSharedInfrastructure()
             .AddCatalogModule(options => options.UseSqlServer(sqlServer.ConnectionString))
             .BuildServiceProvider();

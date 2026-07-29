@@ -1,8 +1,10 @@
+using System.Text.Json.Serialization;
 using FluentValidation;
 using LibraryManagement.Catalog.Application.Authors.RegisterAuthor;
 using LibraryManagement.Catalog.Domain.Authors;
 using LibraryManagement.Catalog.Domain.Works;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
+using LibraryManagement.Catalog.Infrastructure.Serialization;
 using LibraryManagement.Shared.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -58,6 +60,12 @@ public static class ServiceCollectionExtensions
         // other modules have each registered a unit of work of their own.
         services.AddModuleUnitOfWork<CatalogUnitOfWork>(
             typeof(RegisterAuthorCommand).Assembly);
+
+        // The JSON side of this module's value objects, for the outbox. The shared serializer
+        // collects every converter the modules contribute; identifiers need none, the shared
+        // EntityId factory covers them all.
+        services.AddSingleton<JsonConverter, PersonNameJsonConverter>();
+        services.AddSingleton<JsonConverter, TitleJsonConverter>();
 
         return services;
     }

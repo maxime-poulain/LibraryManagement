@@ -51,7 +51,9 @@ public interface IDomainEvent : INotification
     /// <remarks>
     /// Two events describing the same state change raised twice are two distinct occurrences with
     /// two distinct identifiers. This is what lets a handler recognise work it has already done —
-    /// and what an outbox needs to guarantee an event is published once and only once.
+    /// which matters, because the outbox delivers at least once: the identifier is unique in the
+    /// outbox table, so an occurrence is never <em>stored</em> twice, and it is what a handler
+    /// deduplicates by when one is ever <em>delivered</em> twice.
     /// </remarks>
     Guid EventId { get; }
 

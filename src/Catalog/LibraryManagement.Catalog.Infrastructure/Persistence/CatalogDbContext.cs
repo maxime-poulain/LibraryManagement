@@ -1,5 +1,6 @@
 using LibraryManagement.Catalog.Domain.Authors;
 using LibraryManagement.Catalog.Domain.Works;
+using LibraryManagement.Shared.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
 
 namespace LibraryManagement.Catalog.Infrastructure.Persistence;
@@ -38,5 +39,9 @@ public sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> options)
 
         modelBuilder.HasDefaultSchema(Schema);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CatalogDbContext).Assembly);
+
+        // The module's own outbox, in the module's own schema, because an event's row must be
+        // written by the same save as the change that raised it — same context, same transaction.
+        modelBuilder.MapOutbox();
     }
 }
