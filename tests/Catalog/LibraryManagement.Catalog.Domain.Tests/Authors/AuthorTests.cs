@@ -173,6 +173,19 @@ public sealed class AuthorTests
     }
 
     [Fact]
+    public void AddVariantName_AnnouncesTheForm()
+    {
+        // A variant exists to be searched by, so the projection must learn of it the moment it is
+        // recorded — exactly as it learns of the heading.
+        var author = AnAuthor("Gary, Romain");
+
+        author.AddVariantName(Name("Ajar, Émile"));
+
+        author.DomainEvents.OfType<AuthorVariantNameAdded>().Single()
+            .VariantName.ShouldBe(Name("Ajar, Émile"));
+    }
+
+    [Fact]
     public void AddVariantName_Twice_IsRefused()
     {
         var author = AnAuthor("Gary, Romain");

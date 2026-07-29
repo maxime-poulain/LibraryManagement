@@ -68,11 +68,23 @@ public sealed class Work : AggregateRoot<WorkId>
     /// </summary>
     /// <param name="title">The title from now on.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="title"/> is null.</exception>
+    /// <remarks>
+    /// Retitling to the current title records nothing: nothing happened, and an event saying
+    /// otherwise would send the search projection to replace an access point with itself.
+    /// </remarks>
     public void Retitle(Title title)
     {
         ArgumentNullException.ThrowIfNull(title);
 
+        if (title == Title)
+        {
+            return;
+        }
+
+        var previous = Title;
         Title = title;
+
+        AddDomainEvent(new WorkRetitled(Id, previous, title));
     }
 
     /// <summary>

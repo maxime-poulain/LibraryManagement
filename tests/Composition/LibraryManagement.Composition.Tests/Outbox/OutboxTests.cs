@@ -2,6 +2,7 @@ using LibraryManagement.Catalog.Application.Authors.RegisterAuthor;
 using LibraryManagement.Catalog.Domain.Authors;
 using LibraryManagement.Catalog.Infrastructure.Extensions;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
+using LibraryManagement.Catalog.Infrastructure.Search;
 using LibraryManagement.Shared.Application.CQS;
 using LibraryManagement.Shared.Application.DomainEvents;
 using LibraryManagement.Shared.Domain.Results;
@@ -131,6 +132,29 @@ public sealed class OutboxTests(SqlServerFixture sqlServer) : IAsyncLifetime
         var companion = await FindAsync(EchoedRegistrations.Companion.ShouldNotBeNull());
         companion.ShouldNotBeNull().CreatedOn.ShouldNotBe(default);
     }
+
+    [Fact]
+    public async Task TheSearchProjection_IsFedThroughTheDrain()
+    {
+        // The one consumer the strategic design names for Catalog's events, running as a real
+        // production handler: before the drain the author exists but answers to nothing, after it
+        // the heading is an access point. Eventual consistency, observed from the outside.
+        await DispatchAsync("Ndiaye, Marie");
+
+        (await AccessPointsAsync("Ndiaye, Marie")).ShouldBeEmpty();
+
+        await DrainAsync();
+
+        var accessPoint = (await AccessPointsAsync("Ndiaye, Marie")).ShouldHaveSingleItem();
+        accessPoint.IsAuthorized.ShouldBeTrue();
+        accessPoint.Kind.ShouldBe(AccessPointKind.Author);
+    }
+
+    private Task<List<AccessPoint>> AccessPointsAsync(string form)
+        => InScopeAsync(async services => await services.GetRequiredService<CatalogDbContext>()
+            .Set<AccessPoint>().AsNoTracking()
+            .Where(accessPoint => accessPoint.Form == form)
+            .ToListAsync(Token));
 
     // --- Failing ---------------------------------------------------------------------------------
 

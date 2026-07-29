@@ -188,6 +188,7 @@ public sealed class Author : AggregateRoot<AuthorId>
         }
 
         _variantNames.Add(variantName);
+        AddDomainEvent(new AuthorVariantNameAdded(Id, variantName));
 
         return Result.Success();
     }

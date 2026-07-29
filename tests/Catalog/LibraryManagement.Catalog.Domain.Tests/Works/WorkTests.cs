@@ -94,6 +94,32 @@ public sealed class WorkTests
     }
 
     [Fact]
+    public void Retitle_AnnouncesBothTitles()
+    {
+        // The projection replaces one access point with the other, so it needs the outgoing title
+        // as much as the incoming one.
+        var work = AWork();
+
+        work.Retitle(TitleOf("A Thousand Plateaus"));
+
+        var retitled = work.DomainEvents.OfType<WorkRetitled>().Single();
+        retitled.PreviousTitle.ShouldBe(TitleOf("Mille plateaux"));
+        retitled.NewTitle.ShouldBe(TitleOf("A Thousand Plateaus"));
+    }
+
+    [Fact]
+    public void Retitle_ToTheCurrentTitle_RecordsNothing()
+    {
+        // Nothing happened, and an event saying otherwise would send the projection to replace an
+        // access point with itself.
+        var work = AWork();
+
+        work.Retitle(TitleOf("Mille plateaux"));
+
+        work.DomainEvents.OfType<WorkRetitled>().ShouldBeEmpty();
+    }
+
+    [Fact]
     public void AWork_HoldsIdentifiersAndNeverAuthors()
     {
         // Two aggregates. Were an Author reachable from a Work, loading one would drag the other

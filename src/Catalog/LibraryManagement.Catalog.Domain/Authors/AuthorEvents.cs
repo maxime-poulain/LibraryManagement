@@ -46,3 +46,14 @@ public sealed record AuthorHeadingCorrected(
     AuthorId AuthorId,
     PersonName PreviousName,
     PersonName CorrectedName) : DomainEvent;
+
+/// <summary>
+/// Another form the person is known by was recorded.
+/// </summary>
+/// <param name="AuthorId">The record it leads back to.</param>
+/// <param name="VariantName">The form.</param>
+/// <remarks>
+/// A variant exists to be searched by — it is the entire reason authority files record them — so the
+/// search projection must learn of it the moment it is recorded, exactly as it learns of the heading.
+/// </remarks>
+public sealed record AuthorVariantNameAdded(AuthorId AuthorId, PersonName VariantName) : DomainEvent;
