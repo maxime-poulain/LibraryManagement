@@ -15,7 +15,7 @@ public sealed class WorkConfiguration : AggregateRootConfiguration<Work, WorkId>
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        builder.ToTable("Works");
+        builder.ToTable("Work");
 
         builder.Property(work => work.Title)
             .HasConversion(title => title.Value, value => TitleOf(value))
@@ -32,7 +32,7 @@ public sealed class WorkConfiguration : AggregateRootConfiguration<Work, WorkId>
         // so loading one can never drag the other along.
         builder.OwnsMany(work => work.AuthorIds, credit =>
         {
-            credit.ToTable("WorkAuthors");
+            credit.ToTable("WorkAuthor");
             credit.WithOwner().HasForeignKey("WorkId");
             credit.Property(id => id.Value).HasColumnName("AuthorId");
             credit.HasKey("WorkId", "Value");

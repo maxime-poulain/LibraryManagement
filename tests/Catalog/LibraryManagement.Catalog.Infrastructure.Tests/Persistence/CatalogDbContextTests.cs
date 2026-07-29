@@ -71,7 +71,7 @@ public sealed class CatalogDbContextTests(SqlServerFixture sqlServer)
             .FindNavigation(nameof(Author.VariantNames))!
             .TargetEntityType;
 
-        variants.GetTableName().ShouldBe("AuthorVariantNames");
+        variants.GetTableName().ShouldBe("AuthorVariantName");
         variants.IsOwned().ShouldBeTrue();
     }
 

@@ -20,7 +20,7 @@ public sealed class AuthorConfiguration : AggregateRootConfiguration<Author, Aut
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        builder.ToTable("Authors");
+        builder.ToTable("Author");
 
         builder.Property(author => author.AuthorizedName)
             .HasConversion(name => name.Value, value => PersonNameOf(value))
@@ -40,7 +40,7 @@ public sealed class AuthorConfiguration : AggregateRootConfiguration<Author, Aut
         // when they only know a name the author no longer uses, and that search wants an index.
         builder.OwnsMany(author => author.VariantNames, variant =>
         {
-            variant.ToTable("AuthorVariantNames");
+            variant.ToTable("AuthorVariantName");
             variant.WithOwner().HasForeignKey("AuthorId");
             variant.Property(name => name.Value)
                 .HasColumnName("Name")

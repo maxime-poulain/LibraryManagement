@@ -21,7 +21,7 @@ nothing. That is the exact failure the pattern exists to remove, and why the int
 
 ## 2. One table per module
 
-`[catalog].OutboxMessages`, mapped by `modelBuilder.MapOutbox()` in each module's own context — not
+`[catalog].OutboxMessage`, mapped by `modelBuilder.MapOutbox()` in each module's own context — not
 a central table. This is forced, not chosen: the row must be written by the same context as the
 change to share its transaction, and a central table would be a second context, a second
 transaction, and the problem back again. A module that forgets the mapping fails loudly on the

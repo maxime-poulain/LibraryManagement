@@ -34,7 +34,7 @@ public static class OutboxModelBuilderExtensions
 
         modelBuilder.Entity<OutboxMessage>(outbox =>
         {
-            outbox.ToTable("OutboxMessages");
+            outbox.ToTable("OutboxMessage");
 
             outbox.HasKey(message => message.Id);
             outbox.Property(message => message.Id).ValueGeneratedOnAdd();
@@ -58,7 +58,7 @@ public static class OutboxModelBuilderExtensions
             // holds pending rows, so its size tracks the backlog rather than the history.
             outbox.HasIndex(message => message.Id)
                 .HasFilter("[ProcessedOn] IS NULL AND [DeadOn] IS NULL")
-                .HasDatabaseName("IX_OutboxMessages_Pending");
+                .HasDatabaseName("IX_OutboxMessage_Pending");
         });
 
         return modelBuilder;
