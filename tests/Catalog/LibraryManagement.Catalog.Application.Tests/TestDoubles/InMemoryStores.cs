@@ -36,6 +36,16 @@ internal sealed class InMemoryWorkRepository : IWorkRepository
 
     public IReadOnlyCollection<Work> Added => _works.Values;
 
+    public InMemoryWorkRepository With(params Work[] works)
+    {
+        foreach (var work in works)
+        {
+            _works[work.Id] = work;
+        }
+
+        return this;
+    }
+
     public ValueTask<Work?> GetByIdAsync(WorkId id, CancellationToken cancellationToken = default)
         => ValueTask.FromResult(_works.GetValueOrDefault(id));
 
