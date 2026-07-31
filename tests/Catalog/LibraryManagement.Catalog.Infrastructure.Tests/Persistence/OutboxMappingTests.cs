@@ -7,6 +7,7 @@ namespace LibraryManagement.Catalog.Infrastructure.Tests.Persistence;
 /// The outbox table as the store actually enforces it.
 /// </summary>
 [Collection(SqlServerCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class OutboxMappingTests(SqlServerFixture sqlServer)
 {
     private static CancellationToken Token => TestContext.Current.CancellationToken;

@@ -16,6 +16,7 @@ namespace LibraryManagement.Composition.Tests.Outbox;
 /// processor directly — what this proves is only the clockwork.
 /// </summary>
 [Collection(SqlServerCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class HangfireDrainTests(SqlServerFixture sqlServer) : IAsyncLifetime
 {
     private static CancellationToken Token => TestContext.Current.CancellationToken;

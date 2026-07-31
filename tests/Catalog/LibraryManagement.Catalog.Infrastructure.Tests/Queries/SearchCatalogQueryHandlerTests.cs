@@ -13,6 +13,7 @@ namespace LibraryManagement.Catalog.Infrastructure.Tests.Queries;
 /// how the index is read back.
 /// </remarks>
 [Collection(SqlServerCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class SearchCatalogQueryHandlerTests(SqlServerFixture sqlServer)
 {
     private static CancellationToken Token => TestContext.Current.CancellationToken;

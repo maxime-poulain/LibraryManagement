@@ -15,6 +15,7 @@ namespace LibraryManagement.Catalog.Infrastructure.Tests.Search;
 /// at-least-once, so a redelivered event must land on the state it already produced.
 /// </remarks>
 [Collection(SqlServerCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class AccessPointProjectionTests(SqlServerFixture sqlServer)
 {
     private static CancellationToken Token => TestContext.Current.CancellationToken;

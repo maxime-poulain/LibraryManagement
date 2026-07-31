@@ -15,6 +15,7 @@ namespace LibraryManagement.Catalog.Infrastructure.Tests.Persistence;
 /// database had no column to put it in.
 /// </remarks>
 [Collection(SqlServerCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class AuditInterceptorTests(SqlServerFixture sqlServer)
 {
     private static CancellationToken Token => TestContext.Current.CancellationToken;
