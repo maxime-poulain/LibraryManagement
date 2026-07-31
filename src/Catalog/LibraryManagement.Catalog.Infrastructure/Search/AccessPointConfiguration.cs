@@ -33,7 +33,7 @@ public sealed class AccessPointConfiguration : IEntityTypeConfiguration<AccessPo
             .HasMaxLength(16);
 
         builder.Property(accessPoint => accessPoint.Form)
-            .HasMaxLength(Math.Max(PersonName.MaxLength, Title.MaxLength))
+            .HasMaxLength(Math.Max(NameForm.MaxLength, Title.MaxLength))
             .IsRequired();
 
         // The one question this table exists for: which records answer to this form?

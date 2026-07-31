@@ -12,7 +12,7 @@ namespace LibraryManagement.Catalog.Domain;
 public static class CatalogErrorCodes
 {
     /// <summary>A name is empty, blank, or longer than a catalogue heading may be.</summary>
-    public static readonly ErrorCode InvalidPersonName = new("Catalog.InvalidPersonName");
+    public static readonly ErrorCode InvalidName = new("Catalog.InvalidName");
 
     /// <summary>A title is empty, blank, or longer than a title may be.</summary>
     public static readonly ErrorCode InvalidTitle = new("Catalog.InvalidTitle");

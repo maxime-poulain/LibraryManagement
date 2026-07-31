@@ -14,8 +14,8 @@ public sealed class CorrectAuthorHeadingCommandHandlerTests
         => new CorrectAuthorHeadingCommandHandler(_authors)
             .Handle(command, TestContext.Current.CancellationToken);
 
-    private static PersonName NameOf(string value)
-        => PersonName.Create(value).Match(name => name, _ => throw new InvalidOperationException());
+    private static NameForm NameOf(string value)
+        => NameForm.Create(value).Match(name => name, _ => throw new InvalidOperationException());
 
     private static Author AnAuthor(string name = "Hugo, Vicotr")
         => Author.Register(AuthorId.Generate(), NameOf(name), LifeYears.Unknown);

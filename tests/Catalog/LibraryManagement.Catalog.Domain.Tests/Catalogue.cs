@@ -10,7 +10,7 @@ namespace LibraryManagement.Catalog.Domain.Tests;
 // it asserts rather than as a chain of matches.
 internal static class Catalogue
 {
-    public static PersonName Name(string value) => Unwrap(PersonName.Create(value));
+    public static NameForm Name(string value) => Unwrap(NameForm.Create(value));
 
     public static Title TitleOf(string value) => Unwrap(Title.Create(value));
 

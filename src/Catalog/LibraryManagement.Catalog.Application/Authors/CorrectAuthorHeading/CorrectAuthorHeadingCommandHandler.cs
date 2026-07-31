@@ -29,6 +29,6 @@ public sealed class CorrectAuthorHeadingCommandHandler(IAuthorRepository authors
                 $"No author is catalogued under '{authorId}'.");
         }
 
-        return PersonName.Create(command.CorrectedName).Bind(author.CorrectHeading);
+        return NameForm.Create(command.CorrectedName).Bind(author.CorrectHeading);
     }
 }

@@ -14,7 +14,7 @@ public sealed class RegisterAuthorCommandValidatorTests
         int? deathYear = null)
         => new(authorId ?? Guid.CreateVersion7(), authorizedName, birthYear, deathYear);
 
-    private static string TooLongAName() => new('x', PersonName.MaxLength + 1);
+    private static string TooLongAName() => new('x', NameForm.MaxLength + 1);
 
     // --- What a well-formed request looks like ---------------------------------------------------
 

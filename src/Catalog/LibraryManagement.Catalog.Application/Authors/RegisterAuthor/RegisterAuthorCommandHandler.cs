@@ -20,7 +20,7 @@ public sealed class RegisterAuthorCommandHandler(IAuthorRepository authors)
 
         // Combine rather than chain: the name and the years are independent, so an employee who got
         // both wrong should be told both times rather than once per attempt.
-        var result = PersonName.Create(command.AuthorizedName)
+        var result = NameForm.Create(command.AuthorizedName)
             .Combine(LifeYears.Create(command.BirthYear, command.DeathYear))
             .Bind(parts =>
             {

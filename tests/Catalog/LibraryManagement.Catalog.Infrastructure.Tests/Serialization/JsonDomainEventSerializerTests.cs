@@ -18,10 +18,10 @@ namespace LibraryManagement.Catalog.Infrastructure.Tests.Serialization;
 public sealed class JsonDomainEventSerializerTests
 {
     private static JsonDomainEventSerializer Serializer()
-        => new([new PersonNameJsonConverter(), new TitleJsonConverter(), new IsbnJsonConverter()]);
+        => new([new NameFormJsonConverter(), new TitleJsonConverter(), new IsbnJsonConverter()]);
 
-    private static PersonName Name(string value)
-        => PersonName.Create(value).Match(name => name, _ => throw new InvalidOperationException());
+    private static NameForm Name(string value)
+        => NameForm.Create(value).Match(name => name, _ => throw new InvalidOperationException());
 
     private static Title TitleOf(string value)
         => Title.Create(value).Match(title => title, _ => throw new InvalidOperationException());

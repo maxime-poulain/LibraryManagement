@@ -4,7 +4,7 @@ using static LibraryManagement.Catalog.Domain.Tests.Catalogue;
 
 namespace LibraryManagement.Catalog.Domain.Tests.Authors;
 
-public sealed class PersonNameTests
+public sealed class NameFormTests
 {
     [Theory]
     [InlineData(null)]
@@ -12,8 +12,8 @@ public sealed class PersonNameTests
     [InlineData("   ")]
     public void Create_WithoutAName_Fails(string? value)
     {
-        ErrorsOf(PersonName.Create(value))
-            .Single().ErrorCode.ShouldBe(CatalogErrorCodes.InvalidPersonName);
+        ErrorsOf(NameForm.Create(value))
+            .Single().ErrorCode.ShouldBe(CatalogErrorCodes.InvalidName);
     }
 
     [Fact]
@@ -25,14 +25,14 @@ public sealed class PersonNameTests
     [Fact]
     public void Create_LongerThanAHeadingMayRun_Fails()
     {
-        ErrorsOf(PersonName.Create(new string('x', PersonName.MaxLength + 1)))
-            .Single().ErrorCode.ShouldBe(CatalogErrorCodes.InvalidPersonName);
+        ErrorsOf(NameForm.Create(new string('x', NameForm.MaxLength + 1)))
+            .Single().ErrorCode.ShouldBe(CatalogErrorCodes.InvalidName);
     }
 
     [Fact]
     public void Create_AtExactlyTheLimit_Succeeds()
     {
-        Name(new string('x', PersonName.MaxLength)).Value.Length.ShouldBe(PersonName.MaxLength);
+        Name(new string('x', NameForm.MaxLength)).Value.Length.ShouldBe(NameForm.MaxLength);
     }
 
     [Fact]

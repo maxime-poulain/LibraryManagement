@@ -215,8 +215,8 @@ public sealed class AuthorTests
     {
         var author = AnAuthor();
 
-        author.VariantNames.ShouldBeAssignableTo<IReadOnlyList<PersonName>>();
-        (author.VariantNames as ICollection<PersonName>)?.IsReadOnly.ShouldBeTrue();
+        author.VariantNames.ShouldBeAssignableTo<IReadOnlyList<NameForm>>();
+        (author.VariantNames as ICollection<NameForm>)?.IsReadOnly.ShouldBeTrue();
     }
 
     [Fact]

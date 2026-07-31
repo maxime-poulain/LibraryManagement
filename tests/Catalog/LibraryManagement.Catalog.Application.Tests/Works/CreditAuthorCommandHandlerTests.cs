@@ -19,7 +19,7 @@ public sealed class CreditAuthorCommandHandlerTests
     private static Author AnAuthor()
         => Author.Register(
             AuthorId.Generate(),
-            PersonName.Create("Guattari, Félix").Match(name => name, _ => throw new InvalidOperationException()),
+            NameForm.Create("Guattari, Félix").Match(name => name, _ => throw new InvalidOperationException()),
             LifeYears.Unknown);
 
     private static Work AWork(params AuthorId[] authorIds)

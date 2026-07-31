@@ -66,7 +66,7 @@ public static class ServiceCollectionExtensions
         // The JSON side of this module's value objects, for the outbox. The shared serializer
         // collects every converter the modules contribute; identifiers need none, the shared
         // EntityId factory covers them all.
-        services.AddSingleton<JsonConverter, PersonNameJsonConverter>();
+        services.AddSingleton<JsonConverter, NameFormJsonConverter>();
         services.AddSingleton<JsonConverter, TitleJsonConverter>();
         services.AddSingleton<JsonConverter, IsbnJsonConverter>();
 

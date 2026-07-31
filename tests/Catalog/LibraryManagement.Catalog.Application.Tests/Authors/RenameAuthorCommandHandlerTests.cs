@@ -13,8 +13,8 @@ public sealed class RenameAuthorCommandHandlerTests
     private ValueTask<Result> Handle(RenameAuthorCommand command)
         => new RenameAuthorCommandHandler(_authors).Handle(command, TestContext.Current.CancellationToken);
 
-    private static PersonName NameOf(string value)
-        => PersonName.Create(value).Match(name => name, _ => throw new InvalidOperationException());
+    private static NameForm NameOf(string value)
+        => NameForm.Create(value).Match(name => name, _ => throw new InvalidOperationException());
 
     private static Author AnAuthor(string name = "Ernaux, Annie")
         => Author.Register(AuthorId.Generate(), NameOf(name), LifeYears.Unknown);
@@ -63,7 +63,7 @@ public sealed class RenameAuthorCommandHandlerTests
 
         var result = await Handle(new RenameAuthorCommand(author.Id.Value, "   "));
 
-        ErrorsOf(result).Single().ErrorCode.ShouldBe(CatalogErrorCodes.InvalidPersonName);
+        ErrorsOf(result).Single().ErrorCode.ShouldBe(CatalogErrorCodes.InvalidName);
         author.AuthorizedName.Value.ShouldBe("Ernaux, Annie");
     }
 

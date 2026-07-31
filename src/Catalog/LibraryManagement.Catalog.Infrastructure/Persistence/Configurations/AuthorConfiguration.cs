@@ -23,8 +23,8 @@ public sealed class AuthorConfiguration : AggregateRootConfiguration<Author, Aut
         builder.ToTable("Author");
 
         builder.Property(author => author.AuthorizedName)
-            .HasConversion(name => name.Value, value => PersonNameOf(value))
-            .HasMaxLength(PersonName.MaxLength)
+            .HasConversion(name => name.Value, value => NameFormOf(value))
+            .HasMaxLength(NameForm.MaxLength)
             .IsRequired();
 
         // Filing depends on it, and a search for an author is the most common read in a catalogue.
@@ -44,7 +44,7 @@ public sealed class AuthorConfiguration : AggregateRootConfiguration<Author, Aut
             variant.WithOwner().HasForeignKey("AuthorId");
             variant.Property(name => name.Value)
                 .HasColumnName("Name")
-                .HasMaxLength(PersonName.MaxLength)
+                .HasMaxLength(NameForm.MaxLength)
                 .IsRequired();
             variant.HasKey("AuthorId", "Value");
             variant.HasIndex(name => name.Value);
@@ -54,10 +54,10 @@ public sealed class AuthorConfiguration : AggregateRootConfiguration<Author, Aut
             .UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 
-    // A stored name has already been through PersonName.Create once. Re-validating on the way back
+    // A stored name has already been through NameForm.Create once. Re-validating on the way back
     // would turn a corrupt row into an exception no caller can act on, so materialization trusts
     // the store and any repair belongs in a migration.
-    private static PersonName PersonNameOf(string value)
-        => PersonName.Create(value).Match(name => name, _ => throw new InvalidOperationException(
+    private static NameForm NameFormOf(string value)
+        => NameForm.Create(value).Match(name => name, _ => throw new InvalidOperationException(
             $"The catalogue holds '{value}' as a name, which is not a valid one."));
 }

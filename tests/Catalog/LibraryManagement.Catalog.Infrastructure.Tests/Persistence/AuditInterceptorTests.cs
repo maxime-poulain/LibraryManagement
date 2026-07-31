@@ -25,8 +25,8 @@ public sealed class AuditInterceptorTests(SqlServerFixture sqlServer)
     private static readonly DateTimeOffset Opened = new(2026, 3, 14, 9, 30, 0, TimeSpan.Zero);
     private static readonly DateTimeOffset Corrected = new(2026, 5, 2, 16, 45, 0, TimeSpan.Zero);
 
-    private static PersonName Name(string value)
-        => PersonName.Create(value).Match(name => name, _ => throw new InvalidOperationException());
+    private static NameForm Name(string value)
+        => NameForm.Create(value).Match(name => name, _ => throw new InvalidOperationException());
 
     private static Author AnAuthor(string name = "Ernaux, Annie")
         => Author.Register(AuthorId.Generate(), Name(name), LifeYears.Unknown);

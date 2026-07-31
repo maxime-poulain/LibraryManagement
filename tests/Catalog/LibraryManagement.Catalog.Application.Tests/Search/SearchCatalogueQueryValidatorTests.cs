@@ -31,7 +31,7 @@ public sealed class SearchCatalogueQueryValidatorTests
     {
         // Longer than the longest form the catalogue can hold, so this is not a search that
         // happens to find nothing — it is a request that never could.
-        var tooLong = new string('x', Math.Max(PersonName.MaxLength, Title.MaxLength) + 1);
+        var tooLong = new string('x', Math.Max(NameForm.MaxLength, Title.MaxLength) + 1);
 
         var outcome = _validator.Validate(new SearchCatalogueQuery(tooLong));
 

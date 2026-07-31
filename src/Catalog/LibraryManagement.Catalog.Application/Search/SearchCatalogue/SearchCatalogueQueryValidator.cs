@@ -15,7 +15,7 @@ namespace LibraryManagement.Catalog.Application.Search.SearchCatalogue;
 /// </remarks>
 public sealed class SearchCatalogueQueryValidator : AbstractValidator<SearchCatalogueQuery>
 {
-    private static readonly int LongestForm = Math.Max(PersonName.MaxLength, Title.MaxLength);
+    private static readonly int LongestForm = Math.Max(NameForm.MaxLength, Title.MaxLength);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SearchCatalogueQueryValidator"/> class.

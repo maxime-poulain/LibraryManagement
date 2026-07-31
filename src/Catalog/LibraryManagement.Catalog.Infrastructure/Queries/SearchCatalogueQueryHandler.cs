@@ -39,7 +39,7 @@ public sealed class SearchCatalogueQueryHandler(CatalogDbContext context)
         // would otherwise match the entire index, which no caller has asked for.
         ArgumentException.ThrowIfNullOrWhiteSpace(query.SearchTerm);
 
-        // Trimmed because every stored form is: PersonName and Title trim on creation, so the
+        // Trimmed because every stored form is: NameForm and Title trim on creation, so the
         // space a search box leaves behind would otherwise miss what the catalogue holds.
         var term = query.SearchTerm.Trim();
 

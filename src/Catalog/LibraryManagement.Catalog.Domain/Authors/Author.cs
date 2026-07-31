@@ -23,7 +23,7 @@ namespace LibraryManagement.Catalog.Domain.Authors;
 /// </remarks>
 public sealed class Author : AggregateRoot<AuthorId>
 {
-    private readonly List<PersonName> _variantNames = [];
+    private readonly List<NameForm> _variantNames = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Author"/> class with an identity and a heading.
@@ -33,14 +33,14 @@ public sealed class Author : AggregateRoot<AuthorId>
     /// afterwards, by <see cref="CorrectLifeYears"/>, which is also what lets a mapper rebuild an
     /// author from the store: a complex value cannot be passed through a constructor there.
     /// </remarks>
-    private Author(AuthorId id, PersonName authorizedName) : base(id)
+    private Author(AuthorId id, NameForm authorizedName) : base(id)
     {
         AuthorizedName = authorizedName;
         LifeYears = LifeYears.Unknown;
     }
 
     /// <summary>Gets the name the catalogue files this person under.</summary>
-    public PersonName AuthorizedName { get; private set; }
+    public NameForm AuthorizedName { get; private set; }
 
     /// <summary>Gets the years of birth and death, either of which may be unknown.</summary>
     public LifeYears LifeYears { get; private set; }
@@ -48,7 +48,7 @@ public sealed class Author : AggregateRoot<AuthorId>
     /// <summary>
     /// Gets every other form the person has been known by, each of which leads back to this record.
     /// </summary>
-    public IReadOnlyList<PersonName> VariantNames => _variantNames.AsReadOnly();
+    public IReadOnlyList<NameForm> VariantNames => _variantNames.AsReadOnly();
 
     /// <summary>
     /// Opens an authority record for a person.
@@ -60,11 +60,11 @@ public sealed class Author : AggregateRoot<AuthorId>
     /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
     /// <remarks>
     /// Returns an <see cref="Author"/> and not a <see cref="Result{TValue}"/>: every rule that could
-    /// refuse one has already been enforced by <see cref="PersonName"/> and <see cref="LifeYears"/>,
+    /// refuse one has already been enforced by <see cref="NameForm"/> and <see cref="LifeYears"/>,
     /// so this cannot fail. A factory that wrapped a value it can always produce would ask every
     /// caller to handle a failure that does not exist.
     /// </remarks>
-    public static Author Register(AuthorId id, PersonName authorizedName, LifeYears lifeYears)
+    public static Author Register(AuthorId id, NameForm authorizedName, LifeYears lifeYears)
     {
         ArgumentNullException.ThrowIfNull(id);
         ArgumentNullException.ThrowIfNull(authorizedName);
@@ -100,7 +100,7 @@ public sealed class Author : AggregateRoot<AuthorId>
     /// nothing: the two operations differ in exactly what they leave behind.
     /// </para>
     /// </remarks>
-    public Result Rename(PersonName newAuthorizedName)
+    public Result Rename(NameForm newAuthorizedName)
     {
         ArgumentNullException.ThrowIfNull(newAuthorizedName);
 
@@ -142,7 +142,7 @@ public sealed class Author : AggregateRoot<AuthorId>
     /// secondary — and the invariant that a heading is never also a variant holds either way.
     /// </para>
     /// </remarks>
-    public Result CorrectHeading(PersonName correctedName)
+    public Result CorrectHeading(NameForm correctedName)
     {
         ArgumentNullException.ThrowIfNull(correctedName);
 
@@ -169,7 +169,7 @@ public sealed class Author : AggregateRoot<AuthorId>
     /// <param name="variantName">The alternative form.</param>
     /// <returns>Success, or the reason the name was refused.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="variantName"/> is null.</exception>
-    public Result AddVariantName(PersonName variantName)
+    public Result AddVariantName(NameForm variantName)
     {
         ArgumentNullException.ThrowIfNull(variantName);
 
@@ -213,6 +213,6 @@ public sealed class Author : AggregateRoot<AuthorId>
     /// <see langword="true"/> when the name is the heading or one of its variants;
     /// <see langword="false"/> otherwise.
     /// </returns>
-    public bool IsKnownAs(PersonName name)
+    public bool IsKnownAs(NameForm name)
         => AuthorizedName == name || _variantNames.Contains(name);
 }

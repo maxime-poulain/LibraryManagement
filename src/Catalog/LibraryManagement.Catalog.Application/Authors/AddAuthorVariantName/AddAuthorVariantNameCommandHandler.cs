@@ -29,6 +29,6 @@ public sealed class AddAuthorVariantNameCommandHandler(IAuthorRepository authors
                 $"No author is catalogued under '{authorId}'.");
         }
 
-        return PersonName.Create(command.VariantName).Bind(author.AddVariantName);
+        return NameForm.Create(command.VariantName).Bind(author.AddVariantName);
     }
 }

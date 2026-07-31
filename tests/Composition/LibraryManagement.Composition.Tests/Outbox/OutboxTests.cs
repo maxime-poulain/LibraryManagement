@@ -279,8 +279,8 @@ public sealed class EchoingAuthorHandler(IAuthorRepository authors) : IDomainEve
             // outbox row, drained next — is answered by silence and the chain ends there.
             var companion = Author.Register(
                 AuthorId.Generate(),
-                PersonName.Create(EchoedRegistrations.CompanionName).Match(
-                    personName => personName,
+                NameForm.Create(EchoedRegistrations.CompanionName).Match(
+                    nameForm => nameForm,
                     errors => throw new InvalidOperationException(errors[0].ToString())),
                 LifeYears.Unknown);
 
@@ -307,7 +307,7 @@ public static class EchoedRegistrations
     /// <summary>The name the companion is registered under, carrying no marker.</summary>
     public const string CompanionName = "Written by a handler";
 
-    public static List<PersonName> Seen { get; } = [];
+    public static List<NameForm> Seen { get; } = [];
 
     public static AuthorId? Companion { get; set; }
 

@@ -20,7 +20,7 @@ public sealed class CorrectAuthorHeadingCommandValidator : AbstractValidator<Cor
         RuleFor(command => command.CorrectedName)
             .NotEmpty()
             .WithMessage("A corrected name is required.")
-            .MaximumLength(PersonName.MaxLength)
-            .WithMessage($"A corrected name may not exceed {PersonName.MaxLength} characters.");
+            .MaximumLength(NameForm.MaxLength)
+            .WithMessage($"A corrected name may not exceed {NameForm.MaxLength} characters.");
     }
 }

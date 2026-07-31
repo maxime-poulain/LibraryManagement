@@ -33,6 +33,6 @@ public sealed class RenameAuthorCommandHandler(IAuthorRepository authors)
                 $"No author is catalogued under '{authorId}'.");
         }
 
-        return PersonName.Create(command.NewAuthorizedName).Bind(author.Rename);
+        return NameForm.Create(command.NewAuthorizedName).Bind(author.Rename);
     }
 }

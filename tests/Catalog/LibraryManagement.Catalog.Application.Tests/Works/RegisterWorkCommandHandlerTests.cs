@@ -18,7 +18,7 @@ public sealed class RegisterWorkCommandHandlerTests
     private static Author AnAuthor()
         => Author.Register(
             AuthorId.Generate(),
-            PersonName.Create("Deleuze, Gilles").Match(name => name, _ => throw new InvalidOperationException()),
+            NameForm.Create("Deleuze, Gilles").Match(name => name, _ => throw new InvalidOperationException()),
             LifeYears.Unknown);
 
     private static RegisterWorkCommand ACommand(string title, params Guid[] authorIds)

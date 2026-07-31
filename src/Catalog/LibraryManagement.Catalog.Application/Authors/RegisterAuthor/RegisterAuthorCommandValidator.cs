@@ -33,8 +33,8 @@ public sealed class RegisterAuthorCommandValidator : AbstractValidator<RegisterA
         RuleFor(command => command.AuthorizedName)
             .NotEmpty()
             .WithMessage("An authorized name is required.")
-            .MaximumLength(PersonName.MaxLength)
-            .WithMessage($"An authorized name may not exceed {PersonName.MaxLength} characters.");
+            .MaximumLength(NameForm.MaxLength)
+            .WithMessage($"An authorized name may not exceed {NameForm.MaxLength} characters.");
 
         RuleFor(command => command.BirthYear)
             .InclusiveBetween(LifeYears.EarliestYear, LifeYears.LatestYear)

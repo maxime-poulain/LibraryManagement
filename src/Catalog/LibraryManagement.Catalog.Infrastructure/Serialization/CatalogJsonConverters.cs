@@ -15,26 +15,26 @@ namespace LibraryManagement.Catalog.Infrastructure.Serialization;
 // EntityId<T> there is or will be.
 
 /// <summary>
-/// Serializes <see cref="PersonName"/> as the heading itself.
+/// Serializes <see cref="NameForm"/> as the heading itself.
 /// </summary>
-public sealed class PersonNameJsonConverter : JsonConverter<PersonName>
+public sealed class NameFormJsonConverter : JsonConverter<NameForm>
 {
     /// <inheritdoc/>
-    public override PersonName Read(
+    public override NameForm Read(
         ref Utf8JsonReader reader,
         Type typeToConvert,
         JsonSerializerOptions options)
     {
         var value = reader.GetString();
 
-        return PersonName.Create(value).Match(
+        return NameForm.Create(value).Match(
             name => name,
             _ => throw new InvalidOperationException(
                 $"The outbox holds '{value}' as a name, which is not a valid one."));
     }
 
     /// <inheritdoc/>
-    public override void Write(Utf8JsonWriter writer, PersonName value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, NameForm value, JsonSerializerOptions options)
     {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);

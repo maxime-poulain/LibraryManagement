@@ -43,7 +43,7 @@ public sealed class RenameAuthorCommandValidatorTests
     [Fact]
     public void ANameLongerThanAHeadingMayBe_IsRejected()
     {
-        var outcome = _validator.Validate(ARename(newAuthorizedName: new string('x', PersonName.MaxLength + 1)));
+        var outcome = _validator.Validate(ARename(newAuthorizedName: new string('x', NameForm.MaxLength + 1)));
 
         outcome.IsValid.ShouldBeFalse();
         outcome.Errors.ShouldContain(

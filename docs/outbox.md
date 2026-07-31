@@ -43,7 +43,7 @@ conversions:
   back through `FromValue` — the `static abstract` member, reachable from a generic without
   reflection per call.
 * Each module contributes one small converter per value object its events carry
-  (`PersonNameJsonConverter`, `TitleJsonConverter`), registered as `JsonConverter` singletons and
+  (`NameFormJsonConverter`, `TitleJsonConverter`), registered as `JsonConverter` singletons and
   collected by the shared serializer.
 
 Reading trusts the store: a payload the domain refuses is corruption, and it throws rather than

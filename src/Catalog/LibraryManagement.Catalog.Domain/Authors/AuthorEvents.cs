@@ -13,7 +13,7 @@ namespace LibraryManagement.Catalog.Domain.Authors;
 /// is what an integration event does at the boundary, and doing it here would pay that cost with
 /// nothing bought.
 /// </remarks>
-public sealed record AuthorRegistered(AuthorId AuthorId, PersonName AuthorizedName) : DomainEvent;
+public sealed record AuthorRegistered(AuthorId AuthorId, NameForm AuthorizedName) : DomainEvent;
 
 /// <summary>
 /// A person is now filed under a different name.
@@ -27,8 +27,8 @@ public sealed record AuthorRegistered(AuthorId AuthorId, PersonName AuthorizedNa
 /// </remarks>
 public sealed record AuthorRenamed(
     AuthorId AuthorId,
-    PersonName PreviousName,
-    PersonName NewName) : DomainEvent;
+    NameForm PreviousName,
+    NameForm NewName) : DomainEvent;
 
 /// <summary>
 /// A heading was wrong, and has been corrected.
@@ -44,8 +44,8 @@ public sealed record AuthorRenamed(
 /// </remarks>
 public sealed record AuthorHeadingCorrected(
     AuthorId AuthorId,
-    PersonName PreviousName,
-    PersonName CorrectedName) : DomainEvent;
+    NameForm PreviousName,
+    NameForm CorrectedName) : DomainEvent;
 
 /// <summary>
 /// Another form the person is known by was recorded.
@@ -56,4 +56,4 @@ public sealed record AuthorHeadingCorrected(
 /// A variant exists to be searched by — it is the entire reason authority files record them — so the
 /// search projection must learn of it the moment it is recorded, exactly as it learns of the heading.
 /// </remarks>
-public sealed record AuthorVariantNameAdded(AuthorId AuthorId, PersonName VariantName) : DomainEvent;
+public sealed record AuthorVariantNameAdded(AuthorId AuthorId, NameForm VariantName) : DomainEvent;
