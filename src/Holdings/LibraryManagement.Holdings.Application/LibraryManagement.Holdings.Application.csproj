@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <PackageReference Include="FluentValidation" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Shared\LibraryManagement.Shared.Application\LibraryManagement.Shared.Application.csproj" />
+        <ProjectReference Include="..\LibraryManagement.Holdings.Domain\LibraryManagement.Holdings.Domain.csproj" />
+        <!-- Catalog's published language, and only that. Not its domain, not its application: the
+             whole point of the edge is that Holdings names an edition without describing one, and a
+             reference to the module itself would carry the catalog along with the identifier. -->
+        <ProjectReference Include="..\..\Catalog\LibraryManagement.Catalog.PublishedLanguage\LibraryManagement.Catalog.PublishedLanguage.csproj" />
+    </ItemGroup>
+
+</Project>

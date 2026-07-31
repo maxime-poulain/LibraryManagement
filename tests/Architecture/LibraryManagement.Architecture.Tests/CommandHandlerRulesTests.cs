@@ -1,5 +1,6 @@
 using LibraryManagement.Catalog.Application.Authors.RegisterAuthor;
 using LibraryManagement.Catalog.Application.Works.RegisterWork;
+using LibraryManagement.Holdings.Application.Copies.AcquireCopy;
 using LibraryManagement.Shared.Application.CQS;
 using LibraryManagement.Shared.Domain.Results;
 
@@ -35,6 +36,11 @@ public sealed class CommandHandlerRulesTests
 
         handlers.ShouldContain(typeof(RegisterAuthorCommandHandler).FullName);
         handlers.ShouldContain(typeof(RegisterWorkCommandHandler).FullName);
+
+        // One from each module, so that a module added to the solution but forgotten in this
+        // project's references is a failing test rather than a silently narrower scan. Green over
+        // one module reads exactly like green over two.
+        handlers.ShouldContain(typeof(AcquireCopyCommandHandler).FullName);
     }
 
     // --- The rule itself, exercised against deliberate violations --------------------------------

@@ -96,7 +96,7 @@ because a schema name and an error code are contracts and a document is not.
 
 | Code | Métier | Meaning |
 |---|---|---|
-| `Copy` | Exemplaire | One physical object the library owns, of one edition. The word for it everywhere: *item* is refused, because the cap in §2 of the tactical design counted loans and holds under that name and neither of them is one. |
+| `Copy` | Exemplaire | One physical object the library owns, of one edition. This context's word for it, and the only one its code uses: *item* is refused here, because the cap in §2 of the tactical design counted loans and holds under that name and neither of them is one. Ordinary English elsewhere in this document — *an item that will not come back* — is prose and not a concept. |
 | `Barcode` | Code-barres | The label that identifies a copy at the desk. Unique in the library. |
 | `Shelfmark` | Cote | The term for the call number that decides where *this copy* stands — `Shelfmark` in code and in prose, *call number* never. Per copy, not per edition: one copy of a title may live in the children's section and another in the reserve. Built from the class number Catalog assigns, owned here. |
 | `Condition` | État | The physical state of a copy: good, worn, damaged. |
@@ -109,7 +109,7 @@ three times is an enumeration that has not been decided.
 
 | Code | Métier | Meaning |
 |---|---|---|
-| `OnShelf` | En rayon | Available to be lent, as far as Holdings can tell. Whether it is out on loan is a Circulation fact — see §6. |
+| `InService` | En service | Nothing about this copy prevents it from being lent, as far as Holdings can tell. Not `OnShelf`: a copy borrowed last Tuesday is not on a shelf, and this context has no way to know that it isn't — a value naming a physical location would be false for a large share of the stock at any moment, and silently so. Whether it is out on loan is a Circulation fact — see §6. |
 | `InRepair` | En réparation | Temporarily out of the lendable stock, and expected back in it. |
 | `ReferenceOnly` | Exclu du prêt | Held, consultable on site, never lent. |
 | `Withdrawn` | Désherbé | Removed from the collection **on purpose**. *Désherbage* is the librarian's word for weeding: routine work, not a loss. |
@@ -458,6 +458,12 @@ and that is the point: an integrity constraint across modules is a coupling the 
 **One `DbContext` per module** follows from wanting the modules genuinely separate. A single context
 with five schemas would compile, and one `DbSet<Copy>` referenced from a Circulation handler would
 end the separation without anything failing.
+
+**Creating that schema is the host's decision, exactly as the provider is.** A module describes
+tables and indexes and creates none, and a migration names an engine, which a module may not. Today
+only the test fixtures build a schema, and they do it with `EnsureCreated`;
+[migrations.md](migrations.md) records why there are no migrations yet, the shape they will take,
+and what has to happen first.
 
 That settled the question left open when the shared infrastructure was written: **a unit of work
 cannot be resolved by type alone**, because five modules register five implementations of one

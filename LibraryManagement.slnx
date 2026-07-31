@@ -9,6 +9,13 @@
     <Project Path="src/Catalog/LibraryManagement.Catalog.Application/LibraryManagement.Catalog.Application.csproj" />
     <Project Path="src/Catalog/LibraryManagement.Catalog.Domain/LibraryManagement.Catalog.Domain.csproj" />
     <Project Path="src/Catalog/LibraryManagement.Catalog.Infrastructure/LibraryManagement.Catalog.Infrastructure.csproj" />
+    <Project Path="src/Catalog/LibraryManagement.Catalog.PublishedLanguage/LibraryManagement.Catalog.PublishedLanguage.csproj" />
+  </Folder>
+  <Folder Name="/src/Holdings/">
+    <Project Path="src/Holdings/LibraryManagement.Holdings.Application/LibraryManagement.Holdings.Application.csproj" />
+    <Project Path="src/Holdings/LibraryManagement.Holdings.Domain/LibraryManagement.Holdings.Domain.csproj" />
+    <Project Path="src/Holdings/LibraryManagement.Holdings.Infrastructure/LibraryManagement.Holdings.Infrastructure.csproj" />
+    <Project Path="src/Holdings/LibraryManagement.Holdings.PublishedLanguage/LibraryManagement.Holdings.PublishedLanguage.csproj" />
   </Folder>
   <Folder Name="/src/Shared/">
     <Project Path="src/Shared/LibraryManagement.Shared.Application/LibraryManagement.Shared.Application.csproj" />
@@ -26,6 +33,11 @@
     <Project Path="tests/Catalog/LibraryManagement.Catalog.Application.Tests/LibraryManagement.Catalog.Application.Tests.csproj" />
     <Project Path="tests/Catalog/LibraryManagement.Catalog.Domain.Tests/LibraryManagement.Catalog.Domain.Tests.csproj" />
     <Project Path="tests/Catalog/LibraryManagement.Catalog.Infrastructure.Tests/LibraryManagement.Catalog.Infrastructure.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Holdings/">
+    <Project Path="tests/Holdings/LibraryManagement.Holdings.Application.Tests/LibraryManagement.Holdings.Application.Tests.csproj" />
+    <Project Path="tests/Holdings/LibraryManagement.Holdings.Domain.Tests/LibraryManagement.Holdings.Domain.Tests.csproj" />
+    <Project Path="tests/Holdings/LibraryManagement.Holdings.Infrastructure.Tests/LibraryManagement.Holdings.Infrastructure.Tests.csproj" />
   </Folder>
   <Folder Name="/Tests/Shared/">
     <Project Path="tests/Shared/LibraryManagement.Shared.Domain.Tests/LibraryManagement.Shared.Domain.Tests.csproj" />

@@ -1,5 +1,6 @@
 using Hangfire;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
+using LibraryManagement.Holdings.Infrastructure.Persistence;
 using LibraryManagement.Shared.Infrastructure.Outbox;
 
 namespace LibraryManagement.Composition.Tests.Outbox;
@@ -36,10 +37,15 @@ namespace LibraryManagement.Composition.Tests.Outbox;
 /// that tolerance on a schedule.
 /// </para>
 /// </remarks>
-public sealed class OutboxJobs(OutboxProcessor<CatalogDbContext> catalog)
+public sealed class OutboxJobs(
+    OutboxProcessor<CatalogDbContext> catalog,
+    OutboxProcessor<HoldingsDbContext> holdings)
 {
     /// <summary>The recurring job identifier the host registers the Catalog drain under.</summary>
     public const string CatalogJobId = "catalog-outbox";
+
+    /// <summary>The recurring job identifier the host registers the Holdings drain under.</summary>
+    public const string HoldingsJobId = "holdings-outbox";
 
     /// <summary>
     /// Drains the Catalog module's outbox.
@@ -54,4 +60,21 @@ public sealed class OutboxJobs(OutboxProcessor<CatalogDbContext> catalog)
     [DisableConcurrentExecution(timeoutInSeconds: 60)]
     public Task<OutboxDrainOutcome> DrainCatalogAsync(CancellationToken cancellationToken)
         => catalog.ProcessAsync(cancellationToken);
+
+    /// <summary>
+    /// Drains the Holdings module's outbox.
+    /// </summary>
+    /// <param name="cancellationToken">
+    /// Replaced by Hangfire at execution time with the server's shutdown token.
+    /// </param>
+    /// <returns>The run's outcome.</returns>
+    /// <remarks>
+    /// A second method and a second job, not a loop over the modules. Each module's table is drained
+    /// on its own schedule, blocks on its own head, and fails on its own — which is the whole point
+    /// of a table per module, and would be undone by a single job whose first poisonous message
+    /// stopped every other module's queue too.
+    /// </remarks>
+    [DisableConcurrentExecution(timeoutInSeconds: 60)]
+    public Task<OutboxDrainOutcome> DrainHoldingsAsync(CancellationToken cancellationToken)
+        => holdings.ProcessAsync(cancellationToken);
 }
