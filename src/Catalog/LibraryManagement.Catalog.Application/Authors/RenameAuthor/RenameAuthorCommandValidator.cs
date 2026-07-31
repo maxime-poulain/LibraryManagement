@@ -17,10 +17,10 @@ public sealed class RenameAuthorCommandValidator : AbstractValidator<RenameAutho
             .NotEmpty()
             .WithMessage("An author identifier is required.");
 
-        RuleFor(command => command.NewAuthorizedName)
+        RuleFor(command => command.NewPreferredName)
             .NotEmpty()
-            .WithMessage("An authorized name is required.")
+            .WithMessage("A preferred name is required.")
             .MaximumLength(NameForm.MaxLength)
-            .WithMessage($"An authorized name may not exceed {NameForm.MaxLength} characters.");
+            .WithMessage($"A preferred name may not exceed {NameForm.MaxLength} characters.");
     }
 }

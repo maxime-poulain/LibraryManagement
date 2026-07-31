@@ -11,7 +11,7 @@ namespace LibraryManagement.Catalog.Application.Authors.AddAuthorVariantName;
 /// <remarks>
 /// A variant is not decoration: it is what lets a search for a name someone no longer uses — or
 /// never officially used — still find their work, which is the entire reason authority files record
-/// them. The heading itself does not move; a person actually filed under a new name is renamed with
+/// them. The preferred name itself does not move; a person actually filed under a new name is renamed with
 /// <see cref="RenameAuthor.RenameAuthorCommand"/>.
 /// </remarks>
 public sealed record AddAuthorVariantNameCommand(

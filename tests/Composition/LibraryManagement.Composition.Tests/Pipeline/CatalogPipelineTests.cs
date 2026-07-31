@@ -96,7 +96,7 @@ public sealed class CatalogPipelineTests(SqlServerFixture sqlServer) : IAsyncLif
         var author = await FindAsync(command.AuthorId);
 
         author.ShouldNotBeNull();
-        author.AuthorizedName.Value.ShouldBe("Deleuze, Gilles");
+        author.PreferredName.Value.ShouldBe("Deleuze, Gilles");
     }
 
     // --- A malformed command is stopped before it can write ------------------------------------------

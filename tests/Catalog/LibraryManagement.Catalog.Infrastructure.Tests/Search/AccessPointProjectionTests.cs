@@ -38,7 +38,7 @@ public sealed class AccessPointProjectionTests(SqlServerFixture sqlServer)
     // --- Authors ---------------------------------------------------------------------------------
 
     [Fact]
-    public async Task ARegisteredAuthor_IsFindableByItsHeading()
+    public async Task ARegisteredAuthor_IsFindableByItsPreferredName()
     {
         var authorId = AuthorId.Generate();
 
@@ -51,7 +51,7 @@ public sealed class AccessPointProjectionTests(SqlServerFixture sqlServer)
 
         var form = (await FormsOfAsync(authorId.Value)).ShouldHaveSingleItem();
         form.Form.ShouldBe("Ernaux, Annie");
-        form.IsAuthorized.ShouldBeTrue();
+        form.IsPreferred.ShouldBeTrue();
         form.Kind.ShouldBe(AccessPointKind.Author);
     }
 
@@ -70,8 +70,8 @@ public sealed class AccessPointProjectionTests(SqlServerFixture sqlServer)
         }
 
         var forms = await FormsOfAsync(authorId.Value);
-        forms.Single(form => form.Form == "Smith, Alex").IsAuthorized.ShouldBeTrue();
-        forms.Single(form => form.Form == "Smith, Jane").IsAuthorized.ShouldBeFalse();
+        forms.Single(form => form.Form == "Smith, Alex").IsPreferred.ShouldBeTrue();
+        forms.Single(form => form.Form == "Smith, Jane").IsPreferred.ShouldBeFalse();
     }
 
     [Fact]
@@ -85,14 +85,14 @@ public sealed class AccessPointProjectionTests(SqlServerFixture sqlServer)
         {
             await new AuthorRegisteredProjector(context)
                 .Handle(new AuthorRegistered(authorId, Name("Ernuax, Annie")), Token);
-            await new AuthorHeadingCorrectedProjector(context)
-                .Handle(new AuthorHeadingCorrected(authorId, Name("Ernuax, Annie"), Name("Ernaux, Annie")), Token);
+            await new AuthorPreferredNameCorrectedProjector(context)
+                .Handle(new AuthorPreferredNameCorrected(authorId, Name("Ernuax, Annie"), Name("Ernaux, Annie")), Token);
             await context.SaveChangesAsync(Token);
         }
 
         var form = (await FormsOfAsync(authorId.Value)).ShouldHaveSingleItem();
         form.Form.ShouldBe("Ernaux, Annie");
-        form.IsAuthorized.ShouldBeTrue();
+        form.IsPreferred.ShouldBeTrue();
     }
 
     [Fact]
@@ -111,7 +111,7 @@ public sealed class AccessPointProjectionTests(SqlServerFixture sqlServer)
 
         var forms = await FormsOfAsync(authorId.Value);
         forms.Count.ShouldBe(2);
-        forms.Single(form => form.Form == "Ajar, Émile").IsAuthorized.ShouldBeFalse();
+        forms.Single(form => form.Form == "Ajar, Émile").IsPreferred.ShouldBeFalse();
     }
 
     [Fact]
@@ -190,7 +190,7 @@ public sealed class AccessPointProjectionTests(SqlServerFixture sqlServer)
 
         var form = (await FormsOfAsync(editionId.Value)).ShouldHaveSingleItem();
         form.Form.ShouldBe("9782070612758");
-        form.IsAuthorized.ShouldBeTrue();
+        form.IsPreferred.ShouldBeTrue();
         form.Kind.ShouldBe(AccessPointKind.Edition);
     }
 
@@ -239,19 +239,19 @@ public sealed class AccessPointProjectionTests(SqlServerFixture sqlServer)
     public async Task ARedeliveredRetraction_FindsNothingLeftToRetract()
     {
         var authorId = AuthorId.Generate();
-        var corrected = new AuthorHeadingCorrected(authorId, Name("Ernuax, Annie"), Name("Ernaux, Annie"));
+        var corrected = new AuthorPreferredNameCorrected(authorId, Name("Ernuax, Annie"), Name("Ernaux, Annie"));
 
         await using (var context = sqlServer.NewContext())
         {
             await new AuthorRegisteredProjector(context)
                 .Handle(new AuthorRegistered(authorId, Name("Ernuax, Annie")), Token);
-            await new AuthorHeadingCorrectedProjector(context).Handle(corrected, Token);
+            await new AuthorPreferredNameCorrectedProjector(context).Handle(corrected, Token);
             await context.SaveChangesAsync(Token);
         }
 
         await using (var context = sqlServer.NewContext())
         {
-            await new AuthorHeadingCorrectedProjector(context).Handle(corrected, Token);
+            await new AuthorPreferredNameCorrectedProjector(context).Handle(corrected, Token);
             await context.SaveChangesAsync(Token);
         }
 

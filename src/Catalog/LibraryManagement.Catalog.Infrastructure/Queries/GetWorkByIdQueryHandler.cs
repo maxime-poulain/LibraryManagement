@@ -77,15 +77,15 @@ public sealed class GetWorkByIdQueryHandler(CatalogDbContext context)
         var names = await context.Authors
             .AsNoTracking()
             .Where(author => credits.Contains(author.Id))
-            .Select(author => new { author.Id, author.AuthorizedName })
+            .Select(author => new { author.Id, author.PreferredName })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        var headings = names.ToDictionary(author => author.Id, author => author.AuthorizedName.Value);
+        var preferredNames = names.ToDictionary(author => author.Id, author => author.PreferredName.Value);
 
         var credited = credits
-            .Where(headings.ContainsKey)
-            .Select(authorId => new CreditedAuthorDto(authorId.Value, headings[authorId]))
+            .Where(preferredNames.ContainsKey)
+            .Select(authorId => new CreditedAuthorDto(authorId.Value, preferredNames[authorId]))
             .ToArray();
 
         return Result<WorkDetailsDto>.Success(

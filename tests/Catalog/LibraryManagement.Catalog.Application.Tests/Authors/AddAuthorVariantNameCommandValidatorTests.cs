@@ -41,7 +41,7 @@ public sealed class AddAuthorVariantNameCommandValidatorTests
     }
 
     [Fact]
-    public void ANameLongerThanAHeadingMayBe_IsRejected()
+    public void ANameLongerThanANameFormMayRun_IsRejected()
     {
         var outcome = _validator.Validate(AnAddition(variantName: new string('x', NameForm.MaxLength + 1)));
 

@@ -22,7 +22,7 @@ public sealed class WorkRegisteredProjector(CatalogDbContext context)
             AccessPointKind.Work,
             notification.WorkId.Value,
             notification.Title.Value,
-            authorized: true,
+            preferred: true,
             cancellationToken).ConfigureAwait(false);
     }
 }
@@ -53,7 +53,7 @@ public sealed class WorkRetitledProjector(CatalogDbContext context)
             AccessPointKind.Work,
             notification.WorkId.Value,
             notification.NewTitle.Value,
-            authorized: true,
+            preferred: true,
             cancellationToken).ConfigureAwait(false);
     }
 }

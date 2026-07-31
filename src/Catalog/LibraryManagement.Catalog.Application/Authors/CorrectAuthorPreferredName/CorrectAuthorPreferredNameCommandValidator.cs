@@ -1,17 +1,17 @@
 using FluentValidation;
 using LibraryManagement.Catalog.Domain.Authors;
 
-namespace LibraryManagement.Catalog.Application.Authors.CorrectAuthorHeading;
+namespace LibraryManagement.Catalog.Application.Authors.CorrectAuthorPreferredName;
 
 /// <summary>
-/// Checks the shape of a <see cref="CorrectAuthorHeadingCommand"/>.
+/// Checks the shape of a <see cref="CorrectAuthorPreferredNameCommand"/>.
 /// </summary>
-public sealed class CorrectAuthorHeadingCommandValidator : AbstractValidator<CorrectAuthorHeadingCommand>
+public sealed class CorrectAuthorPreferredNameCommandValidator : AbstractValidator<CorrectAuthorPreferredNameCommand>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="CorrectAuthorHeadingCommandValidator"/> class.
+    /// Initializes a new instance of the <see cref="CorrectAuthorPreferredNameCommandValidator"/> class.
     /// </summary>
-    public CorrectAuthorHeadingCommandValidator()
+    public CorrectAuthorPreferredNameCommandValidator()
     {
         RuleFor(command => command.AuthorId)
             .NotEmpty()

@@ -20,7 +20,7 @@ internal static class AccessPointOperations
         AccessPointKind kind,
         Guid targetId,
         string form,
-        bool authorized,
+        bool preferred,
         CancellationToken cancellationToken)
     {
         var existing = await context.Set<AccessPoint>()
@@ -34,13 +34,13 @@ internal static class AccessPointOperations
                 Kind = kind,
                 TargetId = targetId,
                 Form = form,
-                IsAuthorized = authorized,
+                IsPreferred = preferred,
             });
 
             return;
         }
 
-        existing.IsAuthorized = authorized;
+        existing.IsPreferred = preferred;
     }
 
     internal static async ValueTask RemoveAccessPointAsync(

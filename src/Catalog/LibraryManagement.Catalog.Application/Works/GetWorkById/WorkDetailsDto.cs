@@ -28,10 +28,10 @@ public sealed record WorkDetailsDto(
 /// One author credited with a work.
 /// </summary>
 /// <param name="AuthorId">The author.</param>
-/// <param name="AuthorizedName">The name the catalogue files them under, not any variant.</param>
+/// <param name="PreferredName">The name the catalogue files them under, not any variant.</param>
 /// <remarks>
 /// Suffixed too, though the rule only reaches the answer's own type. It travels just as far and is
 /// just as free of the domain, and a <c>CreditedAuthor</c> sitting inside a <c>WorkDetailsDto</c>
 /// would read as a different kind of thing when it is not.
 /// </remarks>
-public sealed record CreditedAuthorDto(Guid AuthorId, string AuthorizedName);
+public sealed record CreditedAuthorDto(Guid AuthorId, string PreferredName);

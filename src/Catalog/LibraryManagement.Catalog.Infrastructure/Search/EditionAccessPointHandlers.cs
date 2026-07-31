@@ -33,7 +33,7 @@ public sealed class EditionRegisteredProjector(CatalogDbContext context)
             AccessPointKind.Edition,
             notification.EditionId.Value,
             notification.Isbn.Value,
-            authorized: true,
+            preferred: true,
             cancellationToken).ConfigureAwait(false);
     }
 }

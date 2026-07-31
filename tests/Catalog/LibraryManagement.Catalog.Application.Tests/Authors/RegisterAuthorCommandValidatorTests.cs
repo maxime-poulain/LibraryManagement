@@ -9,10 +9,10 @@ public sealed class RegisterAuthorCommandValidatorTests
 
     private static RegisterAuthorCommand ARegistration(
         Guid? authorId = null,
-        string authorizedName = "Ernaux, Annie",
+        string preferredName = "Ernaux, Annie",
         int? birthYear = 1940,
         int? deathYear = null)
-        => new(authorId ?? Guid.CreateVersion7(), authorizedName, birthYear, deathYear);
+        => new(authorId ?? Guid.CreateVersion7(), preferredName, birthYear, deathYear);
 
     private static string TooLongAName() => new('x', NameForm.MaxLength + 1);
 
@@ -51,23 +51,23 @@ public sealed class RegisterAuthorCommandValidatorTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void ANameThatIsNotOne_IsRejected(string authorizedName)
+    public void ANameThatIsNotOne_IsRejected(string preferredName)
     {
-        var outcome = _validator.Validate(ARegistration(authorizedName: authorizedName));
+        var outcome = _validator.Validate(ARegistration(preferredName: preferredName));
 
         outcome.IsValid.ShouldBeFalse();
         outcome.Errors.ShouldContain(
-            error => error.PropertyName == nameof(RegisterAuthorCommand.AuthorizedName));
+            error => error.PropertyName == nameof(RegisterAuthorCommand.PreferredName));
     }
 
     [Fact]
-    public void ANameLongerThanAHeadingMayBe_IsRejected()
+    public void ANameLongerThanANameFormMayRun_IsRejected()
     {
-        var outcome = _validator.Validate(ARegistration(authorizedName: TooLongAName()));
+        var outcome = _validator.Validate(ARegistration(preferredName: TooLongAName()));
 
         outcome.IsValid.ShouldBeFalse();
         outcome.Errors.ShouldContain(
-            error => error.PropertyName == nameof(RegisterAuthorCommand.AuthorizedName));
+            error => error.PropertyName == nameof(RegisterAuthorCommand.PreferredName));
     }
 
     [Theory]
@@ -101,7 +101,7 @@ public sealed class RegisterAuthorCommandValidatorTests
         // experience than one round trip. The accumulation is the point of a validator running before
         // the handler rather than a guard clause inside it.
         var outcome = _validator.Validate(
-            ARegistration(authorId: Guid.Empty, authorizedName: "", birthYear: LifeYears.LatestYear + 1));
+            ARegistration(authorId: Guid.Empty, preferredName: "", birthYear: LifeYears.LatestYear + 1));
 
         outcome.Errors.Select(error => error.PropertyName).Distinct().Count().ShouldBe(3);
     }

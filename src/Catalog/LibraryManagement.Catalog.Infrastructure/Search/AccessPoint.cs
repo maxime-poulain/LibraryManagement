@@ -1,7 +1,7 @@
 namespace LibraryManagement.Catalog.Infrastructure.Search;
 
 /// <summary>
-/// What a record can be found by. The catalogue's own word: every heading, variant form and title
+/// What a record can be found by. The catalogue's own word: every preferred name, variant form and title
 /// is an access point, and a search resolves a form to the record it leads back to.
 /// </summary>
 /// <remarks>
@@ -26,14 +26,14 @@ public sealed class AccessPoint
     /// <summary>The record the form leads back to.</summary>
     public Guid TargetId { get; set; }
 
-    /// <summary>The form itself — a heading, a variant, a title.</summary>
+    /// <summary>The form itself — a preferred name, a variant, a title.</summary>
     public string Form { get; set; } = string.Empty;
 
     /// <summary>
     /// Whether this is the form the catalogue files the record under, rather than a variant that
-    /// leads to it. A search matches both; a result list displays the authorized one.
+    /// leads to it. A search matches both; a result list displays the preferred one.
     /// </summary>
-    public bool IsAuthorized { get; set; }
+    public bool IsPreferred { get; set; }
 }
 
 /// <summary>

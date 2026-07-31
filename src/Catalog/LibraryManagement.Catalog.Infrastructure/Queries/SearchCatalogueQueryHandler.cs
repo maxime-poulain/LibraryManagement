@@ -48,21 +48,21 @@ public sealed class SearchCatalogueQueryHandler(CatalogDbContext context)
         // and an unescaped wildcard would quietly turn '100%' into everything.
         //
         // The self-join turns a matched variant into a see-reference. Every record carries
-        // exactly one authorized form — the projectors maintain that — so the join is one to
-        // one: the line shows the form that matched and the heading it leads to.
+        // exactly one preferred form — the projectors maintain that — so the join is one to
+        // one: the line shows the form that matched and the preferred name it leads to.
         var lines = await context.Set<AccessPoint>()
             .AsNoTracking()
             .Where(point => point.Form.StartsWith(term))
             .Join(
-                context.Set<AccessPoint>().Where(heading => heading.IsAuthorized),
+                context.Set<AccessPoint>().Where(preferred => preferred.IsPreferred),
                 point => new { point.Kind, point.TargetId },
-                heading => new { heading.Kind, heading.TargetId },
-                (point, heading) => new
+                preferred => new { preferred.Kind, preferred.TargetId },
+                (point, preferred) => new
                 {
                     point.Kind,
                     point.TargetId,
                     point.Form,
-                    AuthorizedForm = heading.Form,
+                    PreferredForm = preferred.Form,
                 })
             .OrderBy(line => line.Form)
             .ThenBy(line => line.Kind)
@@ -75,7 +75,7 @@ public sealed class SearchCatalogueQueryHandler(CatalogDbContext context)
         // desk actually wants: whoever typed 'Mille' should not have to say whether they are
         // looking for a title or a person before they may look.
         IReadOnlyList<CatalogueEntryDto> entries = lines
-            .Select(line => new CatalogueEntryDto(KindOf(line.Kind), line.TargetId, line.Form, line.AuthorizedForm))
+            .Select(line => new CatalogueEntryDto(KindOf(line.Kind), line.TargetId, line.Form, line.PreferredForm))
             .ToArray();
 
         return Result<IReadOnlyList<CatalogueEntryDto>>.Success(entries);

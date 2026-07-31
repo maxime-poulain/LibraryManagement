@@ -5,8 +5,8 @@ namespace LibraryManagement.Catalog.Application.Search.SearchCatalogue;
 /// </summary>
 /// <param name="Kind">Whether the form leads to an author or to a work.</param>
 /// <param name="RecordId">The record the form leads back to.</param>
-/// <param name="Form">The form that matched the search — a heading, a variant, a title.</param>
-/// <param name="AuthorizedForm">The form the catalogue files the record under.</param>
+/// <param name="Form">The form that matched the search — a preferred name, a variant, a title.</param>
+/// <param name="PreferredForm">The form the catalogue files the record under.</param>
 /// <remarks>
 /// <para>
 /// The unit is the form, not the record, exactly as in the profession's own index: every access
@@ -14,7 +14,7 @@ namespace LibraryManagement.Catalog.Application.Search.SearchCatalogue;
 /// record; one author matched through two of their forms is two lines, each a legitimate way in.
 /// </para>
 /// <para>
-/// When <paramref name="Form"/> and <paramref name="AuthorizedForm"/> differ, the line is a
+/// When <paramref name="Form"/> and <paramref name="PreferredForm"/> differ, the line is a
 /// see-reference — <c>Sullivan, Vernon</c> <em>see</em> <c>Vian, Boris</c> — which is the entire
 /// service a variant exists to render. When they are equal, the line is the entry itself.
 /// </para>
@@ -23,7 +23,7 @@ public sealed record CatalogueEntryDto(
     CatalogueEntryKind Kind,
     Guid RecordId,
     string Form,
-    string AuthorizedForm);
+    string PreferredForm);
 
 /// <summary>
 /// The kinds of record a catalogue search can lead to.

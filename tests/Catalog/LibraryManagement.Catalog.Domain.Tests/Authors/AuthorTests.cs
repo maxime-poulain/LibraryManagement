@@ -12,7 +12,7 @@ public sealed class AuthorTests
     {
         var author = Author.Register(AuthorId.Generate(), Name("Ernaux, Annie"), Years(1940, null));
 
-        author.AuthorizedName.ShouldBe(Name("Ernaux, Annie"));
+        author.PreferredName.ShouldBe(Name("Ernaux, Annie"));
         author.LifeYears.Birth.ShouldBe(1940);
         author.VariantNames.ShouldBeEmpty();
     }
@@ -23,7 +23,7 @@ public sealed class AuthorTests
         var author = AnAuthor("Ernaux, Annie");
 
         author.DomainEvents.OfType<AuthorRegistered>().Single()
-            .AuthorizedName.ShouldBe(Name("Ernaux, Annie"));
+            .PreferredName.ShouldBe(Name("Ernaux, Annie"));
     }
 
     // --- Authority control: a person's name changes, their record does not ------------------------
@@ -35,7 +35,7 @@ public sealed class AuthorTests
 
         Succeeded(author.Rename(Name("Smith, Alex"))).ShouldBeTrue();
 
-        author.AuthorizedName.ShouldBe(Name("Smith, Alex"));
+        author.PreferredName.ShouldBe(Name("Smith, Alex"));
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public sealed class AuthorTests
 
         Succeeded(author.Rename(Name("Smith, Jane"))).ShouldBeTrue();
 
-        author.AuthorizedName.ShouldBe(Name("Smith, Jane"));
+        author.PreferredName.ShouldBe(Name("Smith, Jane"));
         author.VariantNames.ShouldBe([Name("Smith, Alex")]);
     }
 
@@ -87,65 +87,65 @@ public sealed class AuthorTests
         renamed.NewName.ShouldBe(Name("Smith, Alex"));
     }
 
-    // --- Correcting a heading: a fact about the record, not about the person ----------------------
+    // --- Correcting a preferred name: a fact about the record, not about the person ----------------------
 
     [Fact]
-    public void CorrectHeading_ReplacesTheHeading()
+    public void CorrectPreferredName_ReplacesThePreferredName()
     {
         var author = AnAuthor("Ernuax, Annie");
 
-        Succeeded(author.CorrectHeading(Name("Ernaux, Annie"))).ShouldBeTrue();
+        Succeeded(author.CorrectPreferredName(Name("Ernaux, Annie"))).ShouldBeTrue();
 
-        author.AuthorizedName.ShouldBe(Name("Ernaux, Annie"));
+        author.PreferredName.ShouldBe(Name("Ernaux, Annie"));
     }
 
     [Fact]
-    public void CorrectHeading_KeepsNothingOfTheWrongForm()
+    public void CorrectPreferredName_KeepsNothingOfTheWrongForm()
     {
         // The difference with Rename, and the reason this method exists. A typo is nobody's name:
         // kept as a variant it would become a searchable access point, and the catalogue would
         // preserve forever the one thing it was asked to remove.
         var author = AnAuthor("Ernuax, Annie");
 
-        author.CorrectHeading(Name("Ernaux, Annie"));
+        author.CorrectPreferredName(Name("Ernaux, Annie"));
 
         author.VariantNames.ShouldBeEmpty();
         author.IsKnownAs(Name("Ernuax, Annie")).ShouldBeFalse();
     }
 
     [Fact]
-    public void CorrectHeading_ToTheNameAlreadyInUse_IsRefused()
+    public void CorrectPreferredName_ToTheNameAlreadyInUse_IsRefused()
     {
         var author = AnAuthor("Ernaux, Annie");
 
-        ErrorsOf(author.CorrectHeading(Name("Ernaux, Annie")))
+        ErrorsOf(author.CorrectPreferredName(Name("Ernaux, Annie")))
             .Single().ErrorCode.ShouldBe(CatalogErrorCodes.DuplicateName);
     }
 
     [Fact]
-    public void CorrectHeading_ToAFormFiledAsAVariant_PromotesIt()
+    public void CorrectPreferredName_ToAFormFiledAsAVariant_PromotesIt()
     {
         // A correction can restore a proper form someone had filed as secondary, and the invariant
-        // that a heading is never also a variant must hold on the way through.
+        // that a preferred name is never also a variant must hold on the way through.
         var author = AnAuthor("Ernuax, Annie");
         author.AddVariantName(Name("Ernaux, Annie"));
 
-        Succeeded(author.CorrectHeading(Name("Ernaux, Annie"))).ShouldBeTrue();
+        Succeeded(author.CorrectPreferredName(Name("Ernaux, Annie"))).ShouldBeTrue();
 
-        author.AuthorizedName.ShouldBe(Name("Ernaux, Annie"));
+        author.PreferredName.ShouldBe(Name("Ernaux, Annie"));
         author.VariantNames.ShouldBeEmpty();
     }
 
     [Fact]
-    public void CorrectHeading_AnnouncesARetractionRatherThanARename()
+    public void CorrectPreferredName_AnnouncesARetractionRatherThanARename()
     {
         // Consumers treat the two differently: a rename keeps the outgoing form findable, a
         // correction retracts it. The search projection depends on being able to tell them apart.
         var author = AnAuthor("Ernuax, Annie");
 
-        author.CorrectHeading(Name("Ernaux, Annie"));
+        author.CorrectPreferredName(Name("Ernaux, Annie"));
 
-        var corrected = author.DomainEvents.OfType<AuthorHeadingCorrected>().Single();
+        var corrected = author.DomainEvents.OfType<AuthorPreferredNameCorrected>().Single();
         corrected.PreviousName.ShouldBe(Name("Ernuax, Annie"));
         corrected.CorrectedName.ShouldBe(Name("Ernaux, Annie"));
         author.DomainEvents.OfType<AuthorRenamed>().ShouldBeEmpty();
@@ -164,7 +164,7 @@ public sealed class AuthorTests
     }
 
     [Fact]
-    public void AddVariantName_ThatIsTheHeading_IsRefused()
+    public void AddVariantName_ThatIsThePreferredName_IsRefused()
     {
         var author = AnAuthor("Gary, Romain");
 
@@ -176,7 +176,7 @@ public sealed class AuthorTests
     public void AddVariantName_AnnouncesTheForm()
     {
         // A variant exists to be searched by, so the projection must learn of it the moment it is
-        // recorded — exactly as it learns of the heading.
+        // recorded — exactly as it learns of the preferred name.
         var author = AnAuthor("Gary, Romain");
 
         author.AddVariantName(Name("Ajar, Émile"));
@@ -198,7 +198,7 @@ public sealed class AuthorTests
     }
 
     [Fact]
-    public void IsKnownAs_AnswersForTheHeadingAndForEveryVariant()
+    public void IsKnownAs_AnswersForThePreferredNameAndForEveryVariant()
     {
         var author = AnAuthor("Gary, Romain");
         author.AddVariantName(Name("Ajar, Émile"));

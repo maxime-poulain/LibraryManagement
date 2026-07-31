@@ -8,7 +8,7 @@ namespace LibraryManagement.Catalog.Application.Search.SearchCatalogue;
 /// Checks the shape of a <see cref="SearchCatalogueQuery"/>.
 /// </summary>
 /// <remarks>
-/// The upper bound is the longest form the catalogue can hold — the larger of a heading's and a
+/// The upper bound is the longest form the catalogue can hold — the larger of a name form's and a
 /// title's limit. A term longer than every possible form is not a search that happens to find
 /// nothing; it is a request that never could, which is the difference between an empty answer and
 /// a malformed question.

@@ -50,9 +50,9 @@ public sealed class JsonDomainEventSerializerTests
     }
 
     [Fact]
-    public void AHeadingCorrection_RoundTrips()
+    public void APreferredNameCorrection_RoundTrips()
     {
-        var original = new AuthorHeadingCorrected(
+        var original = new AuthorPreferredNameCorrected(
             AuthorId.Generate(),
             Name("Ernuax, Annie"),
             Name("Ernaux, Annie"));

@@ -31,7 +31,7 @@ public sealed class RenameAuthorCommandHandlerTests
         var result = await Handle(new RenameAuthorCommand(author.Id.Value, "Duchesne, Annie"));
 
         result.Match(() => true, _ => false).ShouldBeTrue();
-        author.AuthorizedName.Value.ShouldBe("Duchesne, Annie");
+        author.PreferredName.Value.ShouldBe("Duchesne, Annie");
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public sealed class RenameAuthorCommandHandlerTests
         var result = await Handle(new RenameAuthorCommand(author.Id.Value, "   "));
 
         ErrorsOf(result).Single().ErrorCode.ShouldBe(CatalogErrorCodes.InvalidName);
-        author.AuthorizedName.Value.ShouldBe("Ernaux, Annie");
+        author.PreferredName.Value.ShouldBe("Ernaux, Annie");
     }
 
     [Fact]

@@ -70,7 +70,7 @@ public sealed class CatalogPersistenceTests(SqlServerFixture sqlServer)
     // --- The write side round-trips the domain, not a shadow of it --------------------------------
 
     [Fact]
-    public async Task AnAuthor_ComesBackWithItsHeadingAndItsYears()
+    public async Task AnAuthor_ComesBackWithItsPreferredNameAndItsYears()
     {
         var author = AnAuthor();
         await SaveAsync(context => new AuthorRepository(context).Add(author));
@@ -79,7 +79,7 @@ public sealed class CatalogPersistenceTests(SqlServerFixture sqlServer)
         var found = await new AuthorRepository(reader).GetByIdAsync(author.Id, Token);
 
         found.ShouldNotBeNull();
-        found.AuthorizedName.ShouldBe(Name("Saint-Exupéry, Antoine de"));
+        found.PreferredName.ShouldBe(Name("Saint-Exupéry, Antoine de"));
         found.LifeYears.Birth.ShouldBe(1900);
         found.LifeYears.Death.ShouldBe(1944);
     }
@@ -99,7 +99,7 @@ public sealed class CatalogPersistenceTests(SqlServerFixture sqlServer)
         var found = await new AuthorRepository(reader).GetByIdAsync(author.Id, Token);
 
         found.ShouldNotBeNull();
-        found.AuthorizedName.ShouldBe(Name("Saint-Exupéry, A. de"));
+        found.PreferredName.ShouldBe(Name("Saint-Exupéry, A. de"));
         found.VariantNames.ShouldBe(
             [Name("Saint Exupery, Antoine de"), Name("Saint-Exupéry, Antoine de")],
             ignoreOrder: true);
@@ -150,7 +150,7 @@ public sealed class CatalogPersistenceTests(SqlServerFixture sqlServer)
         // rowversion the engine moves on every write, so nothing in the application can forget to.
         //
         // Both employees correct the dates rather than the name: a rename also files the outgoing
-        // heading as a variant, and two of them would collide on that table's key first — a real
+        // preferred name as a variant, and two of them would collide on that table's key first — a real
         // failure, but a different one, and it would hide the token doing its work.
         var author = AnAuthor();
         await SaveAsync(context => new AuthorRepository(context).Add(author));
@@ -191,7 +191,7 @@ public sealed class CatalogPersistenceTests(SqlServerFixture sqlServer)
         var details = result.Match(found => found, errors => throw new InvalidOperationException(errors[0].ToString()));
 
         details.Title.ShouldBe("Différence et répétition");
-        details.Authors.Single().AuthorizedName.ShouldBe("Deleuze, Gilles");
+        details.Authors.Single().PreferredName.ShouldBe("Deleuze, Gilles");
         // Nothing was materialized, so nothing can be changed through it by accident.
         reader.ChangeTracker.Entries().ShouldBeEmpty();
     }

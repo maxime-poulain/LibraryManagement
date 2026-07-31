@@ -22,13 +22,13 @@ public sealed class AuthorConfiguration : AggregateRootConfiguration<Author, Aut
 
         builder.ToTable("Author");
 
-        builder.Property(author => author.AuthorizedName)
+        builder.Property(author => author.PreferredName)
             .HasConversion(name => name.Value, value => NameFormOf(value))
             .HasMaxLength(NameForm.MaxLength)
             .IsRequired();
 
         // Filing depends on it, and a search for an author is the most common read in a catalogue.
-        builder.HasIndex(author => author.AuthorizedName);
+        builder.HasIndex(author => author.PreferredName);
 
         builder.ComplexProperty(author => author.LifeYears, life =>
         {

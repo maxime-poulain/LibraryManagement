@@ -8,7 +8,7 @@ namespace LibraryManagement.Catalog.Application.Search.SearchCatalogue;
 /// <param name="SearchTerm">The beginning of the form being looked for.</param>
 /// <remarks>
 /// <para>
-/// The search is a <em>prefix</em> match, because that is how a catalogue is browsed: headings are
+/// The search is a <em>prefix</em> match, because that is how a catalogue is browsed: preferred names are
 /// filed surname-first and titles as printed, precisely so that typing the beginning of either
 /// walks the index. A substring search would answer more and rank nothing, and it could not use
 /// the index that makes the table worth keeping.

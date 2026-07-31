@@ -57,7 +57,7 @@ public sealed class AddAuthorVariantNameCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_TheHeadingItself_IsRefusedAsAVariant()
+    public async Task Handle_ThePreferredNameItself_IsRefusedAsAVariant()
     {
         var author = AnAuthor("Vian, Boris");
         _authors.With(author);

@@ -57,7 +57,7 @@ public sealed class NameForm : ValueObject<NameForm>
     /// <inheritdoc/>
     protected override IEnumerable<object?> GetEqualityComponents()
     {
-        // Ordinal, so two headings differing only in case are two headings. A catalogue that treated
+        // Ordinal, so two name forms differing only in case are two forms. A catalogue that treated
         // them as one would silently merge "de Beauvoir" and "De Beauvoir", which are different
         // filing decisions a librarian makes on purpose.
         yield return Value;

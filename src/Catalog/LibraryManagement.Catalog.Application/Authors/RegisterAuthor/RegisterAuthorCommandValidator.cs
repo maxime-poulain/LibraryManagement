@@ -30,11 +30,11 @@ public sealed class RegisterAuthorCommandValidator : AbstractValidator<RegisterA
             .NotEmpty()
             .WithMessage("An author identifier is required.");
 
-        RuleFor(command => command.AuthorizedName)
+        RuleFor(command => command.PreferredName)
             .NotEmpty()
-            .WithMessage("An authorized name is required.")
+            .WithMessage("A preferred name is required.")
             .MaximumLength(NameForm.MaxLength)
-            .WithMessage($"An authorized name may not exceed {NameForm.MaxLength} characters.");
+            .WithMessage($"A preferred name may not exceed {NameForm.MaxLength} characters.");
 
         RuleFor(command => command.BirthYear)
             .InclusiveBetween(LifeYears.EarliestYear, LifeYears.LatestYear)

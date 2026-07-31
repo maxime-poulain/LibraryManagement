@@ -23,7 +23,7 @@ public sealed class NameFormTests
     }
 
     [Fact]
-    public void Create_LongerThanAHeadingMayRun_Fails()
+    public void Create_LongerThanANameFormMayRun_Fails()
     {
         ErrorsOf(NameForm.Create(new string('x', NameForm.MaxLength + 1)))
             .Single().ErrorCode.ShouldBe(CatalogErrorCodes.InvalidName);

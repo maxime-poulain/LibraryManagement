@@ -29,7 +29,7 @@ public sealed class RegisterAuthorCommandHandlerTests
         var result = await Handle(command);
 
         result.Match(() => true, _ => false).ShouldBeTrue();
-        _authors.Added.Single().AuthorizedName.Value.ShouldBe("Ernaux, Annie");
+        _authors.Added.Single().PreferredName.Value.ShouldBe("Ernaux, Annie");
     }
 
     [Fact]

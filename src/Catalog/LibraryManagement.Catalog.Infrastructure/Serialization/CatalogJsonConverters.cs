@@ -15,7 +15,7 @@ namespace LibraryManagement.Catalog.Infrastructure.Serialization;
 // EntityId<T> there is or will be.
 
 /// <summary>
-/// Serializes <see cref="NameForm"/> as the heading itself.
+/// Serializes <see cref="NameForm"/> as the name itself.
 /// </summary>
 public sealed class NameFormJsonConverter : JsonConverter<NameForm>
 {
