@@ -224,6 +224,9 @@ Availability splits in two, and only half of it lives here. Holdings knows a cop
 in repair, lost or withdrawn. It does not know it is out on loan. Availability is the conjunction of
 the two and is computed by whoever asks, never stored twice.
 
+The aggregate, its invariants and the moments that change it are set out in
+[tactical-design-holdings.md](tactical-design-holdings.md).
+
 ### Circulation — core
 
 **Owns.** Loan, renewal, return, hold, hold queue, trapping, pickup deadline, and the circulation
