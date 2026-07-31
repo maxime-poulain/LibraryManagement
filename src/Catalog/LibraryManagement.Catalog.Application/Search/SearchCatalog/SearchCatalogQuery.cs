@@ -5,7 +5,7 @@ namespace LibraryManagement.Catalog.Application.Search.SearchCatalog;
 /// <summary>
 /// Searches the catalog: which records answer to this form?
 /// </summary>
-/// <param name="SearchTerm">The beginning of the form being looked for.</param>
+/// <param name="FormPrefix">The beginning of the form being looked for.</param>
 /// <remarks>
 /// <para>
 /// The search is a <em>prefix</em> match, because that is how a catalog is browsed: preferred names are
@@ -19,7 +19,7 @@ namespace LibraryManagement.Catalog.Application.Search.SearchCatalog;
 /// screen to show it on would be a guess wearing a number.
 /// </para>
 /// </remarks>
-public sealed record SearchCatalogQuery(string SearchTerm) : IQuery<IReadOnlyList<CatalogEntryDto>>
+public sealed record SearchCatalogQuery(string FormPrefix) : IQuery<IReadOnlyList<CatalogEntryDto>>
 {
     /// <summary>The most lines a single search answers with.</summary>
     public const int MaxResults = 50;

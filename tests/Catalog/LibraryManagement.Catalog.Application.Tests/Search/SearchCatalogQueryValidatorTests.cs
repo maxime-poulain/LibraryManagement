@@ -17,13 +17,13 @@ public sealed class SearchCatalogQueryValidatorTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void ATermThatIsNotOne_IsRejected(string searchTerm)
+    public void ATermThatIsNotOne_IsRejected(string formPrefix)
     {
-        var outcome = _validator.Validate(new SearchCatalogQuery(searchTerm));
+        var outcome = _validator.Validate(new SearchCatalogQuery(formPrefix));
 
         outcome.IsValid.ShouldBeFalse();
         outcome.Errors.ShouldContain(
-            error => error.PropertyName == nameof(SearchCatalogQuery.SearchTerm));
+            error => error.PropertyName == nameof(SearchCatalogQuery.FormPrefix));
     }
 
     [Fact]
@@ -37,6 +37,6 @@ public sealed class SearchCatalogQueryValidatorTests
 
         outcome.IsValid.ShouldBeFalse();
         outcome.Errors.ShouldContain(
-            error => error.PropertyName == nameof(SearchCatalogQuery.SearchTerm));
+            error => error.PropertyName == nameof(SearchCatalogQuery.FormPrefix));
     }
 }

@@ -22,7 +22,7 @@ public sealed class SearchCatalogQueryValidator : AbstractValidator<SearchCatalo
     /// </summary>
     public SearchCatalogQueryValidator()
     {
-        RuleFor(query => query.SearchTerm)
+        RuleFor(query => query.FormPrefix)
             .NotEmpty()
             .WithMessage("A search term is required.")
             .MaximumLength(LongestForm)

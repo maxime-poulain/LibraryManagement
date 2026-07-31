@@ -93,7 +93,7 @@ public static class ServiceCollectionExtensions
     /// </para>
     /// <para>
     /// The <see cref="IServiceProvider"/> overload of <c>AddDbContext</c> is what lets the
-    /// interceptors come from the container: the audit one is scoped — it holds the staff member
+    /// interceptors come from the container: the audit one is scoped — it holds the employee
     /// acting — so the options are scoped too rather than singleton, which is required rather than
     /// incidental: singleton options would capture one scope's interceptor and hand it to every
     /// request for the life of the process. The cost is one options object per scope, an allocation
@@ -103,7 +103,7 @@ public static class ServiceCollectionExtensions
     /// <para>
     /// Everything shared is registered with <c>TryAdd</c>, because five modules will each call this
     /// and only the first call should take effect. It is also what lets a host replace
-    /// <see cref="ICurrentUser"/> with a real implementation without having to remove the placeholder
+    /// <see cref="ICurrentEmployee"/> with a real implementation without having to remove the placeholder
     /// first.
     /// </para>
     /// </remarks>
@@ -120,7 +120,7 @@ public static class ServiceCollectionExtensions
         services.AddLogging();
 
         services.TryAddSingleton(TimeProvider.System);
-        services.TryAddScoped<ICurrentUser, UnattributedUser>();
+        services.TryAddScoped<ICurrentEmployee, UnattributedEmployee>();
         services.TryAddSingleton<IDomainEventSerializer, JsonDomainEventSerializer>();
         services.TryAddSingleton<OutboxInterceptor>();
         services.TryAddScoped<AuditInterceptor>();

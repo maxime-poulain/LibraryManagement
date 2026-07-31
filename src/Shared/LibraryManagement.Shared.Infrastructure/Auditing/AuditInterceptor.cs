@@ -9,7 +9,7 @@ namespace LibraryManagement.Shared.Infrastructure.Auditing;
 /// Stamps when a row was written and by whom, on the way into the store.
 /// </summary>
 /// <param name="clock">Reads the instant to stamp.</param>
-/// <param name="currentUser">Names the staff member to attribute the write to, if there is one.</param>
+/// <param name="currentEmployee">Names the employee to attribute the write to, if there is one.</param>
 /// <remarks>
 /// <para>
 /// <see cref="Entity{TEntityId}"/> has carried <see cref="IAuditable"/> from the start, so the four
@@ -36,7 +36,7 @@ namespace LibraryManagement.Shared.Infrastructure.Auditing;
 /// site, a second time zone or a daylight saving change enters the picture.
 /// </para>
 /// </remarks>
-public sealed class AuditInterceptor(TimeProvider clock, ICurrentUser currentUser) : SaveChangesInterceptor
+public sealed class AuditInterceptor(TimeProvider clock, ICurrentEmployee currentEmployee) : SaveChangesInterceptor
 {
     /// <inheritdoc/>
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
@@ -77,7 +77,7 @@ public sealed class AuditInterceptor(TimeProvider clock, ICurrentUser currentUse
     private void Stamp(DbContext context)
     {
         var now = clock.GetUtcNow();
-        var author = currentUser.Identifier;
+        var employee = currentEmployee.EmployeeId;
 
         foreach (var entry in context.ChangeTracker.Entries<IAuditable>())
         {
@@ -85,12 +85,12 @@ public sealed class AuditInterceptor(TimeProvider clock, ICurrentUser currentUse
             {
                 case EntityState.Added:
                     entry.Property(nameof(IAuditable.CreatedOn)).CurrentValue = now;
-                    Attribute(entry.Property(nameof(IAuditable.CreatedBy)), author);
+                    Attribute(entry.Property(nameof(IAuditable.CreatedBy)), employee);
                     break;
 
                 case EntityState.Modified:
                     entry.Property(nameof(IAuditable.ModifiedOn)).CurrentValue = now;
-                    Attribute(entry.Property(nameof(IAuditable.ModifiedBy)), author);
+                    Attribute(entry.Property(nameof(IAuditable.ModifiedBy)), employee);
 
                     // The creation columns were settled once and stay settled. A materialised entity
                     // already carries what the store holds, so an update that resent them could only

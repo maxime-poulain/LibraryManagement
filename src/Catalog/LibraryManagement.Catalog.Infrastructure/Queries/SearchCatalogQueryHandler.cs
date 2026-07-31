@@ -34,17 +34,17 @@ public sealed class SearchCatalogQueryHandler(CatalogDbContext context)
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        // A blank term never arrives here: the validator rejects it at dispatch. Reaching this
+        // A blank prefix never arrives here: the validator rejects it at dispatch. Reaching this
         // handler with one is a wiring mistake, and it is reported as one — a prefix of nothing
         // would otherwise match the entire index, which no caller has asked for.
-        ArgumentException.ThrowIfNullOrWhiteSpace(query.SearchTerm);
+        ArgumentException.ThrowIfNullOrWhiteSpace(query.FormPrefix);
 
         // Trimmed because every stored form is: NameForm and Title trim on creation, so the
         // space a search box leaves behind would otherwise miss what the catalog holds.
-        var term = query.SearchTerm.Trim();
+        var prefix = query.FormPrefix.Trim();
 
         // StartsWith and not a raw LIKE: Entity Framework escapes the pattern characters, so a
-        // term containing '%' or '_' means those characters. The term is typed by an employee,
+        // prefix containing '%' or '_' means those characters. The prefix is typed by an employee,
         // and an unescaped wildcard would quietly turn '100%' into everything.
         //
         // The self-join turns a matched variant into a see-reference. Every record carries
@@ -52,7 +52,7 @@ public sealed class SearchCatalogQueryHandler(CatalogDbContext context)
         // one: the line shows the form that matched and the preferred name it leads to.
         var lines = await context.Set<AccessPoint>()
             .AsNoTracking()
-            .Where(point => point.Form.StartsWith(term))
+            .Where(point => point.Form.StartsWith(prefix))
             .Join(
                 context.Set<AccessPoint>().Where(preferred => preferred.IsPreferred),
                 point => new { point.Kind, point.TargetId },

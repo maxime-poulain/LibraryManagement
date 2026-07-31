@@ -114,7 +114,7 @@ public sealed class AuditInterceptorTests(SqlServerFixture sqlServer)
         // see it: every other instant is a whole second and would survive any precision at all.
         // Undeclared, the column would be a datetimeoffset(7) and this value would come back with
         // its hundred-nanosecond tail intact — detail neither the clock nor the catalog has a use
-        // for, and which no aggregate can be ordered by anyway, since an identifier is only ordered
+        // for, and which no aggregate can be ordered by anyway, since an employeeId is only ordered
         // to the millisecond either.
         var author = AnAuthor("Sous-seconde, Sylvie");
 
@@ -153,8 +153,8 @@ public sealed class AuditInterceptorTests(SqlServerFixture sqlServer)
         public override DateTimeOffset GetUtcNow() => now;
     }
 
-    private sealed class ActingAs(string? identifier) : ICurrentUser
+    private sealed class ActingAs(string? employeeId) : ICurrentEmployee
     {
-        public string? Identifier => identifier;
+        public string? EmployeeId => employeeId;
     }
 }

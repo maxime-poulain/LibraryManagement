@@ -8,8 +8,8 @@ namespace LibraryManagement.Shared.Infrastructure.Auditing;
 /// <remarks>
 /// <para>
 /// The placeholder until Staff Access exists, and it is registered with a <c>TryAdd</c> so that a
-/// host supplying a real <see cref="ICurrentUser"/> replaces it without this having to be removed
-/// first.
+/// host supplying a real <see cref="ICurrentEmployee"/> replaces it without this having to be
+/// removed first.
 /// </para>
 /// <para>
 /// It answers <see langword="null"/> rather than a name of its own invention. Auditing that records
@@ -17,8 +17,8 @@ namespace LibraryManagement.Shared.Infrastructure.Auditing;
 /// column full of noise that reads, at a glance, exactly like a column full of facts.
 /// </para>
 /// </remarks>
-public sealed class UnattributedUser : ICurrentUser
+public sealed class UnattributedEmployee : ICurrentEmployee
 {
     /// <inheritdoc/>
-    public string? Identifier => null;
+    public string? EmployeeId => null;
 }
