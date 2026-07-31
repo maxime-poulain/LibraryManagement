@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- References nothing, deliberately. A published language that referenced the module's domain
+         would carry it to every consumer, which is the export a bounded context exists to prevent.
+         Everything here is primitives and types declared in this project. -->
+
+</Project>

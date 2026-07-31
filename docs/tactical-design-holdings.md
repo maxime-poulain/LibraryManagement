@@ -64,9 +64,7 @@ That is also why the fifth value is called `InService` and not `OnShelf`. A copy
 last Tuesday is not on a shelf, and Holdings has no way to know that it isn't — a status naming a
 physical location would be false for a large share of the stock at any moment, and *silently* false,
 which is worse. `InService` claims only what this context can actually vouch for: nothing about this
-copy prevents it from being lent. **This renames the glossary row currently reading `OnShelf | En
-rayon`; §10 records the amendment rather than making it here, because a term belongs to the
-glossary.**
+copy prevents it from being lent. The glossary row was amended to match when the module was built.
 
 ## 3. `Barcode`
 
@@ -244,6 +242,7 @@ Circulation needs from it is a question, not an announcement (§6).
 |---|---|
 | `CopyAcquired(copyId, editionId, barcode)` | read model |
 | `CopyReshelved(…, previousShelfmark, newShelfmark)` | read model |
+| `CopyConditionRecorded(…, previousCondition, newCondition)` | read model |
 | `CopyRelabelled(…, previousBarcode, newBarcode)` | read model |
 | `CopySentForRepair`, `CopyReturnedFromRepair` | read model |
 | `CopyRestrictedToReference`, `CopyReleasedForLending` | read model |
@@ -273,10 +272,20 @@ fact about a physical object, which is the boundary error this context exists to
 
 ## 10. Consequences and open questions
 
-**The amendment this document asks for.** The Holdings glossary row `OnShelf | En rayon` should
-become `InService | En service`, for the reason in §2: a librarian says *en rayon* about a copy that
-is physically there, and Holdings cannot know that. The row is the glossary's to change, so it is
-requested here rather than taken.
+**The amendment this document asked for, and got.** The Holdings glossary row `OnShelf | En rayon`
+is now `InService | En service`, for the reason in §2: a librarian says *en rayon* about a copy that
+is physically there, and Holdings cannot know that.
+
+**What building it added.** Two things the design did not anticipate and the code settled.
+
+A copy's status has to be *stored* as its name rather than its number, for the reason the access
+point index already stored its kind that way: this table is read by a human when something looks
+wrong, and `InRepair` answers where `1` asks.
+
+And one database holding two modules' schemas does not compose for free. `EnsureCreated` builds the
+database and then answers "already there" for the second context over it, leaving that module's
+tables unbuilt — the relational creator has to be asked for them directly. It is a test's problem
+today and a host's problem tomorrow, and the answer there is migrations.
 
 **A merged edition orphans this context's identifiers.** Catalog has no merge operation, and the day
 it acquires one, every `Copy` holding the absorbed `EditionId` points at a record that no longer

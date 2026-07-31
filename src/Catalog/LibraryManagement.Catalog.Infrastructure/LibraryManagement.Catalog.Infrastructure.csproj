@@ -16,6 +16,9 @@
     <ItemGroup>
         <ProjectReference Include="..\..\Shared\LibraryManagement.Shared.Infrastructure\LibraryManagement.Shared.Infrastructure.csproj" />
         <ProjectReference Include="..\LibraryManagement.Catalog.Application\LibraryManagement.Catalog.Application.csproj" />
+        <!-- The module answers its own published language: the interface is declared there, the
+             implementation reads this module's store. -->
+        <ProjectReference Include="..\LibraryManagement.Catalog.PublishedLanguage\LibraryManagement.Catalog.PublishedLanguage.csproj" />
     </ItemGroup>
 
 </Project>

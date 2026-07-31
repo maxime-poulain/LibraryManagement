@@ -3,6 +3,7 @@ using Hangfire.SqlServer;
 using LibraryManagement.Catalog.Application.Authors.RegisterAuthor;
 using LibraryManagement.Catalog.Infrastructure.Extensions;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
+using LibraryManagement.Holdings.Infrastructure.Extensions;
 using LibraryManagement.Shared.Application.CQS;
 using LibraryManagement.Shared.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
@@ -29,8 +30,13 @@ public sealed class HangfireDrainTests(SqlServerFixture sqlServer) : IAsyncLifet
 
         // The mediator, its pipeline and its scoped lifetime come from the assembly's one
         // AddMediator call — see CompositionRoot.
+        // Both modules, because OutboxJobs is the host's surface and takes one processor per module
+        // it hosts. That is deliberate: a job per module is what lets each table block on its own
+        // head, and a single job looping over the modules would let one poisonous message stop every
+        // other queue. The cost is this line — a host that wires a module wires its drain with it.
         _provider = CompositionRoot.Services()
             .AddCatalogModule(options => options.UseSqlServer(sqlServer.ConnectionString))
+            .AddHoldingsModule(options => options.UseSqlServer(sqlServer.ConnectionString))
             .AddTransient<OutboxJobs>()
             .BuildServiceProvider();
 

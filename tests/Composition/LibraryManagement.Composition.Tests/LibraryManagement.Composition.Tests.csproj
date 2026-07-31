@@ -39,6 +39,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\src\Catalog\LibraryManagement.Catalog.Infrastructure\LibraryManagement.Catalog.Infrastructure.csproj" />
+        <ProjectReference Include="..\..\..\src\Holdings\LibraryManagement.Holdings.Infrastructure\LibraryManagement.Holdings.Infrastructure.csproj" />
     </ItemGroup>
 
     <ItemGroup>
