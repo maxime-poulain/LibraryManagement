@@ -7,7 +7,7 @@ namespace LibraryManagement.Catalog.Application.Works.CreditAuthor;
 /// </summary>
 /// <remarks>
 /// Whether the work and the author <em>exist</em> is not checked here — that is a question about
-/// the catalogue rather than about the request, it needs the store to answer, and the handler asks
+/// the catalog rather than about the request, it needs the store to answer, and the handler asks
 /// it.
 /// </remarks>
 public sealed class CreditAuthorCommandValidator : AbstractValidator<CreditAuthorCommand>

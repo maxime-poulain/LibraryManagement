@@ -4,7 +4,7 @@ using LibraryManagement.Shared.Domain.Results;
 namespace LibraryManagement.Catalog.Domain.Authors;
 
 /// <summary>
-/// One form of a name a record is catalogued under, in filing order — family name first, as in
+/// One form of a name a record is cataloged under, in filing order — family name first, as in
 /// <c>"Saint-Exupéry, Antoine de"</c>.
 /// </summary>
 /// <remarks>
@@ -57,7 +57,7 @@ public sealed class NameForm : ValueObject<NameForm>
     /// <inheritdoc/>
     protected override IEnumerable<object?> GetEqualityComponents()
     {
-        // Ordinal, so two name forms differing only in case are two forms. A catalogue that treated
+        // Ordinal, so two name forms differing only in case are two forms. A catalog that treated
         // them as one would silently merge "de Beauvoir" and "De Beauvoir", which are different
         // filing decisions a librarian makes on purpose.
         yield return Value;

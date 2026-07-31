@@ -113,7 +113,7 @@ public sealed class AuditInterceptorTests(SqlServerFixture sqlServer)
         // The precision the column declares, seen from the outside, and the only test here that can
         // see it: every other instant is a whole second and would survive any precision at all.
         // Undeclared, the column would be a datetimeoffset(7) and this value would come back with
-        // its hundred-nanosecond tail intact — detail neither the clock nor the catalogue has a use
+        // its hundred-nanosecond tail intact — detail neither the clock nor the catalog has a use
         // for, and which no aggregate can be ordered by anyway, since an identifier is only ordered
         // to the millisecond either.
         var author = AnAuthor("Sous-seconde, Sylvie");

@@ -6,7 +6,7 @@ namespace LibraryManagement.Catalog.Domain.Authors;
 /// An authority record was opened for a person.
 /// </summary>
 /// <param name="AuthorId">The new record.</param>
-/// <param name="PreferredName">The name the catalogue files the person under.</param>
+/// <param name="PreferredName">The name the catalog files the person under.</param>
 /// <remarks>
 /// Domain events carry the domain's own types rather than primitives. They never leave the context —
 /// a handler that reacts to one is compiled against the same model. Flattening to strings and Guids

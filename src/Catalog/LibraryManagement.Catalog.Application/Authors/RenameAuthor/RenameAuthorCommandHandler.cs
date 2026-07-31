@@ -30,7 +30,7 @@ public sealed class RenameAuthorCommandHandler(IAuthorRepository authors)
         {
             return Result.Failure(
                 CatalogErrorCodes.AuthorNotFound,
-                $"No author is catalogued under '{authorId}'.");
+                $"No author is cataloged under '{authorId}'.");
         }
 
         return NameForm.Create(command.NewPreferredName).Bind(author.Rename);

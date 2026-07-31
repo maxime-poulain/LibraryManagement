@@ -27,7 +27,7 @@ public sealed class GetWorkByIdQueryValidatorTests
     [Fact]
     public void TheValidator_ChecksTheShapeAndNothingElse()
     {
-        // Whether the work exists is a question about the catalogue, needs the store to answer, and
+        // Whether the work exists is a question about the catalog, needs the store to answer, and
         // belongs to the handler. A validator that consulted a repository would put a second source
         // of truth in front of the first.
         typeof(GetWorkByIdQueryValidator)

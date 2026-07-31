@@ -8,7 +8,7 @@ namespace LibraryManagement.Catalog.Infrastructure.Search;
 // never save, converge rather than accumulate, carry no invariant.
 
 /// <summary>
-/// A work catalogued: its title becomes findable.
+/// A work cataloged: its title becomes findable.
 /// </summary>
 public sealed class WorkRegisteredProjector(CatalogDbContext context)
     : IDomainEventHandler<WorkRegistered>

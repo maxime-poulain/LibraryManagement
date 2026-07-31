@@ -8,7 +8,7 @@ namespace LibraryManagement.Catalog.Domain.Tests;
 
 // Builders that unwrap the Results these tests are not about, so each test reads as the one thing
 // it asserts rather than as a chain of matches.
-internal static class Catalogue
+internal static class Catalog
 {
     public static NameForm Name(string value) => Unwrap(NameForm.Create(value));
 

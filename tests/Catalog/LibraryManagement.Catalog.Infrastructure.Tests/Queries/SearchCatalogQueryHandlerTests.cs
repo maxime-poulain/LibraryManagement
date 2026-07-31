@@ -1,4 +1,4 @@
-using LibraryManagement.Catalog.Application.Search.SearchCatalogue;
+using LibraryManagement.Catalog.Application.Search.SearchCatalog;
 using LibraryManagement.Catalog.Infrastructure.Queries;
 using LibraryManagement.Catalog.Infrastructure.Search;
 
@@ -13,7 +13,7 @@ namespace LibraryManagement.Catalog.Infrastructure.Tests.Queries;
 /// how the index is read back.
 /// </remarks>
 [Collection(SqlServerCollection.Name)]
-public sealed class SearchCatalogueQueryHandlerTests(SqlServerFixture sqlServer)
+public sealed class SearchCatalogQueryHandlerTests(SqlServerFixture sqlServer)
 {
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
@@ -34,12 +34,12 @@ public sealed class SearchCatalogueQueryHandlerTests(SqlServerFixture sqlServer)
         await context.SaveChangesAsync(Token);
     }
 
-    private async Task<IReadOnlyList<CatalogueEntryDto>> SearchAsync(string term)
+    private async Task<IReadOnlyList<CatalogEntryDto>> SearchAsync(string term)
     {
         await using var reader = sqlServer.NewContext();
 
-        var result = await new SearchCatalogueQueryHandler(reader)
-            .Handle(new SearchCatalogueQuery(term), Token);
+        var result = await new SearchCatalogQueryHandler(reader)
+            .Handle(new SearchCatalogQuery(term), Token);
 
         return result.Match(entries => entries, _ => throw new InvalidOperationException("Expected success."));
     }
@@ -53,7 +53,7 @@ public sealed class SearchCatalogueQueryHandlerTests(SqlServerFixture sqlServer)
 
         var entry = (await SearchAsync(stem)).ShouldHaveSingleItem();
 
-        entry.Kind.ShouldBe(CatalogueEntryKind.Author);
+        entry.Kind.ShouldBe(CatalogEntryKind.Author);
         entry.RecordId.ShouldBe(authorId);
         entry.Form.ShouldBe($"{stem}, Annie");
         entry.PreferredForm.ShouldBe(entry.Form);
@@ -80,7 +80,7 @@ public sealed class SearchCatalogueQueryHandlerTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task TheSearch_ReadsAPrefixAndNotASubstring()
     {
-        // The browse behaviour of a catalogue: preferred names are filed surname-first and titles as
+        // The browse behaviour of a catalog: preferred names are filed surname-first and titles as
         // printed precisely so the beginning is the search. A middle is not a way in.
         var stem = AStem();
         await SeedAsync(APoint(AccessPointKind.Author, Guid.CreateVersion7(), $"{stem}-Ernaux, Annie", preferred: true));
@@ -122,7 +122,7 @@ public sealed class SearchCatalogueQueryHandlerTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task AuthorsAndWorks_InterfileInFilingOrder()
     {
-        // The dictionary catalogue: one alphabet for persons and titles, so whoever typed the
+        // The dictionary catalog: one alphabet for persons and titles, so whoever typed the
         // term does not have to say what kind of thing they are looking for before they may look.
         var stem = AStem();
         await SeedAsync(
@@ -132,8 +132,8 @@ public sealed class SearchCatalogueQueryHandlerTests(SqlServerFixture sqlServer)
         var entries = await SearchAsync(stem);
 
         entries.Count.ShouldBe(2);
-        entries[0].Kind.ShouldBe(CatalogueEntryKind.Author);
-        entries[1].Kind.ShouldBe(CatalogueEntryKind.Work);
+        entries[0].Kind.ShouldBe(CatalogEntryKind.Author);
+        entries[1].Kind.ShouldBe(CatalogEntryKind.Work);
     }
 
     [Fact]
@@ -142,15 +142,15 @@ public sealed class SearchCatalogueQueryHandlerTests(SqlServerFixture sqlServer)
         // The first page of the browse, in filing order. Paging waits for the interface that
         // needs it; the cap only keeps a one-letter search from carting the index across.
         var stem = AStem();
-        var beyondTheCap = SearchCatalogueQuery.MaxResults + 10;
+        var beyondTheCap = SearchCatalogQuery.MaxResults + 10;
         await SeedAsync([.. Enumerable.Range(0, beyondTheCap)
             .Select(i => APoint(AccessPointKind.Work, Guid.CreateVersion7(), $"{stem} {i:D3}", preferred: true))]);
 
         var entries = await SearchAsync(stem);
 
-        entries.Count.ShouldBe(SearchCatalogueQuery.MaxResults);
+        entries.Count.ShouldBe(SearchCatalogQuery.MaxResults);
         entries[0].Form.ShouldBe($"{stem} 000");
-        entries[^1].Form.ShouldBe($"{stem} {SearchCatalogueQuery.MaxResults - 1:D3}");
+        entries[^1].Form.ShouldBe($"{stem} {SearchCatalogQuery.MaxResults - 1:D3}");
     }
 
     [Fact]
@@ -164,7 +164,7 @@ public sealed class SearchCatalogueQueryHandlerTests(SqlServerFixture sqlServer)
 
         var entry = (await SearchAsync(stem)).ShouldHaveSingleItem();
 
-        entry.Kind.ShouldBe(CatalogueEntryKind.Edition);
+        entry.Kind.ShouldBe(CatalogEntryKind.Edition);
         entry.RecordId.ShouldBe(editionId);
     }
 
@@ -187,7 +187,7 @@ public sealed class SearchCatalogueQueryHandlerTests(SqlServerFixture sqlServer)
         await using var reader = sqlServer.NewContext();
 
         await Should.ThrowAsync<ArgumentException>(
-            async () => await new SearchCatalogueQueryHandler(reader)
-                .Handle(new SearchCatalogueQuery("   "), Token));
+            async () => await new SearchCatalogQueryHandler(reader)
+                .Handle(new SearchCatalogQuery("   "), Token));
     }
 }

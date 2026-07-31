@@ -48,7 +48,7 @@ public sealed class RenameAuthorCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AnAuthorNobodyCatalogued_Fails()
+    public async Task Handle_AnAuthorNobodyCataloged_Fails()
     {
         var result = await Handle(new RenameAuthorCommand(Guid.CreateVersion7(), "Duchesne, Annie"));
 

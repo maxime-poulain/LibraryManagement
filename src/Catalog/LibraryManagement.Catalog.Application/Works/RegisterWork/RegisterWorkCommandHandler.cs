@@ -11,7 +11,7 @@ namespace LibraryManagement.Catalog.Application.Works.RegisterWork;
 /// Handles <see cref="RegisterWorkCommand"/>.
 /// </summary>
 /// <param name="works">The store to add the new work to.</param>
-/// <param name="authors">Consulted to confirm every credited author is catalogued.</param>
+/// <param name="authors">Consulted to confirm every credited author is cataloged.</param>
 /// <remarks>
 /// Crediting an author who does not exist is a rule that spans two aggregates, so neither of them
 /// can enforce it alone and the handler asks the question. It stays a business rule and not a
@@ -45,7 +45,7 @@ public sealed class RegisterWorkCommandHandler(
             {
                 errors.Add(
                     CatalogErrorCodes.AuthorNotFound,
-                    $"No author is catalogued under '{authorId}'.");
+                    $"No author is cataloged under '{authorId}'.");
             }
         }
 

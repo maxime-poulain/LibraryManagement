@@ -20,7 +20,7 @@ namespace LibraryManagement.Architecture.Tests;
 /// A configuration that omits <c>IsRowVersion</c> builds a model, produces a schema and passes every
 /// test in the suite. What it also does is remove optimistic concurrency from that aggregate, so two
 /// employees editing the same record stop colliding and start overwriting each other. Nothing
-/// reports it, and the catalogue is simply wrong afterwards. That is the mistake this rule exists to
+/// reports it, and the catalog is simply wrong afterwards. That is the mistake this rule exists to
 /// make impossible rather than unlikely.
 /// </para>
 /// </remarks>

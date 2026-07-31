@@ -1,5 +1,5 @@
 using LibraryManagement.Catalog.Domain.Authors;
-using static LibraryManagement.Catalog.Domain.Tests.Catalogue;
+using static LibraryManagement.Catalog.Domain.Tests.Catalog;
 
 namespace LibraryManagement.Catalog.Domain.Tests.Authors;
 
@@ -103,7 +103,7 @@ public sealed class AuthorTests
     public void CorrectPreferredName_KeepsNothingOfTheWrongForm()
     {
         // The difference with Rename, and the reason this method exists. A typo is nobody's name:
-        // kept as a variant it would become a searchable access point, and the catalogue would
+        // kept as a variant it would become a searchable access point, and the catalog would
         // preserve forever the one thing it was asked to remove.
         var author = AnAuthor("Ernuax, Annie");
 

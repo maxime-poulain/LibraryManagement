@@ -1,4 +1,4 @@
-using LibraryManagement.Catalog.Application.Search.SearchCatalogue;
+using LibraryManagement.Catalog.Application.Search.SearchCatalog;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
 using LibraryManagement.Catalog.Infrastructure.Search;
 using LibraryManagement.Shared.Application.CQS;
@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace LibraryManagement.Catalog.Infrastructure.Queries;
 
 /// <summary>
-/// Handles <see cref="SearchCatalogueQuery"/> against the access-point index.
+/// Handles <see cref="SearchCatalogQuery"/> against the access-point index.
 /// </summary>
 /// <param name="context">The module's store.</param>
 /// <remarks>
@@ -24,12 +24,12 @@ namespace LibraryManagement.Catalog.Infrastructure.Queries;
 /// is asked a criterion, and "nothing answers to that" answers it.
 /// </para>
 /// </remarks>
-public sealed class SearchCatalogueQueryHandler(CatalogDbContext context)
-    : IQueryHandler<SearchCatalogueQuery, IReadOnlyList<CatalogueEntryDto>>
+public sealed class SearchCatalogQueryHandler(CatalogDbContext context)
+    : IQueryHandler<SearchCatalogQuery, IReadOnlyList<CatalogEntryDto>>
 {
     /// <inheritdoc/>
-    public async ValueTask<Result<IReadOnlyList<CatalogueEntryDto>>> Handle(
-        SearchCatalogueQuery query,
+    public async ValueTask<Result<IReadOnlyList<CatalogEntryDto>>> Handle(
+        SearchCatalogQuery query,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
@@ -40,7 +40,7 @@ public sealed class SearchCatalogueQueryHandler(CatalogDbContext context)
         ArgumentException.ThrowIfNullOrWhiteSpace(query.SearchTerm);
 
         // Trimmed because every stored form is: NameForm and Title trim on creation, so the
-        // space a search box leaves behind would otherwise miss what the catalogue holds.
+        // space a search box leaves behind would otherwise miss what the catalog holds.
         var term = query.SearchTerm.Trim();
 
         // StartsWith and not a raw LIKE: Entity Framework escapes the pattern characters, so a
@@ -67,28 +67,28 @@ public sealed class SearchCatalogueQueryHandler(CatalogDbContext context)
             .OrderBy(line => line.Form)
             .ThenBy(line => line.Kind)
             .ThenBy(line => line.TargetId)
-            .Take(SearchCatalogueQuery.MaxResults)
+            .Take(SearchCatalogQuery.MaxResults)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        // Authors and works interfile in one alphabet — the dictionary catalogue, which is what a
+        // Authors and works interfile in one alphabet — the dictionary catalog, which is what a
         // desk actually wants: whoever typed 'Mille' should not have to say whether they are
         // looking for a title or a person before they may look.
-        IReadOnlyList<CatalogueEntryDto> entries = lines
-            .Select(line => new CatalogueEntryDto(KindOf(line.Kind), line.TargetId, line.Form, line.PreferredForm))
+        IReadOnlyList<CatalogEntryDto> entries = lines
+            .Select(line => new CatalogEntryDto(KindOf(line.Kind), line.TargetId, line.Form, line.PreferredForm))
             .ToArray();
 
-        return Result<IReadOnlyList<CatalogueEntryDto>>.Success(entries);
+        return Result<IReadOnlyList<CatalogEntryDto>>.Success(entries);
     }
 
     // The contract's kind, not the row's: the storage enum cannot leave the module. An unknown
     // kind is corruption, reported as such — the same trust-the-store stance the serializer takes.
-    private static CatalogueEntryKind KindOf(AccessPointKind kind)
+    private static CatalogEntryKind KindOf(AccessPointKind kind)
         => kind switch
         {
-            AccessPointKind.Author => CatalogueEntryKind.Author,
-            AccessPointKind.Work => CatalogueEntryKind.Work,
-            AccessPointKind.Edition => CatalogueEntryKind.Edition,
+            AccessPointKind.Author => CatalogEntryKind.Author,
+            AccessPointKind.Work => CatalogEntryKind.Work,
+            AccessPointKind.Edition => CatalogEntryKind.Edition,
             _ => throw new InvalidOperationException($"Unknown access point kind '{kind}'."),
         };
 }

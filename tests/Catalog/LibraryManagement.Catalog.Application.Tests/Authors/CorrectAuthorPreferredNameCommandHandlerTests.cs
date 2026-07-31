@@ -49,7 +49,7 @@ public sealed class CorrectAuthorPreferredNameCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AnAuthorNobodyCatalogued_Fails()
+    public async Task Handle_AnAuthorNobodyCataloged_Fails()
     {
         var result = await Handle(new CorrectAuthorPreferredNameCommand(Guid.CreateVersion7(), "Hugo, Victor"));
 

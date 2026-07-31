@@ -37,7 +37,7 @@ public sealed class AddAuthorVariantNameCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AnAuthorNobodyCatalogued_Fails()
+    public async Task Handle_AnAuthorNobodyCataloged_Fails()
     {
         var result = await Handle(new AddAuthorVariantNameCommand(Guid.CreateVersion7(), "Sullivan, Vernon"));
 

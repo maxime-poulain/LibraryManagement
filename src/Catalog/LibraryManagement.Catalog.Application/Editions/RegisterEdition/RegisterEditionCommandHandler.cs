@@ -11,9 +11,9 @@ namespace LibraryManagement.Catalog.Application.Editions.RegisterEdition;
 /// Handles <see cref="RegisterEditionCommand"/>.
 /// </summary>
 /// <param name="editions">The store to add the new edition to.</param>
-/// <param name="works">Consulted to confirm the work being printed is catalogued.</param>
+/// <param name="works">Consulted to confirm the work being printed is cataloged.</param>
 /// <remarks>
-/// An edition of a work nobody catalogued is the rule that spans two aggregates, enforced here for
+/// An edition of a work nobody cataloged is the rule that spans two aggregates, enforced here for
 /// the reason given on <see cref="Works.RegisterWork.RegisterWorkCommandHandler"/>. The ISBN and
 /// the work's existence are independent, so both mistakes are reported at once.
 /// </remarks>
@@ -46,7 +46,7 @@ public sealed class RegisterEditionCommandHandler(
         {
             errors.Add(
                 CatalogErrorCodes.WorkNotFound,
-                $"No work is catalogued under '{workId}'.");
+                $"No work is cataloged under '{workId}'.");
         }
 
         if (errors.Count > 0)

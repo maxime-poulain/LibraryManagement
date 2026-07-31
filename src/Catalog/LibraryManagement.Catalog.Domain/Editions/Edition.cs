@@ -18,7 +18,7 @@ namespace LibraryManagement.Catalog.Domain.Editions;
 /// <para>
 /// Deliberately thin: an identity, the work it prints, and the ISBN it bears when it bears one.
 /// No ISBN is not an oversight — grey literature, self-published works and everything printed
-/// before 1970 carry none, and those are exactly what the manual commands exist to catalogue. The
+/// before 1970 carry none, and those are exactly what the manual commands exist to catalog. The
 /// publisher, the format and a translation's contributors arrive with their own concepts the day
 /// they are modelled; a thin edition is what lets Holdings attach copies without waiting for them.
 /// </para>
@@ -34,7 +34,7 @@ public sealed class Edition : AggregateRoot<EditionId>
     public Isbn? Isbn { get; private set; }
 
     /// <summary>
-    /// Catalogues an edition of a work.
+    /// Catalogs an edition of a work.
     /// </summary>
     /// <param name="id">The identifier the edition will keep for its whole life.</param>
     /// <param name="workId">The work this edition prints. That it exists is the caller's rule to enforce.</param>

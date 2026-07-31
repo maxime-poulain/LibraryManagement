@@ -27,7 +27,7 @@ public sealed class AuthorConfiguration : AggregateRootConfiguration<Author, Aut
             .HasMaxLength(NameForm.MaxLength)
             .IsRequired();
 
-        // Filing depends on it, and a search for an author is the most common read in a catalogue.
+        // Filing depends on it, and a search for an author is the most common read in a catalog.
         builder.HasIndex(author => author.PreferredName);
 
         builder.ComplexProperty(author => author.LifeYears, life =>
@@ -59,5 +59,5 @@ public sealed class AuthorConfiguration : AggregateRootConfiguration<Author, Aut
     // the store and any repair belongs in a migration.
     private static NameForm NameFormOf(string value)
         => NameForm.Create(value).Match(name => name, _ => throw new InvalidOperationException(
-            $"The catalogue holds '{value}' as a name, which is not a valid one."));
+            $"The catalog holds '{value}' as a name, which is not a valid one."));
 }

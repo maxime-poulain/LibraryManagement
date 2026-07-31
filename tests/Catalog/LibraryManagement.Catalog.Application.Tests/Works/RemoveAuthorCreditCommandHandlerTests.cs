@@ -41,7 +41,7 @@ public sealed class RemoveAuthorCreditCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AWorkNobodyCatalogued_Fails()
+    public async Task Handle_AWorkNobodyCataloged_Fails()
     {
         var result = await Handle(new RemoveAuthorCreditCommand(Guid.CreateVersion7(), Guid.CreateVersion7()));
 

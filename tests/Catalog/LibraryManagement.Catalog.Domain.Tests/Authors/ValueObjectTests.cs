@@ -1,6 +1,6 @@
 using LibraryManagement.Catalog.Domain.Authors;
 using LibraryManagement.Catalog.Domain.Works;
-using static LibraryManagement.Catalog.Domain.Tests.Catalogue;
+using static LibraryManagement.Catalog.Domain.Tests.Catalog;
 
 namespace LibraryManagement.Catalog.Domain.Tests.Authors;
 
@@ -39,7 +39,7 @@ public sealed class NameFormTests
     public void Equality_IsCaseSensitive()
     {
         // "de Beauvoir" and "De Beauvoir" are different filing decisions a librarian makes on
-        // purpose, so the catalogue must not silently merge them.
+        // purpose, so the catalog must not silently merge them.
         Name("de Beauvoir, Simone").ShouldNotBe(Name("De Beauvoir, Simone"));
     }
 }
@@ -102,7 +102,7 @@ public sealed class LifeYearsTests
     }
 
     [Fact]
-    public void ToString_PrintsTheFormACatalogueUses()
+    public void ToString_PrintsTheFormACatalogUses()
     {
         Years(1900, 1944).ToString().ShouldBe("1900-1944");
         Years(1940, null).ToString().ShouldBe("1940-");

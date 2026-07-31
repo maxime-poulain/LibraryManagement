@@ -35,7 +35,7 @@ public sealed class CreditAuthorCommandHandlerTests
     [Fact]
     public async Task Handle_CreditsTheAuthor()
     {
-        // Attribution moving after cataloguing is the ordinary life of a record: the work was
+        // Attribution moving after cataloging is the ordinary life of a record: the work was
         // registered under one author, and scholarship adds the second.
         var author = AnAuthor();
         var work = AWork();
@@ -49,7 +49,7 @@ public sealed class CreditAuthorCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AWorkNobodyCatalogued_Fails()
+    public async Task Handle_AWorkNobodyCataloged_Fails()
     {
         var author = AnAuthor();
         _authors.With(author);
@@ -60,7 +60,7 @@ public sealed class CreditAuthorCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_CreditingAnAuthorThatIsNotCatalogued_Fails()
+    public async Task Handle_CreditingAnAuthorThatIsNotCataloged_Fails()
     {
         // The rule spanning two aggregates, asked by the handler here exactly as it is at
         // registration: a credit must point at a record that exists.

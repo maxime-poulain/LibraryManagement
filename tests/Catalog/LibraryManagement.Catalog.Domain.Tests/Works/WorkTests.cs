@@ -1,6 +1,6 @@
 using LibraryManagement.Catalog.Domain.Authors;
 using LibraryManagement.Catalog.Domain.Works;
-using static LibraryManagement.Catalog.Domain.Tests.Catalogue;
+using static LibraryManagement.Catalog.Domain.Tests.Catalog;
 
 namespace LibraryManagement.Catalog.Domain.Tests.Works;
 

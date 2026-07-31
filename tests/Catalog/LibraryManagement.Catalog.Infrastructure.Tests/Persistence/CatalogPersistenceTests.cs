@@ -197,9 +197,9 @@ public sealed class CatalogPersistenceTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
-    public async Task TheQueryHandler_FailsForAWorkThatIsNotCatalogued()
+    public async Task TheQueryHandler_FailsForAWorkThatIsNotCataloged()
     {
-        // A work that is not catalogued is a failure and not an empty answer: the caller asked for
+        // A work that is not cataloged is a failure and not an empty answer: the caller asked for
         // one particular work, and a null would leave them to tell absence from breakage.
         await using var reader = sqlServer.NewContext();
 
@@ -214,7 +214,7 @@ public sealed class CatalogPersistenceTests(SqlServerFixture sqlServer)
     public async Task TheQueryHandler_DoesNotSecondGuessTheValidator()
     {
         // The empty identifier never reaches here: GetWorkByIdQueryValidator rejects it at dispatch,
-        // and a work that is genuinely not catalogued stays a different answer from a request that
+        // and a work that is genuinely not cataloged stays a different answer from a request that
         // was never well formed. Reaching the handler with one is a wiring mistake, and WorkId says
         // so by throwing rather than by inventing a not-found.
         await using var reader = sqlServer.NewContext();

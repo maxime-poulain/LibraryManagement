@@ -27,7 +27,7 @@ public sealed class RegisterAuthorCommandValidatorTests
     [Fact]
     public void ARegistrationWithNeitherYear_IsAccepted()
     {
-        // A catalogue frequently knows a name and nothing else. Demanding a year would make the
+        // A catalog frequently knows a name and nothing else. Demanding a year would make the
         // ordinary case the exception.
         _validator.Validate(ARegistration(birthYear: null, deathYear: null)).IsValid.ShouldBeTrue();
     }
@@ -73,7 +73,7 @@ public sealed class RegisterAuthorCommandValidatorTests
     [Theory]
     [InlineData(LifeYears.EarliestYear - 1)]
     [InlineData(LifeYears.LatestYear + 1)]
-    public void AYearOfBirthOutsideWhatACatalogueAccepts_IsRejected(int birthYear)
+    public void AYearOfBirthOutsideWhatACatalogAccepts_IsRejected(int birthYear)
     {
         var outcome = _validator.Validate(ARegistration(birthYear: birthYear));
 
@@ -85,7 +85,7 @@ public sealed class RegisterAuthorCommandValidatorTests
     [Theory]
     [InlineData(LifeYears.EarliestYear - 1)]
     [InlineData(LifeYears.LatestYear + 1)]
-    public void AYearOfDeathOutsideWhatACatalogueAccepts_IsRejected(int deathYear)
+    public void AYearOfDeathOutsideWhatACatalogAccepts_IsRejected(int deathYear)
     {
         var outcome = _validator.Validate(ARegistration(deathYear: deathYear));
 
@@ -121,7 +121,7 @@ public sealed class RegisterAuthorCommandValidatorTests
     [Fact]
     public void TheValidator_ChecksTheShapeAndNothingElse()
     {
-        // Whether an author is already catalogued under that name is a question about the catalogue,
+        // Whether an author is already cataloged under that name is a question about the catalog,
         // needs the store to answer, and is not asked here. A validator with a dependency is a
         // validator that has started making decisions the handler owns.
         typeof(RegisterAuthorCommandValidator)

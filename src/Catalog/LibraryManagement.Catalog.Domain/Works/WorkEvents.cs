@@ -3,7 +3,7 @@ using LibraryManagement.Shared.Domain;
 namespace LibraryManagement.Catalog.Domain.Works;
 
 /// <summary>
-/// A work was catalogued.
+/// A work was cataloged.
 /// </summary>
 /// <param name="WorkId">The new work.</param>
 /// <param name="PreferredTitle">The title it is filed under.</param>

@@ -20,7 +20,7 @@ namespace LibraryManagement.Catalog.Infrastructure.Persistence;
 /// </para>
 /// <para>
 /// The sets are internal. Nothing outside this assembly can reach them, so the only way into the
-/// catalogue's data from elsewhere is through a repository or a query abstraction the domain
+/// catalog's data from elsewhere is through a repository or a query abstraction the domain
 /// declared.
 /// </para>
 /// </remarks>

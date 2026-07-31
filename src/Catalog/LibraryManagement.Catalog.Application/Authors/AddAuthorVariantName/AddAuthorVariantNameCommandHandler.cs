@@ -26,7 +26,7 @@ public sealed class AddAuthorVariantNameCommandHandler(IAuthorRepository authors
         {
             return Result.Failure(
                 CatalogErrorCodes.AuthorNotFound,
-                $"No author is catalogued under '{authorId}'.");
+                $"No author is cataloged under '{authorId}'.");
         }
 
         return NameForm.Create(command.VariantName).Bind(author.AddVariantName);

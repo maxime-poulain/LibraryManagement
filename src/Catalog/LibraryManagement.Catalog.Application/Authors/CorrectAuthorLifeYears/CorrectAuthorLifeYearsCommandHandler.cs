@@ -26,7 +26,7 @@ public sealed class CorrectAuthorLifeYearsCommandHandler(IAuthorRepository autho
         {
             return Result.Failure(
                 CatalogErrorCodes.AuthorNotFound,
-                $"No author is catalogued under '{authorId}'.");
+                $"No author is cataloged under '{authorId}'.");
         }
 
         return LifeYears.Create(command.BirthYear, command.DeathYear)

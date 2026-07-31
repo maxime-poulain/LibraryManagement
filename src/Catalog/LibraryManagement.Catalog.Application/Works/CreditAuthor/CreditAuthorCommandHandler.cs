@@ -10,7 +10,7 @@ namespace LibraryManagement.Catalog.Application.Works.CreditAuthor;
 /// Handles <see cref="CreditAuthorCommand"/>.
 /// </summary>
 /// <param name="works">The store holding the work to credit.</param>
-/// <param name="authors">Consulted to confirm the credited author is catalogued.</param>
+/// <param name="authors">Consulted to confirm the credited author is cataloged.</param>
 /// <remarks>
 /// Crediting an author who does not exist is the rule that spans two aggregates, enforced here for
 /// the reason given on <see cref="RegisterWork.RegisterWorkCommandHandler"/>: neither aggregate can
@@ -34,7 +34,7 @@ public sealed class CreditAuthorCommandHandler(
         {
             return Result.Failure(
                 CatalogErrorCodes.WorkNotFound,
-                $"No work is catalogued under '{workId}'.");
+                $"No work is cataloged under '{workId}'.");
         }
 
         var authorId = AuthorId.Create(command.AuthorId);
@@ -44,7 +44,7 @@ public sealed class CreditAuthorCommandHandler(
         {
             return Result.Failure(
                 CatalogErrorCodes.AuthorNotFound,
-                $"No author is catalogued under '{authorId}'.");
+                $"No author is cataloged under '{authorId}'.");
         }
 
         return work.CreditAuthor(authorId);

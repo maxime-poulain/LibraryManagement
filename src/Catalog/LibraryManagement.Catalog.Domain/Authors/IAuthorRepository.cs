@@ -21,11 +21,11 @@ public interface IAuthorRepository
     /// </summary>
     /// <param name="id">The author to get.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The author, or <see langword="null"/> when none is catalogued under that identifier.</returns>
+    /// <returns>The author, or <see langword="null"/> when none is cataloged under that identifier.</returns>
     ValueTask<Author?> GetByIdAsync(AuthorId id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Determines whether an author is catalogued under an identifier.
+    /// Determines whether an author is cataloged under an identifier.
     /// </summary>
     /// <param name="id">The author to look for.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>

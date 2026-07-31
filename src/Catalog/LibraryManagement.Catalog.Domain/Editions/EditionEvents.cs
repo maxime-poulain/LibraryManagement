@@ -4,7 +4,7 @@ using LibraryManagement.Shared.Domain;
 namespace LibraryManagement.Catalog.Domain.Editions;
 
 /// <summary>
-/// An edition was catalogued.
+/// An edition was cataloged.
 /// </summary>
 /// <param name="EditionId">The new edition.</param>
 /// <param name="WorkId">The work it prints.</param>

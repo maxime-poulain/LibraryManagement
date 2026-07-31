@@ -7,9 +7,9 @@ namespace LibraryManagement.Catalog.Application.Works.GetWorkById;
 /// </summary>
 /// <remarks>
 /// Whether a work exists is not checked here, and could not be: that is a question about the
-/// catalogue, it needs the store to answer, and the handler asks it. What is checked is that the
+/// catalog, it needs the store to answer, and the handler asks it. What is checked is that the
 /// caller asked a question at all — an empty identifier is not one, and it is the difference between
-/// a malformed request and a work that is genuinely not catalogued.
+/// a malformed request and a work that is genuinely not cataloged.
 /// </remarks>
 public sealed class GetWorkByIdQueryValidator : AbstractValidator<GetWorkByIdQuery>
 {

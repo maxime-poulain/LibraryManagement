@@ -35,7 +35,7 @@ public sealed class RetitleWorkCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AWorkNobodyCatalogued_Fails()
+    public async Task Handle_AWorkNobodyCataloged_Fails()
     {
         var result = await Handle(new RetitleWorkCommand(Guid.CreateVersion7(), "La Horde du Contrevent"));
 

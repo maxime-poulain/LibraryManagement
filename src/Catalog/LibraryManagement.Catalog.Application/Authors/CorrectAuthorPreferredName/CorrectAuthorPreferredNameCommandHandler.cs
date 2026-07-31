@@ -26,7 +26,7 @@ public sealed class CorrectAuthorPreferredNameCommandHandler(IAuthorRepository a
         {
             return Result.Failure(
                 CatalogErrorCodes.AuthorNotFound,
-                $"No author is catalogued under '{authorId}'.");
+                $"No author is cataloged under '{authorId}'.");
         }
 
         return NameForm.Create(command.CorrectedName).Bind(author.CorrectPreferredName);

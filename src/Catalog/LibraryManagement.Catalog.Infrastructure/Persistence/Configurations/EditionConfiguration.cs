@@ -25,7 +25,7 @@ public sealed class EditionConfiguration : AggregateRootConfiguration<Edition, E
             .HasConversion(id => id.Value, value => WorkId.Create(value))
             .IsRequired();
 
-        // "The editions of this work" is the question a catalogue asks of this table most.
+        // "The editions of this work" is the question a catalog asks of this table most.
         builder.HasIndex(edition => edition.WorkId);
 
         builder.Property(edition => edition.Isbn)
@@ -33,12 +33,12 @@ public sealed class EditionConfiguration : AggregateRootConfiguration<Edition, E
             .HasMaxLength(Isbn.MaxLength);
 
         // Indexed but deliberately not unique: publishers do reuse ISBNs, and forbidding a
-        // duplicate is a cataloguing decision the domain has not made — an index is not where it
+        // duplicate is a cataloging decision the domain has not made — an index is not where it
         // would be made.
         builder.HasIndex(edition => edition.Isbn);
     }
 
     private static Isbn IsbnOf(string value)
         => Isbn.Create(value).Match(isbn => isbn, _ => throw new InvalidOperationException(
-            $"The catalogue holds '{value}' as an ISBN, which is not a valid one."));
+            $"The catalog holds '{value}' as an ISBN, which is not a valid one."));
 }

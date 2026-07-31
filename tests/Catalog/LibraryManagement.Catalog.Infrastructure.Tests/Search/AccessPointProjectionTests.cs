@@ -78,7 +78,7 @@ public sealed class AccessPointProjectionTests(SqlServerFixture sqlServer)
     public async Task ACorrection_RetractsTheWrongFormOutright()
     {
         // The difference a rename never has: the typo stops being findable. Kept as an access
-        // point, it would preserve forever the one thing the catalogue was asked to remove.
+        // point, it would preserve forever the one thing the catalog was asked to remove.
         var authorId = AuthorId.Generate();
 
         await using (var context = sqlServer.NewContext())
@@ -117,7 +117,7 @@ public sealed class AccessPointProjectionTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task TwoAuthorsSharingAForm_AreTwoAnswers()
     {
-        // Homonyms are ordinary in a catalogue: the form resolves to every record it leads to, and
+        // Homonyms are ordinary in a catalog: the form resolves to every record it leads to, and
         // telling them apart is what the authority record exists for.
         var first = AuthorId.Generate();
         var second = AuthorId.Generate();

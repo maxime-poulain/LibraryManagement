@@ -28,10 +28,10 @@ public static class CatalogErrorCodes
     /// </summary>
     public static readonly ErrorCode DuplicateName = new("Catalog.DuplicateName");
 
-    /// <summary>No author is catalogued under that identifier.</summary>
+    /// <summary>No author is cataloged under that identifier.</summary>
     public static readonly ErrorCode AuthorNotFound = new("Catalog.AuthorNotFound");
 
-    /// <summary>No work is catalogued under that identifier.</summary>
+    /// <summary>No work is cataloged under that identifier.</summary>
     public static readonly ErrorCode WorkNotFound = new("Catalog.WorkNotFound");
 
     /// <summary>The author is already credited on this work.</summary>

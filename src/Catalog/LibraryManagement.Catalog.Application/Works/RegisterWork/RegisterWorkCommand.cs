@@ -4,7 +4,7 @@ using LibraryManagement.Shared.Domain.Results;
 namespace LibraryManagement.Catalog.Application.Works.RegisterWork;
 
 /// <summary>
-/// Catalogues a work.
+/// Catalogs a work.
 /// </summary>
 /// <param name="WorkId">The identifier the work will keep, supplied by the caller.</param>
 /// <param name="PreferredTitle">The title.</param>

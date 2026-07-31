@@ -73,7 +73,7 @@ public sealed class AuthorRenamedProjector(CatalogDbContext context)
 /// <remarks>
 /// The whole reason <see cref="AuthorPreferredNameCorrected"/> is a different event from
 /// <see cref="AuthorRenamed"/>: a rename keeps the outgoing form findable, a correction removes it.
-/// A typo kept as an access point would preserve forever the one thing the catalogue was asked to
+/// A typo kept as an access point would preserve forever the one thing the catalog was asked to
 /// remove.
 /// </remarks>
 public sealed class AuthorPreferredNameCorrectedProjector(CatalogDbContext context)

@@ -49,7 +49,7 @@ public sealed class RegisterWorkCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_CreditingAnAuthorThatIsNotCatalogued_Fails()
+    public async Task Handle_CreditingAnAuthorThatIsNotCataloged_Fails()
     {
         // A rule spanning two aggregates, so neither can enforce it alone and the handler asks.
         var result = await Handle(ACommand("Mille plateaux", Guid.CreateVersion7()));

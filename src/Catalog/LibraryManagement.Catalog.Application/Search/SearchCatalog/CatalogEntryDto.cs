@@ -1,12 +1,12 @@
-namespace LibraryManagement.Catalog.Application.Search.SearchCatalogue;
+namespace LibraryManagement.Catalog.Application.Search.SearchCatalog;
 
 /// <summary>
-/// One line of the catalogue's index: a form, and the record it leads back to.
+/// One line of the catalog's index: a form, and the record it leads back to.
 /// </summary>
 /// <param name="Kind">Whether the form leads to an author or to a work.</param>
 /// <param name="RecordId">The record the form leads back to.</param>
 /// <param name="Form">The form that matched the search — a preferred name, a variant, a title.</param>
-/// <param name="PreferredForm">The form the catalogue files the record under.</param>
+/// <param name="PreferredForm">The form the catalog files the record under.</param>
 /// <remarks>
 /// <para>
 /// The unit is the form, not the record, exactly as in the profession's own index: every access
@@ -19,20 +19,20 @@ namespace LibraryManagement.Catalog.Application.Search.SearchCatalogue;
 /// service a variant exists to render. When they are equal, the line is the entry itself.
 /// </para>
 /// </remarks>
-public sealed record CatalogueEntryDto(
-    CatalogueEntryKind Kind,
+public sealed record CatalogEntryDto(
+    CatalogEntryKind Kind,
     Guid RecordId,
     string Form,
     string PreferredForm);
 
 /// <summary>
-/// The kinds of record a catalogue search can lead to.
+/// The kinds of record a catalog search can lead to.
 /// </summary>
 /// <remarks>
 /// Owned by the contract, not borrowed from the storage row's own enum: the application cannot
 /// reference the infrastructure, and a caller of this query must not have to either.
 /// </remarks>
-public enum CatalogueEntryKind
+public enum CatalogEntryKind
 {
     /// <summary>The line leads to an author record.</summary>
     Author,

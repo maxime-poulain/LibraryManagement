@@ -23,7 +23,7 @@ public sealed class AccessPointConfiguration : IEntityTypeConfiguration<AccessPo
         builder.ToTable("AccessPoint");
 
         // The natural key is the fact itself: this form leads to that record. Two authors sharing a
-        // form — homonyms are ordinary in a catalogue — are two rows, distinguished by TargetId.
+        // form — homonyms are ordinary in a catalog — are two rows, distinguished by TargetId.
         builder.HasKey(accessPoint => new { accessPoint.Kind, accessPoint.TargetId, accessPoint.Form });
 
         // Stored as its name rather than its number: a projection table is read by humans when

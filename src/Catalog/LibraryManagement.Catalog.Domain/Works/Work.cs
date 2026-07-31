@@ -21,7 +21,7 @@ namespace LibraryManagement.Catalog.Domain.Works;
 /// </para>
 /// <para>
 /// The title is a <see cref="PreferredTitle"/> and not a <c>Title</c>, for the reason
-/// <see cref="Author.PreferredName"/> is not an <c>AuthorizedName</c>: it is a cataloguer's choice
+/// <see cref="Author.PreferredName"/> is not an <c>AuthorizedName</c>: it is a cataloger's choice
 /// among the forms a work is known by, not a description of it. <em>Le Petit Prince</em>,
 /// <em>The Little Prince</em> and <em>Der kleine Prinz</em> are one work, and one of the three is
 /// filed under. The qualifier also keeps the word free for the day an edition carries the title
@@ -41,12 +41,12 @@ public sealed class Work : AggregateRoot<WorkId>
     public IReadOnlyList<AuthorId> AuthorIds => _authorIds.AsReadOnly();
 
     /// <summary>
-    /// Catalogues a work.
+    /// Catalogs a work.
     /// </summary>
     /// <param name="id">The identifier the work will keep for its whole life.</param>
     /// <param name="title">The title.</param>
     /// <param name="authorIds">The authors credited, which may be none.</param>
-    /// <returns>The new work, or the reason it could not be catalogued.</returns>
+    /// <returns>The new work, or the reason it could not be cataloged.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="id"/> or <paramref name="title"/> is null.</exception>
     public static Result<Work> Register(WorkId id, Title title, IEnumerable<AuthorId>? authorIds = null)
     {

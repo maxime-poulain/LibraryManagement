@@ -15,7 +15,7 @@ namespace LibraryManagement.Catalog.Domain.Authors;
 /// identifier, that is a single change. Copied onto each work, it would be a migration.
 /// </para>
 /// <para>
-/// The model follows authority control: one <see cref="PreferredName"/> that the catalogue files
+/// The model follows authority control: one <see cref="PreferredName"/> that the catalog files
 /// under, and <see cref="VariantNames"/> that every former or alternative form falls back to. The
 /// variants are not decoration — they are what lets a search for a name someone no longer uses still
 /// find their work, which is the entire reason authority files record them.
@@ -39,7 +39,7 @@ public sealed class Author : AggregateRoot<AuthorId>
         LifeYears = LifeYears.Unknown;
     }
 
-    /// <summary>Gets the name the catalogue files this person under.</summary>
+    /// <summary>Gets the name the catalog files this person under.</summary>
     public NameForm PreferredName { get; private set; }
 
     /// <summary>Gets the years of birth and death, either of which may be unknown.</summary>
@@ -132,7 +132,7 @@ public sealed class Author : AggregateRoot<AuthorId>
     /// <para>
     /// <see cref="Rename"/> records a fact about the person; this records a fact about the record.
     /// A typo is nobody's name: kept as a variant it would become a searchable access point, and the
-    /// catalogue would preserve forever the one thing it was asked to remove. So nothing is kept,
+    /// catalog would preserve forever the one thing it was asked to remove. So nothing is kept,
     /// and <see cref="AuthorPreferredNameCorrected"/> tells consumers to retract the old form where
     /// <see cref="AuthorRenamed"/> tells them to keep it findable.
     /// </para>
