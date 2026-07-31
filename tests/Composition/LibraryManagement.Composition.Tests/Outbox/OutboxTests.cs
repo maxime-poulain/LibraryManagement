@@ -26,6 +26,7 @@ namespace LibraryManagement.Composition.Tests.Outbox;
 /// <see cref="HangfireDrainTests"/>, and nowhere else.
 /// </remarks>
 [Collection(SqlServerCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class OutboxTests(SqlServerFixture sqlServer) : IAsyncLifetime
 {
     private static CancellationToken Token => TestContext.Current.CancellationToken;

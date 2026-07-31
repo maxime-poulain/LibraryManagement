@@ -24,6 +24,7 @@ namespace LibraryManagement.Composition.Tests.Pipeline;
 /// each half proven, the seam between them assumed.
 /// </remarks>
 [Collection(SqlServerCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class CatalogPipelineTests(SqlServerFixture sqlServer) : IAsyncLifetime
 {
     private static CancellationToken Token => TestContext.Current.CancellationToken;

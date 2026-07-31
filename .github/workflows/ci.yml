@@ -1,0 +1,76 @@
+name: CI
+
+# Runs on every pull request, and on every push to one: opened, reopened, and synchronize —
+# synchronize being what fires when the source branch gains a commit. `reopened` is not decoration:
+# without it a reopened pull request has no run at all, and a required check waits forever on a run
+# that will never start.
+#
+# A `pull_request` trigger builds the *merge* of the head and the base, not the head alone. That is
+# what a merge gate should test — the result of merging, not the branch in isolation.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# This workflow only reads the repository. Nothing it does needs a token that can write.
+permissions:
+  contents: read
+
+# A new push supersedes the run in flight: cancelling it frees the agent instead of paying for two
+# runs of which only the later one will ever be reported.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The job name — "Build and unit tests" — is the string that appears in the branch protection
+  # rule as a required status check, so it is deliberately explicit and must stay stable: renaming
+  # it leaves the ruleset waiting on a context nobody produces any more, which blocks every merge.
+  #
+  # One job, no matrix, for the same reason. A matrix names its checks "Build and unit tests (x)",
+  # one per leg, so adding or removing a leg silently changes what the ruleset is waiting for.
+  build-and-unit-tests:
+    name: Build and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Keyed on Directory.Packages.props because central package management puts every version in
+      # that one file; the .csproj files are hashed too, since they decide which of those versions a
+      # restore actually pulls. NuGet.config clears the inherited sources, so a restore here reaches
+      # nuget.org and nothing else.
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Restore
+        run: dotnet restore LibraryManagement.slnx
+
+      # --no-restore, then --no-build below: without them the same work would be done three times,
+      # since both commands restore and build by default. Both carry --configuration Release, and
+      # they must agree — a mismatch makes `dotnet test` quietly rebuild in Debug, and the run would
+      # then test something other than what it compiled.
+      - name: Build (Release)
+        run: dotnet build LibraryManagement.slnx --configuration Release --no-restore
+
+      # Unit tests only. Integration tests carry [Trait("Category", "Integration")], which every
+      # class in SqlServerCollection also carries: needing a real SQL Server is what makes a test an
+      # integration test, and this agent starts no container.
+      #
+      # The exclusion is by trait rather than by project on purpose. Two test projects are mixed —
+      # Catalog.Infrastructure.Tests and Composition.Tests each hold unit tests that need nothing —
+      # so selecting whole projects would drop seventeen real tests without saying so. It also fails
+      # safe: an unmarked test runs, so a forgotten trait costs a slow build and a loud failure
+      # rather than a silent hole in the gate.
+      - name: Unit tests
+        run: >
+          dotnet test LibraryManagement.slnx --configuration Release --no-build
+          --filter "Category!=Integration"

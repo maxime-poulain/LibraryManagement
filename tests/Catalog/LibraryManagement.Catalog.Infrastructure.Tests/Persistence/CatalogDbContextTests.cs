@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 namespace LibraryManagement.Catalog.Infrastructure.Tests.Persistence;
 
 [Collection(SqlServerCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class CatalogDbContextTests(SqlServerFixture sqlServer)
 {
     // Touching Model forces EF to build and validate the whole mapping. Every configuration mistake

@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 namespace LibraryManagement.Catalog.Infrastructure.Tests.Persistence;
 
 [Collection(SqlServerCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class CatalogPersistenceTests(SqlServerFixture sqlServer)
 {
     private static CancellationToken Token => TestContext.Current.CancellationToken;
