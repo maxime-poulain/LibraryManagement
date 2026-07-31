@@ -19,15 +19,23 @@ namespace LibraryManagement.Catalog.Domain.Works;
 /// and many mediaeval texts have none. A model that demanded one would force a librarian to invent
 /// an author for <em>Le Roman de Renart</em>.
 /// </para>
+/// <para>
+/// The title is a <see cref="PreferredTitle"/> and not a <c>Title</c>, for the reason
+/// <see cref="Author.PreferredName"/> is not an <c>AuthorizedName</c>: it is a cataloguer's choice
+/// among the forms a work is known by, not a description of it. <em>Le Petit Prince</em>,
+/// <em>The Little Prince</em> and <em>Der kleine Prinz</em> are one work, and one of the three is
+/// filed under. The qualifier also keeps the word free for the day an edition carries the title
+/// printed on its own title page, which is a different fact about a different thing.
+/// </para>
 /// </remarks>
 public sealed class Work : AggregateRoot<WorkId>
 {
     private readonly List<AuthorId> _authorIds = [];
 
-    private Work(WorkId id, Title title) : base(id) => Title = title;
+    private Work(WorkId id, Title preferredTitle) : base(id) => PreferredTitle = preferredTitle;
 
-    /// <summary>Gets the title the work is known by.</summary>
-    public Title Title { get; private set; }
+    /// <summary>Gets the title the work is filed under — its preferred title.</summary>
+    public Title PreferredTitle { get; private set; }
 
     /// <summary>Gets the authors credited with the work, in the order they were credited.</summary>
     public IReadOnlyList<AuthorId> AuthorIds => _authorIds.AsReadOnly();
@@ -76,13 +84,13 @@ public sealed class Work : AggregateRoot<WorkId>
     {
         ArgumentNullException.ThrowIfNull(title);
 
-        if (title == Title)
+        if (title == PreferredTitle)
         {
             return;
         }
 
-        var previous = Title;
-        Title = title;
+        var previous = PreferredTitle;
+        PreferredTitle = title;
 
         AddDomainEvent(new WorkRetitled(Id, previous, title));
     }

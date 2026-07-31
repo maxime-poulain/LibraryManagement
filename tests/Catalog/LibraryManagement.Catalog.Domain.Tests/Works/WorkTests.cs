@@ -18,7 +18,7 @@ public sealed class WorkTests
 
         var work = AWork(first, second);
 
-        work.Title.ShouldBe(TitleOf("Mille plateaux"));
+        work.PreferredTitle.ShouldBe(TitleOf("Mille plateaux"));
         work.AuthorIds.ShouldBe([first, second]);
     }
 
@@ -44,7 +44,7 @@ public sealed class WorkTests
     public void Register_RaisesTheEventThatSaysSo()
     {
         AWork().DomainEvents.OfType<WorkRegistered>().Single()
-            .Title.ShouldBe(TitleOf("Mille plateaux"));
+            .PreferredTitle.ShouldBe(TitleOf("Mille plateaux"));
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public sealed class WorkTests
 
         work.Retitle(TitleOf("A Thousand Plateaus"));
 
-        work.Title.ShouldBe(TitleOf("A Thousand Plateaus"));
+        work.PreferredTitle.ShouldBe(TitleOf("A Thousand Plateaus"));
         work.AuthorIds.ShouldBe([author]);
     }
 

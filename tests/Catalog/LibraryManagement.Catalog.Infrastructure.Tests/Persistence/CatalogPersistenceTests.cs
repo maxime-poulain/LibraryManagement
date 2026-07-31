@@ -137,7 +137,7 @@ public sealed class CatalogPersistenceTests(SqlServerFixture sqlServer)
         var found = await new WorkRepository(reader).GetByIdAsync(work.Id, Token);
 
         found.ShouldNotBeNull();
-        found.Title.ShouldBe(TitleOf("Mille plateaux"));
+        found.PreferredTitle.ShouldBe(TitleOf("Mille plateaux"));
         found.AuthorIds.ShouldBe([first.Id, second.Id], ignoreOrder: true);
     }
 

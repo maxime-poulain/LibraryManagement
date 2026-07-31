@@ -51,7 +51,7 @@ public sealed class RegisterWorkCommandValidatorTests
         var outcome = _validator.Validate(ARegistration(title: title));
 
         outcome.IsValid.ShouldBeFalse();
-        outcome.Errors.ShouldContain(error => error.PropertyName == nameof(RegisterWorkCommand.Title));
+        outcome.Errors.ShouldContain(error => error.PropertyName == nameof(RegisterWorkCommand.PreferredTitle));
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public sealed class RegisterWorkCommandValidatorTests
         var outcome = _validator.Validate(ARegistration(title: TooLongATitle()));
 
         outcome.IsValid.ShouldBeFalse();
-        outcome.Errors.ShouldContain(error => error.PropertyName == nameof(RegisterWorkCommand.Title));
+        outcome.Errors.ShouldContain(error => error.PropertyName == nameof(RegisterWorkCommand.PreferredTitle));
     }
 
     [Fact]

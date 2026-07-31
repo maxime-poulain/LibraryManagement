@@ -21,7 +21,7 @@ public sealed class RegisterWorkCommandValidator : AbstractValidator<RegisterWor
             .NotEmpty()
             .WithMessage("A work identifier is required.");
 
-        RuleFor(command => command.Title)
+        RuleFor(command => command.PreferredTitle)
             .NotEmpty()
             .WithMessage("A title is required.")
             .MaximumLength(Title.MaxLength)

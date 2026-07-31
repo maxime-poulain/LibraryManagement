@@ -31,7 +31,7 @@ public sealed class RetitleWorkCommandHandlerTests
         var result = await Handle(new RetitleWorkCommand(work.Id.Value, "La Horde du Contrevent"));
 
         result.Match(() => true, _ => false).ShouldBeTrue();
-        work.Title.Value.ShouldBe("La Horde du Contrevent");
+        work.PreferredTitle.Value.ShouldBe("La Horde du Contrevent");
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public sealed class RetitleWorkCommandHandlerTests
         var result = await Handle(new RetitleWorkCommand(work.Id.Value, "   "));
 
         ErrorsOf(result).Single().ErrorCode.ShouldBe(CatalogErrorCodes.InvalidTitle);
-        work.Title.Value.ShouldBe("La Horde du Contrevent");
+        work.PreferredTitle.Value.ShouldBe("La Horde du Contrevent");
     }
 
     [Fact]

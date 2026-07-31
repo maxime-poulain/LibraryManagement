@@ -59,7 +59,7 @@ public sealed class GetWorkByIdQueryHandler(CatalogDbContext context)
             .Where(candidate => candidate.Id == id)
             .Select(candidate => new
             {
-                candidate.Title,
+                candidate.PreferredTitle,
                 AuthorIds = candidate.AuthorIds.ToList(),
             })
             .FirstOrDefaultAsync(cancellationToken)
@@ -89,7 +89,7 @@ public sealed class GetWorkByIdQueryHandler(CatalogDbContext context)
             .ToArray();
 
         return Result<WorkDetailsDto>.Success(
-            new WorkDetailsDto(query.WorkId, work.Title.Value, credited));
+            new WorkDetailsDto(query.WorkId, work.PreferredTitle.Value, credited));
     }
 
     // A work that is not catalogued is a failure and not an empty answer. The caller asked for one

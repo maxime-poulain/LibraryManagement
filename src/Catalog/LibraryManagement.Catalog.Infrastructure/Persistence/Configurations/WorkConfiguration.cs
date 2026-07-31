@@ -17,12 +17,12 @@ public sealed class WorkConfiguration : AggregateRootConfiguration<Work, WorkId>
 
         builder.ToTable("Work");
 
-        builder.Property(work => work.Title)
+        builder.Property(work => work.PreferredTitle)
             .HasConversion(title => title.Value, value => TitleOf(value))
             .HasMaxLength(Title.MaxLength)
             .IsRequired();
 
-        builder.HasIndex(work => work.Title);
+        builder.HasIndex(work => work.PreferredTitle);
 
         // A join table rather than a JSON array of identifiers. "Everything by this author" is a
         // question the catalogue is asked constantly, and an array cannot be indexed for it.

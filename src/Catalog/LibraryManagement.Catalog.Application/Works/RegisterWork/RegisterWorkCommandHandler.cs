@@ -30,7 +30,7 @@ public sealed class RegisterWorkCommandHandler(
 
         var errors = new ErrorCollection();
 
-        var title = Title.Create(command.Title);
+        var title = Title.Create(command.PreferredTitle);
         title.TapError(errors.AddErrors);
 
         var authorIds = command.AuthorIds.Select(AuthorId.Create).ToArray();

@@ -21,7 +21,7 @@ public sealed class WorkRegisteredProjector(CatalogDbContext context)
         await context.EnsureAccessPointAsync(
             AccessPointKind.Work,
             notification.WorkId.Value,
-            notification.Title.Value,
+            notification.PreferredTitle.Value,
             preferred: true,
             cancellationToken).ConfigureAwait(false);
     }

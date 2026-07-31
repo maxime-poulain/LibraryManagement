@@ -29,7 +29,7 @@ public sealed class RetitleWorkCommandHandler(IWorkRepository works)
                 $"No work is catalogued under '{workId}'.");
         }
 
-        return Title.Create(command.Title)
+        return Title.Create(command.NewPreferredTitle)
             .Bind(title =>
             {
                 work.Retitle(title);

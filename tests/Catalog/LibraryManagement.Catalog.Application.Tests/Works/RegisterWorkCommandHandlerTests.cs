@@ -36,7 +36,7 @@ public sealed class RegisterWorkCommandHandlerTests
         var result = await Handle(ACommand("Mille plateaux", author.Id.Value));
 
         result.Match(() => true, _ => false).ShouldBeTrue();
-        _works.Added.Single().Title.Value.ShouldBe("Mille plateaux");
+        _works.Added.Single().PreferredTitle.Value.ShouldBe("Mille plateaux");
     }
 
     [Fact]

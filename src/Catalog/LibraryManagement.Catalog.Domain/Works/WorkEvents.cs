@@ -6,8 +6,8 @@ namespace LibraryManagement.Catalog.Domain.Works;
 /// A work was catalogued.
 /// </summary>
 /// <param name="WorkId">The new work.</param>
-/// <param name="Title">Its title.</param>
-public sealed record WorkRegistered(WorkId WorkId, Title Title) : DomainEvent;
+/// <param name="PreferredTitle">The title it is filed under.</param>
+public sealed record WorkRegistered(WorkId WorkId, Title PreferredTitle) : DomainEvent;
 
 /// <summary>
 /// A work is now recorded under a different title.
