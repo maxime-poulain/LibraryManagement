@@ -8,7 +8,7 @@ namespace LibraryManagement.Catalog.Infrastructure.Search;
 // never save, converge rather than accumulate, carry no invariant.
 
 /// <summary>
-/// A work catalogued: its title becomes findable.
+/// A work cataloged: its title becomes findable.
 /// </summary>
 public sealed class WorkRegisteredProjector(CatalogDbContext context)
     : IDomainEventHandler<WorkRegistered>
@@ -21,8 +21,8 @@ public sealed class WorkRegisteredProjector(CatalogDbContext context)
         await context.EnsureAccessPointAsync(
             AccessPointKind.Work,
             notification.WorkId.Value,
-            notification.Title.Value,
-            authorized: true,
+            notification.PreferredTitle.Value,
+            preferred: true,
             cancellationToken).ConfigureAwait(false);
     }
 }
@@ -53,7 +53,7 @@ public sealed class WorkRetitledProjector(CatalogDbContext context)
             AccessPointKind.Work,
             notification.WorkId.Value,
             notification.NewTitle.Value,
-            authorized: true,
+            preferred: true,
             cancellationToken).ConfigureAwait(false);
     }
 }

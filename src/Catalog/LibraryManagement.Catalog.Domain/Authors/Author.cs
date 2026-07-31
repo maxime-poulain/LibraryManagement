@@ -15,7 +15,7 @@ namespace LibraryManagement.Catalog.Domain.Authors;
 /// identifier, that is a single change. Copied onto each work, it would be a migration.
 /// </para>
 /// <para>
-/// The model follows authority control: one <see cref="AuthorizedName"/> that the catalogue files
+/// The model follows authority control: one <see cref="PreferredName"/> that the catalog files
 /// under, and <see cref="VariantNames"/> that every former or alternative form falls back to. The
 /// variants are not decoration — they are what lets a search for a name someone no longer uses still
 /// find their work, which is the entire reason authority files record them.
@@ -23,24 +23,24 @@ namespace LibraryManagement.Catalog.Domain.Authors;
 /// </remarks>
 public sealed class Author : AggregateRoot<AuthorId>
 {
-    private readonly List<PersonName> _variantNames = [];
+    private readonly List<NameForm> _variantNames = [];
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Author"/> class with an identity and a heading.
+    /// Initializes a new instance of the <see cref="Author"/> class with an identity and a preferred name.
     /// </summary>
     /// <remarks>
     /// Takes only what identifies the record and what it cannot exist without. The years are set
     /// afterwards, by <see cref="CorrectLifeYears"/>, which is also what lets a mapper rebuild an
     /// author from the store: a complex value cannot be passed through a constructor there.
     /// </remarks>
-    private Author(AuthorId id, PersonName authorizedName) : base(id)
+    private Author(AuthorId id, NameForm preferredName) : base(id)
     {
-        AuthorizedName = authorizedName;
+        PreferredName = preferredName;
         LifeYears = LifeYears.Unknown;
     }
 
-    /// <summary>Gets the name the catalogue files this person under.</summary>
-    public PersonName AuthorizedName { get; private set; }
+    /// <summary>Gets the name the catalog files this person under.</summary>
+    public NameForm PreferredName { get; private set; }
 
     /// <summary>Gets the years of birth and death, either of which may be unknown.</summary>
     public LifeYears LifeYears { get; private set; }
@@ -48,31 +48,31 @@ public sealed class Author : AggregateRoot<AuthorId>
     /// <summary>
     /// Gets every other form the person has been known by, each of which leads back to this record.
     /// </summary>
-    public IReadOnlyList<PersonName> VariantNames => _variantNames.AsReadOnly();
+    public IReadOnlyList<NameForm> VariantNames => _variantNames.AsReadOnly();
 
     /// <summary>
     /// Opens an authority record for a person.
     /// </summary>
     /// <param name="id">The identifier the record will keep for its whole life.</param>
-    /// <param name="authorizedName">The name to file the person under.</param>
+    /// <param name="preferredName">The name to file the person under.</param>
     /// <param name="lifeYears">The years of birth and death, or <see cref="LifeYears.Unknown"/>.</param>
     /// <returns>The new record.</returns>
     /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
     /// <remarks>
     /// Returns an <see cref="Author"/> and not a <see cref="Result{TValue}"/>: every rule that could
-    /// refuse one has already been enforced by <see cref="PersonName"/> and <see cref="LifeYears"/>,
+    /// refuse one has already been enforced by <see cref="NameForm"/> and <see cref="LifeYears"/>,
     /// so this cannot fail. A factory that wrapped a value it can always produce would ask every
     /// caller to handle a failure that does not exist.
     /// </remarks>
-    public static Author Register(AuthorId id, PersonName authorizedName, LifeYears lifeYears)
+    public static Author Register(AuthorId id, NameForm preferredName, LifeYears lifeYears)
     {
         ArgumentNullException.ThrowIfNull(id);
-        ArgumentNullException.ThrowIfNull(authorizedName);
+        ArgumentNullException.ThrowIfNull(preferredName);
         ArgumentNullException.ThrowIfNull(lifeYears);
 
-        var author = new Author(id, authorizedName);
+        var author = new Author(id, preferredName);
         author.CorrectLifeYears(lifeYears);
-        author.AddDomainEvent(new AuthorRegistered(id, authorizedName));
+        author.AddDomainEvent(new AuthorRegistered(id, preferredName));
 
         return author;
     }
@@ -80,85 +80,85 @@ public sealed class Author : AggregateRoot<AuthorId>
     /// <summary>
     /// Files the person under a new name, keeping the old one as a variant.
     /// </summary>
-    /// <param name="newAuthorizedName">The name to file the person under from now on.</param>
+    /// <param name="newPreferredName">The name to file the person under from now on.</param>
     /// <returns>Success, or the reason the name was refused.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="newAuthorizedName"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="newPreferredName"/> is null.</exception>
     /// <remarks>
     /// <para>
-    /// The previous heading becomes a variant rather than disappearing. Nothing published under it
+    /// The previous preferred name becomes a variant rather than disappearing. Nothing published under it
     /// stops existing — a book printed in 1990 still bears the name on its title page — and a reader
     /// who only knows the old name must still be able to find the work.
     /// </para>
     /// <para>
     /// Renaming to a name already recorded as a variant is the ordinary case of someone returning to
-    /// a former name, so it is allowed: the variant is promoted and the outgoing heading takes its
+    /// a former name, so it is allowed: the variant is promoted and the outgoing preferred name takes its
     /// place among the variants.
     /// </para>
     /// <para>
-    /// This records a fact about the <em>person</em>. A heading that was simply wrong — a typo, a
-    /// mistranscription — is repaired with <see cref="CorrectHeading"/> instead, which keeps
+    /// This records a fact about the <em>person</em>. A preferred name that was simply wrong — a typo, a
+    /// mistranscription — is repaired with <see cref="CorrectPreferredName"/> instead, which keeps
     /// nothing: the two operations differ in exactly what they leave behind.
     /// </para>
     /// </remarks>
-    public Result Rename(PersonName newAuthorizedName)
+    public Result Rename(NameForm newPreferredName)
     {
-        ArgumentNullException.ThrowIfNull(newAuthorizedName);
+        ArgumentNullException.ThrowIfNull(newPreferredName);
 
-        if (newAuthorizedName == AuthorizedName)
+        if (newPreferredName == PreferredName)
         {
             return Result.Failure(
                 CatalogErrorCodes.DuplicateName,
-                $"'{newAuthorizedName}' is already the authorized name.");
+                $"'{newPreferredName}' is already the preferred name.");
         }
 
-        var previous = AuthorizedName;
+        var previous = PreferredName;
 
-        _variantNames.Remove(newAuthorizedName);
-        AuthorizedName = newAuthorizedName;
+        _variantNames.Remove(newPreferredName);
+        PreferredName = newPreferredName;
         _variantNames.Add(previous);
 
-        AddDomainEvent(new AuthorRenamed(Id, previous, newAuthorizedName));
+        AddDomainEvent(new AuthorRenamed(Id, previous, newPreferredName));
 
         return Result.Success();
     }
 
     /// <summary>
-    /// Replaces a heading that was wrong, keeping nothing of it.
+    /// Replaces a preferred name that was wrong, keeping nothing of it.
     /// </summary>
-    /// <param name="correctedName">The heading as it should have read.</param>
+    /// <param name="correctedName">The preferred name as it should have read.</param>
     /// <returns>Success, or the reason the correction was refused.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="correctedName"/> is null.</exception>
     /// <remarks>
     /// <para>
     /// <see cref="Rename"/> records a fact about the person; this records a fact about the record.
     /// A typo is nobody's name: kept as a variant it would become a searchable access point, and the
-    /// catalogue would preserve forever the one thing it was asked to remove. So nothing is kept,
-    /// and <see cref="AuthorHeadingCorrected"/> tells consumers to retract the old form where
+    /// catalog would preserve forever the one thing it was asked to remove. So nothing is kept,
+    /// and <see cref="AuthorPreferredNameCorrected"/> tells consumers to retract the old form where
     /// <see cref="AuthorRenamed"/> tells them to keep it findable.
     /// </para>
     /// <para>
     /// Correcting to a form already recorded as a variant promotes it, exactly as
     /// <see cref="Rename"/> does — a correction can restore a proper form someone had filed as
-    /// secondary — and the invariant that a heading is never also a variant holds either way.
+    /// secondary — and the invariant that a preferred name is never also a variant holds either way.
     /// </para>
     /// </remarks>
-    public Result CorrectHeading(PersonName correctedName)
+    public Result CorrectPreferredName(NameForm correctedName)
     {
         ArgumentNullException.ThrowIfNull(correctedName);
 
-        if (correctedName == AuthorizedName)
+        if (correctedName == PreferredName)
         {
             return Result.Failure(
                 CatalogErrorCodes.DuplicateName,
-                $"'{correctedName}' is already the authorized name.");
+                $"'{correctedName}' is already the preferred name.");
         }
 
-        var previous = AuthorizedName;
+        var previous = PreferredName;
 
         _variantNames.Remove(correctedName);
-        AuthorizedName = correctedName;
+        PreferredName = correctedName;
 
-        AddDomainEvent(new AuthorHeadingCorrected(Id, previous, correctedName));
+        AddDomainEvent(new AuthorPreferredNameCorrected(Id, previous, correctedName));
 
         return Result.Success();
     }
@@ -169,15 +169,15 @@ public sealed class Author : AggregateRoot<AuthorId>
     /// <param name="variantName">The alternative form.</param>
     /// <returns>Success, or the reason the name was refused.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="variantName"/> is null.</exception>
-    public Result AddVariantName(PersonName variantName)
+    public Result AddVariantName(NameForm variantName)
     {
         ArgumentNullException.ThrowIfNull(variantName);
 
-        if (variantName == AuthorizedName)
+        if (variantName == PreferredName)
         {
             return Result.Failure(
                 CatalogErrorCodes.DuplicateName,
-                $"'{variantName}' is the authorized name, so it cannot also be a variant.");
+                $"'{variantName}' is the preferred name, so it cannot also be a variant.");
         }
 
         if (_variantNames.Contains(variantName))
@@ -210,9 +210,9 @@ public sealed class Author : AggregateRoot<AuthorId>
     /// </summary>
     /// <param name="name">The name to look for.</param>
     /// <returns>
-    /// <see langword="true"/> when the name is the heading or one of its variants;
+    /// <see langword="true"/> when the name is the preferred name or one of its variants;
     /// <see langword="false"/> otherwise.
     /// </returns>
-    public bool IsKnownAs(PersonName name)
-        => AuthorizedName == name || _variantNames.Contains(name);
+    public bool IsKnownAs(NameForm name)
+        => PreferredName == name || _variantNames.Contains(name);
 }

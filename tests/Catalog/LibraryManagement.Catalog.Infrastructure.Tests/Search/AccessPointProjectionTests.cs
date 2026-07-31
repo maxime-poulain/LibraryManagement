@@ -19,8 +19,8 @@ public sealed class AccessPointProjectionTests(SqlServerFixture sqlServer)
 {
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
-    private static PersonName Name(string value)
-        => PersonName.Create(value).Match(name => name, _ => throw new InvalidOperationException());
+    private static NameForm Name(string value)
+        => NameForm.Create(value).Match(name => name, _ => throw new InvalidOperationException());
 
     private static Title TitleOf(string value)
         => Title.Create(value).Match(title => title, _ => throw new InvalidOperationException());
@@ -38,7 +38,7 @@ public sealed class AccessPointProjectionTests(SqlServerFixture sqlServer)
     // --- Authors ---------------------------------------------------------------------------------
 
     [Fact]
-    public async Task ARegisteredAuthor_IsFindableByItsHeading()
+    public async Task ARegisteredAuthor_IsFindableByItsPreferredName()
     {
         var authorId = AuthorId.Generate();
 
@@ -51,7 +51,7 @@ public sealed class AccessPointProjectionTests(SqlServerFixture sqlServer)
 
         var form = (await FormsOfAsync(authorId.Value)).ShouldHaveSingleItem();
         form.Form.ShouldBe("Ernaux, Annie");
-        form.IsAuthorized.ShouldBeTrue();
+        form.IsPreferred.ShouldBeTrue();
         form.Kind.ShouldBe(AccessPointKind.Author);
     }
 
@@ -70,29 +70,29 @@ public sealed class AccessPointProjectionTests(SqlServerFixture sqlServer)
         }
 
         var forms = await FormsOfAsync(authorId.Value);
-        forms.Single(form => form.Form == "Smith, Alex").IsAuthorized.ShouldBeTrue();
-        forms.Single(form => form.Form == "Smith, Jane").IsAuthorized.ShouldBeFalse();
+        forms.Single(form => form.Form == "Smith, Alex").IsPreferred.ShouldBeTrue();
+        forms.Single(form => form.Form == "Smith, Jane").IsPreferred.ShouldBeFalse();
     }
 
     [Fact]
     public async Task ACorrection_RetractsTheWrongFormOutright()
     {
         // The difference a rename never has: the typo stops being findable. Kept as an access
-        // point, it would preserve forever the one thing the catalogue was asked to remove.
+        // point, it would preserve forever the one thing the catalog was asked to remove.
         var authorId = AuthorId.Generate();
 
         await using (var context = sqlServer.NewContext())
         {
             await new AuthorRegisteredProjector(context)
                 .Handle(new AuthorRegistered(authorId, Name("Ernuax, Annie")), Token);
-            await new AuthorHeadingCorrectedProjector(context)
-                .Handle(new AuthorHeadingCorrected(authorId, Name("Ernuax, Annie"), Name("Ernaux, Annie")), Token);
+            await new AuthorPreferredNameCorrectedProjector(context)
+                .Handle(new AuthorPreferredNameCorrected(authorId, Name("Ernuax, Annie"), Name("Ernaux, Annie")), Token);
             await context.SaveChangesAsync(Token);
         }
 
         var form = (await FormsOfAsync(authorId.Value)).ShouldHaveSingleItem();
         form.Form.ShouldBe("Ernaux, Annie");
-        form.IsAuthorized.ShouldBeTrue();
+        form.IsPreferred.ShouldBeTrue();
     }
 
     [Fact]
@@ -111,13 +111,13 @@ public sealed class AccessPointProjectionTests(SqlServerFixture sqlServer)
 
         var forms = await FormsOfAsync(authorId.Value);
         forms.Count.ShouldBe(2);
-        forms.Single(form => form.Form == "Ajar, Émile").IsAuthorized.ShouldBeFalse();
+        forms.Single(form => form.Form == "Ajar, Émile").IsPreferred.ShouldBeFalse();
     }
 
     [Fact]
     public async Task TwoAuthorsSharingAForm_AreTwoAnswers()
     {
-        // Homonyms are ordinary in a catalogue: the form resolves to every record it leads to, and
+        // Homonyms are ordinary in a catalog: the form resolves to every record it leads to, and
         // telling them apart is what the authority record exists for.
         var first = AuthorId.Generate();
         var second = AuthorId.Generate();
@@ -190,7 +190,7 @@ public sealed class AccessPointProjectionTests(SqlServerFixture sqlServer)
 
         var form = (await FormsOfAsync(editionId.Value)).ShouldHaveSingleItem();
         form.Form.ShouldBe("9782070612758");
-        form.IsAuthorized.ShouldBeTrue();
+        form.IsPreferred.ShouldBeTrue();
         form.Kind.ShouldBe(AccessPointKind.Edition);
     }
 
@@ -239,19 +239,19 @@ public sealed class AccessPointProjectionTests(SqlServerFixture sqlServer)
     public async Task ARedeliveredRetraction_FindsNothingLeftToRetract()
     {
         var authorId = AuthorId.Generate();
-        var corrected = new AuthorHeadingCorrected(authorId, Name("Ernuax, Annie"), Name("Ernaux, Annie"));
+        var corrected = new AuthorPreferredNameCorrected(authorId, Name("Ernuax, Annie"), Name("Ernaux, Annie"));
 
         await using (var context = sqlServer.NewContext())
         {
             await new AuthorRegisteredProjector(context)
                 .Handle(new AuthorRegistered(authorId, Name("Ernuax, Annie")), Token);
-            await new AuthorHeadingCorrectedProjector(context).Handle(corrected, Token);
+            await new AuthorPreferredNameCorrectedProjector(context).Handle(corrected, Token);
             await context.SaveChangesAsync(Token);
         }
 
         await using (var context = sqlServer.NewContext())
         {
-            await new AuthorHeadingCorrectedProjector(context).Handle(corrected, Token);
+            await new AuthorPreferredNameCorrectedProjector(context).Handle(corrected, Token);
             await context.SaveChangesAsync(Token);
         }
 

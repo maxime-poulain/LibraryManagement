@@ -22,7 +22,7 @@ namespace LibraryManagement.Shared.Infrastructure.Behaviors;
 /// <para>
 /// <strong>The line carries the message's name and its error codes, never its contents.</strong>
 /// A command's fields are what an employee typed, and an error's <em>message</em> interpolates
-/// them back — "'…' is already the authorized name" names a person. What a member borrows or asks
+/// them back — "'…' is already the preferred name" names a person. What a member borrows or asks
 /// for is confidential by professional ethics before it is personal data by law, so the payload
 /// and the error messages stay out of the log wholesale rather than field by field. The codes
 /// alone answer the operational question — what failed, how often, why.

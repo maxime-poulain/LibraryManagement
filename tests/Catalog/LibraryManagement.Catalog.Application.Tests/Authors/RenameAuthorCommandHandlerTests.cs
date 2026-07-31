@@ -13,8 +13,8 @@ public sealed class RenameAuthorCommandHandlerTests
     private ValueTask<Result> Handle(RenameAuthorCommand command)
         => new RenameAuthorCommandHandler(_authors).Handle(command, TestContext.Current.CancellationToken);
 
-    private static PersonName NameOf(string value)
-        => PersonName.Create(value).Match(name => name, _ => throw new InvalidOperationException());
+    private static NameForm NameOf(string value)
+        => NameForm.Create(value).Match(name => name, _ => throw new InvalidOperationException());
 
     private static Author AnAuthor(string name = "Ernaux, Annie")
         => Author.Register(AuthorId.Generate(), NameOf(name), LifeYears.Unknown);
@@ -31,7 +31,7 @@ public sealed class RenameAuthorCommandHandlerTests
         var result = await Handle(new RenameAuthorCommand(author.Id.Value, "Duchesne, Annie"));
 
         result.Match(() => true, _ => false).ShouldBeTrue();
-        author.AuthorizedName.Value.ShouldBe("Duchesne, Annie");
+        author.PreferredName.Value.ShouldBe("Duchesne, Annie");
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public sealed class RenameAuthorCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AnAuthorNobodyCatalogued_Fails()
+    public async Task Handle_AnAuthorNobodyCataloged_Fails()
     {
         var result = await Handle(new RenameAuthorCommand(Guid.CreateVersion7(), "Duchesne, Annie"));
 
@@ -63,8 +63,8 @@ public sealed class RenameAuthorCommandHandlerTests
 
         var result = await Handle(new RenameAuthorCommand(author.Id.Value, "   "));
 
-        ErrorsOf(result).Single().ErrorCode.ShouldBe(CatalogErrorCodes.InvalidPersonName);
-        author.AuthorizedName.Value.ShouldBe("Ernaux, Annie");
+        ErrorsOf(result).Single().ErrorCode.ShouldBe(CatalogErrorCodes.InvalidName);
+        author.PreferredName.Value.ShouldBe("Ernaux, Annie");
     }
 
     [Fact]

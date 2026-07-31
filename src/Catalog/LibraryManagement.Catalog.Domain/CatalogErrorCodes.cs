@@ -11,8 +11,8 @@ namespace LibraryManagement.Catalog.Domain;
 /// </remarks>
 public static class CatalogErrorCodes
 {
-    /// <summary>A name is empty, blank, or longer than a catalogue heading may be.</summary>
-    public static readonly ErrorCode InvalidPersonName = new("Catalog.InvalidPersonName");
+    /// <summary>A name is empty, blank, or longer than a name form may run to.</summary>
+    public static readonly ErrorCode InvalidName = new("Catalog.InvalidName");
 
     /// <summary>A title is empty, blank, or longer than a title may be.</summary>
     public static readonly ErrorCode InvalidTitle = new("Catalog.InvalidTitle");
@@ -23,13 +23,15 @@ public static class CatalogErrorCodes
     /// <summary>A value that is not an ISBN: wrong shape, wrong prefix, or a failed check digit.</summary>
     public static readonly ErrorCode InvalidIsbn = new("Catalog.InvalidIsbn");
 
-    /// <summary>The name is already recorded for this author, as the heading or as a variant.</summary>
+    /// <summary>
+    /// The name is already recorded for this author, as the preferred name or as a variant.
+    /// </summary>
     public static readonly ErrorCode DuplicateName = new("Catalog.DuplicateName");
 
-    /// <summary>No author is catalogued under that identifier.</summary>
+    /// <summary>No author is cataloged under that identifier.</summary>
     public static readonly ErrorCode AuthorNotFound = new("Catalog.AuthorNotFound");
 
-    /// <summary>No work is catalogued under that identifier.</summary>
+    /// <summary>No work is cataloged under that identifier.</summary>
     public static readonly ErrorCode WorkNotFound = new("Catalog.WorkNotFound");
 
     /// <summary>The author is already credited on this work.</summary>

@@ -1,6 +1,6 @@
 using LibraryManagement.Catalog.Domain.Editions;
 using LibraryManagement.Catalog.Domain.Works;
-using static LibraryManagement.Catalog.Domain.Tests.Catalogue;
+using static LibraryManagement.Catalog.Domain.Tests.Catalog;
 
 namespace LibraryManagement.Catalog.Domain.Tests.Editions;
 
@@ -21,7 +21,7 @@ public sealed class EditionTests
     public void Register_WithoutAnIsbn_Succeeds()
     {
         // Grey literature, self-published works and everything printed before 1970 bear none —
-        // exactly what the manual commands exist to catalogue.
+        // exactly what the manual commands exist to catalog.
         Edition.Register(EditionId.Generate(), WorkId.Generate(), isbn: null).Isbn.ShouldBeNull();
     }
 

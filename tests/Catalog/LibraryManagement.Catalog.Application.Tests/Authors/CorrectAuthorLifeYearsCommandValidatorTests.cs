@@ -40,7 +40,7 @@ public sealed class CorrectAuthorLifeYearsCommandValidatorTests
     [Theory]
     [InlineData(LifeYears.EarliestYear - 1)]
     [InlineData(LifeYears.LatestYear + 1)]
-    public void AYearOfBirthOutsideWhatACatalogueAccepts_IsRejected(int birthYear)
+    public void AYearOfBirthOutsideWhatACatalogAccepts_IsRejected(int birthYear)
     {
         var outcome = _validator.Validate(ACorrection(birthYear: birthYear));
 
@@ -52,7 +52,7 @@ public sealed class CorrectAuthorLifeYearsCommandValidatorTests
     [Theory]
     [InlineData(LifeYears.EarliestYear - 1)]
     [InlineData(LifeYears.LatestYear + 1)]
-    public void AYearOfDeathOutsideWhatACatalogueAccepts_IsRejected(int deathYear)
+    public void AYearOfDeathOutsideWhatACatalogAccepts_IsRejected(int deathYear)
     {
         var outcome = _validator.Validate(ACorrection(deathYear: deathYear));
 

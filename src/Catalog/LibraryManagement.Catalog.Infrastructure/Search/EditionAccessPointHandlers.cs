@@ -8,7 +8,7 @@ namespace LibraryManagement.Catalog.Infrastructure.Search;
 // states: never save, converge rather than accumulate, carry no invariant.
 
 /// <summary>
-/// An edition catalogued: its ISBN, when it bears one, becomes findable.
+/// An edition cataloged: its ISBN, when it bears one, becomes findable.
 /// </summary>
 /// <remarks>
 /// An edition without an ISBN adds nothing, and that is not an error: it has no form to answer to
@@ -33,7 +33,7 @@ public sealed class EditionRegisteredProjector(CatalogDbContext context)
             AccessPointKind.Edition,
             notification.EditionId.Value,
             notification.Isbn.Value,
-            authorized: true,
+            preferred: true,
             cancellationToken).ConfigureAwait(false);
     }
 }

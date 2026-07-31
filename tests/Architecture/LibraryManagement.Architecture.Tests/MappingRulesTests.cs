@@ -68,7 +68,7 @@ public sealed class MappingRulesTests
             ProductionCode.Fixtures);
 
         violations.ShouldNotContain(violation =>
-            violation.Contains(nameof(PersonNameConfiguration), StringComparison.Ordinal));
+            violation.Contains(nameof(NameFormConfiguration), StringComparison.Ordinal));
     }
 
     [Fact]
@@ -120,9 +120,9 @@ public sealed class ProperWorkConfiguration : AggregateRootConfiguration<Work, W
     }
 }
 
-public sealed class PersonNameConfiguration : IEntityTypeConfiguration<PersonName>
+public sealed class NameFormConfiguration : IEntityTypeConfiguration<NameForm>
 {
-    public void Configure(EntityTypeBuilder<PersonName> builder)
+    public void Configure(EntityTypeBuilder<NameForm> builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
         builder.Property(name => name.Value);

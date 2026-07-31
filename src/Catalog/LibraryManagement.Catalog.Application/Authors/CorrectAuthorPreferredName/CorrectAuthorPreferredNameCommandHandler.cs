@@ -3,18 +3,18 @@ using LibraryManagement.Catalog.Domain.Authors;
 using LibraryManagement.Shared.Application.CQS;
 using LibraryManagement.Shared.Domain.Results;
 
-namespace LibraryManagement.Catalog.Application.Authors.CorrectAuthorHeading;
+namespace LibraryManagement.Catalog.Application.Authors.CorrectAuthorPreferredName;
 
 /// <summary>
-/// Handles <see cref="CorrectAuthorHeadingCommand"/>.
+/// Handles <see cref="CorrectAuthorPreferredNameCommand"/>.
 /// </summary>
 /// <param name="authors">The store holding the record to repair.</param>
-public sealed class CorrectAuthorHeadingCommandHandler(IAuthorRepository authors)
-    : ICommandHandler<CorrectAuthorHeadingCommand, Result>
+public sealed class CorrectAuthorPreferredNameCommandHandler(IAuthorRepository authors)
+    : ICommandHandler<CorrectAuthorPreferredNameCommand, Result>
 {
     /// <inheritdoc/>
     public async ValueTask<Result> Handle(
-        CorrectAuthorHeadingCommand command,
+        CorrectAuthorPreferredNameCommand command,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
@@ -26,9 +26,9 @@ public sealed class CorrectAuthorHeadingCommandHandler(IAuthorRepository authors
         {
             return Result.Failure(
                 CatalogErrorCodes.AuthorNotFound,
-                $"No author is catalogued under '{authorId}'.");
+                $"No author is cataloged under '{authorId}'.");
         }
 
-        return PersonName.Create(command.CorrectedName).Bind(author.CorrectHeading);
+        return NameForm.Create(command.CorrectedName).Bind(author.CorrectPreferredName);
     }
 }

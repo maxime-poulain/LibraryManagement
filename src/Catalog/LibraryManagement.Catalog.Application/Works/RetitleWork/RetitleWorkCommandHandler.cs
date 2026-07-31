@@ -26,10 +26,10 @@ public sealed class RetitleWorkCommandHandler(IWorkRepository works)
         {
             return Result.Failure(
                 CatalogErrorCodes.WorkNotFound,
-                $"No work is catalogued under '{workId}'.");
+                $"No work is cataloged under '{workId}'.");
         }
 
-        return Title.Create(command.Title)
+        return Title.Create(command.NewPreferredTitle)
             .Bind(title =>
             {
                 work.Retitle(title);

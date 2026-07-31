@@ -17,7 +17,7 @@ namespace LibraryManagement.Shared.Infrastructure.Persistence;
 /// identifier left to the store's own generation, and above all a <c>rowversion</c> that was never
 /// declared as one. That last omission produces a model that builds, a schema that looks right and a
 /// table with a column nobody checks, so two employees editing the same record simply overwrite each
-/// other and the catalogue is quietly wrong.
+/// other and the catalog is quietly wrong.
 /// </para>
 /// <para>
 /// The identifier is <c>ValueGeneratedNever</c>, never <c>ValueGeneratedOnAdd</c>. Identifiers here

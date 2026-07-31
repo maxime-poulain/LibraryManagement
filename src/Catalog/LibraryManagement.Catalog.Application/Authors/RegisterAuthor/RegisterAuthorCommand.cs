@@ -11,7 +11,7 @@ namespace LibraryManagement.Catalog.Application.Authors.RegisterAuthor;
 /// a command returns no value, so generating it here is what lets the caller know the identity of
 /// what it just created.
 /// </param>
-/// <param name="AuthorizedName">The name to file the person under.</param>
+/// <param name="PreferredName">The name to file the person under.</param>
 /// <param name="BirthYear">The year of birth, if known.</param>
 /// <param name="DeathYear">The year of death, if known.</param>
 /// <remarks>
@@ -22,6 +22,6 @@ namespace LibraryManagement.Catalog.Application.Authors.RegisterAuthor;
 /// </remarks>
 public sealed record RegisterAuthorCommand(
     Guid AuthorId,
-    string AuthorizedName,
+    string PreferredName,
     int? BirthYear,
     int? DeathYear) : ICommand<Result>;

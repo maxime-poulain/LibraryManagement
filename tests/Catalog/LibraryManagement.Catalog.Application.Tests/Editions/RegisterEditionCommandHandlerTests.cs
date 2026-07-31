@@ -15,7 +15,7 @@ public sealed class RegisterEditionCommandHandlerTests
         => new RegisterEditionCommandHandler(_editions, _works)
             .Handle(command, TestContext.Current.CancellationToken);
 
-    private Work ACataloguedWork()
+    private Work ACatalogedWork()
     {
         var work = Work.Register(
                 WorkId.Generate(),
@@ -33,7 +33,7 @@ public sealed class RegisterEditionCommandHandlerTests
     [Fact]
     public async Task Handle_AddsTheEditionToTheStore()
     {
-        var work = ACataloguedWork();
+        var work = ACatalogedWork();
         var command = new RegisterEditionCommand(Guid.CreateVersion7(), work.Id.Value, "978-2-07-061275-8");
 
         var result = await Handle(command);
@@ -48,7 +48,7 @@ public sealed class RegisterEditionCommandHandlerTests
     [Fact]
     public async Task Handle_WithoutAnIsbn_Succeeds()
     {
-        var work = ACataloguedWork();
+        var work = ACatalogedWork();
 
         var result = await Handle(new RegisterEditionCommand(Guid.CreateVersion7(), work.Id.Value, Isbn: null));
 
@@ -57,7 +57,7 @@ public sealed class RegisterEditionCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AWorkNobodyCatalogued_Fails()
+    public async Task Handle_AWorkNobodyCataloged_Fails()
     {
         // The rule spanning two aggregates, asked by the handler exactly as crediting an author
         // asks it: an edition prints a work, and the work must be there to be printed.
@@ -70,7 +70,7 @@ public sealed class RegisterEditionCommandHandlerTests
     [Fact]
     public async Task Handle_WithAValueThatIsNotAnIsbn_Fails()
     {
-        var work = ACataloguedWork();
+        var work = ACatalogedWork();
 
         var result = await Handle(new RegisterEditionCommand(Guid.CreateVersion7(), work.Id.Value, "9782070612757"));
 

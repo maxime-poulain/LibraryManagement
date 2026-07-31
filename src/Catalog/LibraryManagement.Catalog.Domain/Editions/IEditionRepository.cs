@@ -15,11 +15,11 @@ public interface IEditionRepository
     /// </summary>
     /// <param name="id">The edition to get.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The edition, or <see langword="null"/> when none is catalogued under that identifier.</returns>
+    /// <returns>The edition, or <see langword="null"/> when none is cataloged under that identifier.</returns>
     ValueTask<Edition?> GetByIdAsync(EditionId id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Adds a newly catalogued edition.
+    /// Adds a newly cataloged edition.
     /// </summary>
     /// <param name="edition">The edition to add.</param>
     /// <remarks>

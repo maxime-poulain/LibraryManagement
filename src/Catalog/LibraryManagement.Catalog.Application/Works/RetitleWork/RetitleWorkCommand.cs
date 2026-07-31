@@ -7,7 +7,7 @@ namespace LibraryManagement.Catalog.Application.Works.RetitleWork;
 /// Records a work under a different title.
 /// </summary>
 /// <param name="WorkId">The work to retitle.</param>
-/// <param name="Title">The title from now on.</param>
+/// <param name="NewPreferredTitle">The title from now on.</param>
 /// <remarks>
 /// Retitling to the current title succeeds and records nothing: nothing happened, and the model
 /// keeps no memory of former titles. The search projection follows the same shape — the new title
@@ -16,4 +16,4 @@ namespace LibraryManagement.Catalog.Application.Works.RetitleWork;
 /// </remarks>
 public sealed record RetitleWorkCommand(
     Guid WorkId,
-    string Title) : ICommand<Result>;
+    string NewPreferredTitle) : ICommand<Result>;

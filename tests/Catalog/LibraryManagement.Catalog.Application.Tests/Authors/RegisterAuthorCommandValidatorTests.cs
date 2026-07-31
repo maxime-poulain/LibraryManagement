@@ -9,12 +9,12 @@ public sealed class RegisterAuthorCommandValidatorTests
 
     private static RegisterAuthorCommand ARegistration(
         Guid? authorId = null,
-        string authorizedName = "Ernaux, Annie",
+        string preferredName = "Ernaux, Annie",
         int? birthYear = 1940,
         int? deathYear = null)
-        => new(authorId ?? Guid.CreateVersion7(), authorizedName, birthYear, deathYear);
+        => new(authorId ?? Guid.CreateVersion7(), preferredName, birthYear, deathYear);
 
-    private static string TooLongAName() => new('x', PersonName.MaxLength + 1);
+    private static string TooLongAName() => new('x', NameForm.MaxLength + 1);
 
     // --- What a well-formed request looks like ---------------------------------------------------
 
@@ -27,7 +27,7 @@ public sealed class RegisterAuthorCommandValidatorTests
     [Fact]
     public void ARegistrationWithNeitherYear_IsAccepted()
     {
-        // A catalogue frequently knows a name and nothing else. Demanding a year would make the
+        // A catalog frequently knows a name and nothing else. Demanding a year would make the
         // ordinary case the exception.
         _validator.Validate(ARegistration(birthYear: null, deathYear: null)).IsValid.ShouldBeTrue();
     }
@@ -51,29 +51,29 @@ public sealed class RegisterAuthorCommandValidatorTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void ANameThatIsNotOne_IsRejected(string authorizedName)
+    public void ANameThatIsNotOne_IsRejected(string preferredName)
     {
-        var outcome = _validator.Validate(ARegistration(authorizedName: authorizedName));
+        var outcome = _validator.Validate(ARegistration(preferredName: preferredName));
 
         outcome.IsValid.ShouldBeFalse();
         outcome.Errors.ShouldContain(
-            error => error.PropertyName == nameof(RegisterAuthorCommand.AuthorizedName));
+            error => error.PropertyName == nameof(RegisterAuthorCommand.PreferredName));
     }
 
     [Fact]
-    public void ANameLongerThanAHeadingMayBe_IsRejected()
+    public void ANameLongerThanANameFormMayRun_IsRejected()
     {
-        var outcome = _validator.Validate(ARegistration(authorizedName: TooLongAName()));
+        var outcome = _validator.Validate(ARegistration(preferredName: TooLongAName()));
 
         outcome.IsValid.ShouldBeFalse();
         outcome.Errors.ShouldContain(
-            error => error.PropertyName == nameof(RegisterAuthorCommand.AuthorizedName));
+            error => error.PropertyName == nameof(RegisterAuthorCommand.PreferredName));
     }
 
     [Theory]
     [InlineData(LifeYears.EarliestYear - 1)]
     [InlineData(LifeYears.LatestYear + 1)]
-    public void AYearOfBirthOutsideWhatACatalogueAccepts_IsRejected(int birthYear)
+    public void AYearOfBirthOutsideWhatACatalogAccepts_IsRejected(int birthYear)
     {
         var outcome = _validator.Validate(ARegistration(birthYear: birthYear));
 
@@ -85,7 +85,7 @@ public sealed class RegisterAuthorCommandValidatorTests
     [Theory]
     [InlineData(LifeYears.EarliestYear - 1)]
     [InlineData(LifeYears.LatestYear + 1)]
-    public void AYearOfDeathOutsideWhatACatalogueAccepts_IsRejected(int deathYear)
+    public void AYearOfDeathOutsideWhatACatalogAccepts_IsRejected(int deathYear)
     {
         var outcome = _validator.Validate(ARegistration(deathYear: deathYear));
 
@@ -101,7 +101,7 @@ public sealed class RegisterAuthorCommandValidatorTests
         // experience than one round trip. The accumulation is the point of a validator running before
         // the handler rather than a guard clause inside it.
         var outcome = _validator.Validate(
-            ARegistration(authorId: Guid.Empty, authorizedName: "", birthYear: LifeYears.LatestYear + 1));
+            ARegistration(authorId: Guid.Empty, preferredName: "", birthYear: LifeYears.LatestYear + 1));
 
         outcome.Errors.Select(error => error.PropertyName).Distinct().Count().ShouldBe(3);
     }
@@ -121,7 +121,7 @@ public sealed class RegisterAuthorCommandValidatorTests
     [Fact]
     public void TheValidator_ChecksTheShapeAndNothingElse()
     {
-        // Whether an author is already catalogued under that name is a question about the catalogue,
+        // Whether an author is already cataloged under that name is a question about the catalog,
         // needs the store to answer, and is not asked here. A validator with a dependency is a
         // validator that has started making decisions the handler owns.
         typeof(RegisterAuthorCommandValidator)

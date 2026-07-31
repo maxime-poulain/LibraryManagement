@@ -19,7 +19,7 @@ namespace LibraryManagement.Catalog.Infrastructure.Search;
 //     aggregates, and this table can be rebuilt from their events.
 
 /// <summary>
-/// A new authority record: its heading becomes findable.
+/// A new authority record: its preferred name becomes findable.
 /// </summary>
 public sealed class AuthorRegisteredProjector(CatalogDbContext context)
     : IDomainEventHandler<AuthorRegistered>
@@ -32,14 +32,14 @@ public sealed class AuthorRegisteredProjector(CatalogDbContext context)
         await context.EnsureAccessPointAsync(
             AccessPointKind.Author,
             notification.AuthorId.Value,
-            notification.AuthorizedName.Value,
-            authorized: true,
+            notification.PreferredName.Value,
+            preferred: true,
             cancellationToken).ConfigureAwait(false);
     }
 }
 
 /// <summary>
-/// A person renamed: the incoming form becomes the authorized one, and the outgoing form stays
+/// A person renamed: the incoming form becomes the preferred one, and the outgoing form stays
 /// findable as a variant — a book printed under it still bears it on its title page.
 /// </summary>
 public sealed class AuthorRenamedProjector(CatalogDbContext context)
@@ -54,33 +54,33 @@ public sealed class AuthorRenamedProjector(CatalogDbContext context)
             AccessPointKind.Author,
             notification.AuthorId.Value,
             notification.NewName.Value,
-            authorized: true,
+            preferred: true,
             cancellationToken).ConfigureAwait(false);
 
         await context.EnsureAccessPointAsync(
             AccessPointKind.Author,
             notification.AuthorId.Value,
             notification.PreviousName.Value,
-            authorized: false,
+            preferred: false,
             cancellationToken).ConfigureAwait(false);
     }
 }
 
 /// <summary>
-/// A heading corrected: the wrong form is retracted — not demoted — and the corrected one takes its
-/// place.
+/// A preferred name corrected: the wrong form is retracted — not demoted — and the corrected one
+/// takes its place.
 /// </summary>
 /// <remarks>
-/// The whole reason <see cref="AuthorHeadingCorrected"/> is a different event from
+/// The whole reason <see cref="AuthorPreferredNameCorrected"/> is a different event from
 /// <see cref="AuthorRenamed"/>: a rename keeps the outgoing form findable, a correction removes it.
-/// A typo kept as an access point would preserve forever the one thing the catalogue was asked to
+/// A typo kept as an access point would preserve forever the one thing the catalog was asked to
 /// remove.
 /// </remarks>
-public sealed class AuthorHeadingCorrectedProjector(CatalogDbContext context)
-    : IDomainEventHandler<AuthorHeadingCorrected>
+public sealed class AuthorPreferredNameCorrectedProjector(CatalogDbContext context)
+    : IDomainEventHandler<AuthorPreferredNameCorrected>
 {
     /// <inheritdoc/>
-    public async ValueTask Handle(AuthorHeadingCorrected notification, CancellationToken cancellationToken)
+    public async ValueTask Handle(AuthorPreferredNameCorrected notification, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(notification);
 
@@ -94,7 +94,7 @@ public sealed class AuthorHeadingCorrectedProjector(CatalogDbContext context)
             AccessPointKind.Author,
             notification.AuthorId.Value,
             notification.CorrectedName.Value,
-            authorized: true,
+            preferred: true,
             cancellationToken).ConfigureAwait(false);
     }
 }
@@ -115,7 +115,7 @@ public sealed class AuthorVariantNameAddedProjector(CatalogDbContext context)
             AccessPointKind.Author,
             notification.AuthorId.Value,
             notification.VariantName.Value,
-            authorized: false,
+            preferred: false,
             cancellationToken).ConfigureAwait(false);
     }
 }

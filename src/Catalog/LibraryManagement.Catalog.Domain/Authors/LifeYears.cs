@@ -5,7 +5,7 @@ using LibraryManagement.Shared.Domain.Results;
 namespace LibraryManagement.Catalog.Domain.Authors;
 
 /// <summary>
-/// The years a person was born and died, either of which a catalogue may not know.
+/// The years a person was born and died, either of which a catalog may not know.
 /// </summary>
 /// <remarks>
 /// A value object rather than two fields on <see cref="Author"/>, because the two are only
@@ -14,10 +14,10 @@ namespace LibraryManagement.Catalog.Domain.Authors;
 /// </remarks>
 public sealed class LifeYears : ValueObject<LifeYears>
 {
-    /// <summary>The earliest year a catalogue will accept.</summary>
+    /// <summary>The earliest year a catalog will accept.</summary>
     public const int EarliestYear = 1;
 
-    /// <summary>The latest year a catalogue will accept.</summary>
+    /// <summary>The latest year a catalog will accept.</summary>
     /// <remarks>
     /// A fixed bound rather than "not in the future". The domain has no clock, and giving it one to
     /// reject a year typed two ahead would buy very little: an implausible year is a question about
@@ -82,7 +82,7 @@ public sealed class LifeYears : ValueObject<LifeYears>
         yield return Death;
     }
 
-    /// <summary>Returns the years in the form a catalogue prints them, such as <c>"1900-1944"</c>.</summary>
+    /// <summary>Returns the years in the form a catalog prints them, such as <c>"1900-1944"</c>.</summary>
     public override string ToString() => (Birth, Death) switch
     {
         (null, null) => string.Empty,

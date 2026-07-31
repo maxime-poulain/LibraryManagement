@@ -18,7 +18,7 @@ public sealed class RegisterWorkCommandHandlerTests
     private static Author AnAuthor()
         => Author.Register(
             AuthorId.Generate(),
-            PersonName.Create("Deleuze, Gilles").Match(name => name, _ => throw new InvalidOperationException()),
+            NameForm.Create("Deleuze, Gilles").Match(name => name, _ => throw new InvalidOperationException()),
             LifeYears.Unknown);
 
     private static RegisterWorkCommand ACommand(string title, params Guid[] authorIds)
@@ -36,7 +36,7 @@ public sealed class RegisterWorkCommandHandlerTests
         var result = await Handle(ACommand("Mille plateaux", author.Id.Value));
 
         result.Match(() => true, _ => false).ShouldBeTrue();
-        _works.Added.Single().Title.Value.ShouldBe("Mille plateaux");
+        _works.Added.Single().PreferredTitle.Value.ShouldBe("Mille plateaux");
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public sealed class RegisterWorkCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_CreditingAnAuthorThatIsNotCatalogued_Fails()
+    public async Task Handle_CreditingAnAuthorThatIsNotCataloged_Fails()
     {
         // A rule spanning two aggregates, so neither can enforce it alone and the handler asks.
         var result = await Handle(ACommand("Mille plateaux", Guid.CreateVersion7()));

@@ -51,7 +51,7 @@ public sealed class RegisterWorkCommandValidatorTests
         var outcome = _validator.Validate(ARegistration(title: title));
 
         outcome.IsValid.ShouldBeFalse();
-        outcome.Errors.ShouldContain(error => error.PropertyName == nameof(RegisterWorkCommand.Title));
+        outcome.Errors.ShouldContain(error => error.PropertyName == nameof(RegisterWorkCommand.PreferredTitle));
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public sealed class RegisterWorkCommandValidatorTests
         var outcome = _validator.Validate(ARegistration(title: TooLongATitle()));
 
         outcome.IsValid.ShouldBeFalse();
-        outcome.Errors.ShouldContain(error => error.PropertyName == nameof(RegisterWorkCommand.Title));
+        outcome.Errors.ShouldContain(error => error.PropertyName == nameof(RegisterWorkCommand.PreferredTitle));
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public sealed class RegisterWorkCommandValidatorTests
     {
         // The distinction the command's own documentation draws: an empty list says "nobody wrote
         // this", a missing one says nothing at all. Accepting null would let a caller who forgot the
-        // field catalogue an anonymous work without meaning to.
+        // field catalog an anonymous work without meaning to.
         //
         // Built here rather than through the helper, whose default would put the missing list back.
         var outcome = _validator.Validate(
@@ -97,7 +97,7 @@ public sealed class RegisterWorkCommandValidatorTests
     {
         // Work.CreditAuthor refuses the duplicate too, and would report it. Catching it here reports
         // it alongside every other malformation instead of one round trip later, and it is a
-        // statement about the request rather than about the catalogue.
+        // statement about the request rather than about the catalog.
         var authorId = Guid.CreateVersion7();
 
         var outcome = _validator.Validate(ARegistration(authorIds: [authorId, authorId]));
@@ -119,7 +119,7 @@ public sealed class RegisterWorkCommandValidatorTests
     [Fact]
     public void TheValidator_ChecksTheShapeAndNothingElse()
     {
-        // Whether the credited authors exist is a question about the catalogue, needs the store to
+        // Whether the credited authors exist is a question about the catalog, needs the store to
         // answer, and the handler asks it — which is also how the answer gets to name the author that
         // is missing.
         typeof(RegisterWorkCommandValidator)

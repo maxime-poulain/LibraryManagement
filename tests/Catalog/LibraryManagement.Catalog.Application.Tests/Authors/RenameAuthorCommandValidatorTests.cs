@@ -9,8 +9,8 @@ public sealed class RenameAuthorCommandValidatorTests
 
     private static RenameAuthorCommand ARename(
         Guid? authorId = null,
-        string newAuthorizedName = "Duchesne, Annie")
-        => new(authorId ?? Guid.CreateVersion7(), newAuthorizedName);
+        string newPreferredName = "Duchesne, Annie")
+        => new(authorId ?? Guid.CreateVersion7(), newPreferredName);
 
     [Fact]
     public void AWellFormedRename_IsAccepted()
@@ -31,29 +31,29 @@ public sealed class RenameAuthorCommandValidatorTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void ANameThatIsNotOne_IsRejected(string newAuthorizedName)
+    public void ANameThatIsNotOne_IsRejected(string newPreferredName)
     {
-        var outcome = _validator.Validate(ARename(newAuthorizedName: newAuthorizedName));
+        var outcome = _validator.Validate(ARename(newPreferredName: newPreferredName));
 
         outcome.IsValid.ShouldBeFalse();
         outcome.Errors.ShouldContain(
-            error => error.PropertyName == nameof(RenameAuthorCommand.NewAuthorizedName));
+            error => error.PropertyName == nameof(RenameAuthorCommand.NewPreferredName));
     }
 
     [Fact]
-    public void ANameLongerThanAHeadingMayBe_IsRejected()
+    public void ANameLongerThanANameFormMayRun_IsRejected()
     {
-        var outcome = _validator.Validate(ARename(newAuthorizedName: new string('x', PersonName.MaxLength + 1)));
+        var outcome = _validator.Validate(ARename(newPreferredName: new string('x', NameForm.MaxLength + 1)));
 
         outcome.IsValid.ShouldBeFalse();
         outcome.Errors.ShouldContain(
-            error => error.PropertyName == nameof(RenameAuthorCommand.NewAuthorizedName));
+            error => error.PropertyName == nameof(RenameAuthorCommand.NewPreferredName));
     }
 
     [Fact]
     public void EveryMistakeInARequest_IsReportedAtOnce()
     {
-        var outcome = _validator.Validate(ARename(authorId: Guid.Empty, newAuthorizedName: ""));
+        var outcome = _validator.Validate(ARename(authorId: Guid.Empty, newPreferredName: ""));
 
         outcome.Errors.Select(error => error.PropertyName).Distinct().Count().ShouldBe(2);
     }

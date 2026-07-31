@@ -25,8 +25,8 @@ public sealed class AuditInterceptorTests(SqlServerFixture sqlServer)
     private static readonly DateTimeOffset Opened = new(2026, 3, 14, 9, 30, 0, TimeSpan.Zero);
     private static readonly DateTimeOffset Corrected = new(2026, 5, 2, 16, 45, 0, TimeSpan.Zero);
 
-    private static PersonName Name(string value)
-        => PersonName.Create(value).Match(name => name, _ => throw new InvalidOperationException());
+    private static NameForm Name(string value)
+        => NameForm.Create(value).Match(name => name, _ => throw new InvalidOperationException());
 
     private static Author AnAuthor(string name = "Ernaux, Annie")
         => Author.Register(AuthorId.Generate(), Name(name), LifeYears.Unknown);
@@ -113,8 +113,8 @@ public sealed class AuditInterceptorTests(SqlServerFixture sqlServer)
         // The precision the column declares, seen from the outside, and the only test here that can
         // see it: every other instant is a whole second and would survive any precision at all.
         // Undeclared, the column would be a datetimeoffset(7) and this value would come back with
-        // its hundred-nanosecond tail intact — detail neither the clock nor the catalogue has a use
-        // for, and which no aggregate can be ordered by anyway, since an identifier is only ordered
+        // its hundred-nanosecond tail intact — detail neither the clock nor the catalog has a use
+        // for, and which no aggregate can be ordered by anyway, since an employeeId is only ordered
         // to the millisecond either.
         var author = AnAuthor("Sous-seconde, Sylvie");
 
@@ -153,8 +153,8 @@ public sealed class AuditInterceptorTests(SqlServerFixture sqlServer)
         public override DateTimeOffset GetUtcNow() => now;
     }
 
-    private sealed class ActingAs(string? identifier) : ICurrentUser
+    private sealed class ActingAs(string? employeeId) : ICurrentEmployee
     {
-        public string? Identifier => identifier;
+        public string? EmployeeId => employeeId;
     }
 }

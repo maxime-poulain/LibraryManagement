@@ -29,7 +29,7 @@ public sealed class RegisterAuthorCommandHandlerTests
         var result = await Handle(command);
 
         result.Match(() => true, _ => false).ShouldBeTrue();
-        _authors.Added.Single().AuthorizedName.Value.ShouldBe("Ernaux, Annie");
+        _authors.Added.Single().PreferredName.Value.ShouldBe("Ernaux, Annie");
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public sealed class RegisterAuthorCommandHandlerTests
     {
         var result = await Handle(ACommand(name: "  "));
 
-        ErrorsOf(result).Single().ErrorCode.ShouldBe(CatalogErrorCodes.InvalidPersonName);
+        ErrorsOf(result).Single().ErrorCode.ShouldBe(CatalogErrorCodes.InvalidName);
         _authors.Added.ShouldBeEmpty();
     }
 
@@ -70,7 +70,7 @@ public sealed class RegisterAuthorCommandHandlerTests
 
         var codes = ErrorsOf(result).Select(error => error.ErrorCode).ToArray();
 
-        codes.ShouldContain(CatalogErrorCodes.InvalidPersonName);
+        codes.ShouldContain(CatalogErrorCodes.InvalidName);
         codes.ShouldContain(CatalogErrorCodes.InvalidLifeYears);
     }
 

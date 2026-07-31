@@ -17,7 +17,7 @@ public sealed class CorrectAuthorLifeYearsCommandHandlerTests
     private static Author AnAuthor()
         => Author.Register(
             AuthorId.Generate(),
-            PersonName.Create("Ernaux, Annie").Match(name => name, _ => throw new InvalidOperationException()),
+            NameForm.Create("Ernaux, Annie").Match(name => name, _ => throw new InvalidOperationException()),
             LifeYears.Unknown);
 
     private static IReadOnlyErrorCollection ErrorsOf(Result result)
@@ -37,7 +37,7 @@ public sealed class CorrectAuthorLifeYearsCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AnAuthorNobodyCatalogued_Fails()
+    public async Task Handle_AnAuthorNobodyCataloged_Fails()
     {
         var result = await Handle(new CorrectAuthorLifeYearsCommand(Guid.CreateVersion7(), 1940, null));
 

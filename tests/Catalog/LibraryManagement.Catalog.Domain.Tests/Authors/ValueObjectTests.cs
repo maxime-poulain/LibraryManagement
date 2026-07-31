@@ -1,10 +1,10 @@
 using LibraryManagement.Catalog.Domain.Authors;
 using LibraryManagement.Catalog.Domain.Works;
-using static LibraryManagement.Catalog.Domain.Tests.Catalogue;
+using static LibraryManagement.Catalog.Domain.Tests.Catalog;
 
 namespace LibraryManagement.Catalog.Domain.Tests.Authors;
 
-public sealed class PersonNameTests
+public sealed class NameFormTests
 {
     [Theory]
     [InlineData(null)]
@@ -12,8 +12,8 @@ public sealed class PersonNameTests
     [InlineData("   ")]
     public void Create_WithoutAName_Fails(string? value)
     {
-        ErrorsOf(PersonName.Create(value))
-            .Single().ErrorCode.ShouldBe(CatalogErrorCodes.InvalidPersonName);
+        ErrorsOf(NameForm.Create(value))
+            .Single().ErrorCode.ShouldBe(CatalogErrorCodes.InvalidName);
     }
 
     [Fact]
@@ -23,23 +23,23 @@ public sealed class PersonNameTests
     }
 
     [Fact]
-    public void Create_LongerThanAHeadingMayRun_Fails()
+    public void Create_LongerThanANameFormMayRun_Fails()
     {
-        ErrorsOf(PersonName.Create(new string('x', PersonName.MaxLength + 1)))
-            .Single().ErrorCode.ShouldBe(CatalogErrorCodes.InvalidPersonName);
+        ErrorsOf(NameForm.Create(new string('x', NameForm.MaxLength + 1)))
+            .Single().ErrorCode.ShouldBe(CatalogErrorCodes.InvalidName);
     }
 
     [Fact]
     public void Create_AtExactlyTheLimit_Succeeds()
     {
-        Name(new string('x', PersonName.MaxLength)).Value.Length.ShouldBe(PersonName.MaxLength);
+        Name(new string('x', NameForm.MaxLength)).Value.Length.ShouldBe(NameForm.MaxLength);
     }
 
     [Fact]
     public void Equality_IsCaseSensitive()
     {
         // "de Beauvoir" and "De Beauvoir" are different filing decisions a librarian makes on
-        // purpose, so the catalogue must not silently merge them.
+        // purpose, so the catalog must not silently merge them.
         Name("de Beauvoir, Simone").ShouldNotBe(Name("De Beauvoir, Simone"));
     }
 }
@@ -102,7 +102,7 @@ public sealed class LifeYearsTests
     }
 
     [Fact]
-    public void ToString_PrintsTheFormACatalogueUses()
+    public void ToString_PrintsTheFormACatalogUses()
     {
         Years(1900, 1944).ToString().ShouldBe("1900-1944");
         Years(1940, null).ToString().ShouldBe("1940-");

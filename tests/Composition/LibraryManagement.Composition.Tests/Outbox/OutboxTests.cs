@@ -62,9 +62,9 @@ public sealed class OutboxTests(SqlServerFixture sqlServer) : IAsyncLifetime
         return await work(scope.ServiceProvider);
     }
 
-    private Task<Result> DispatchAsync(string authorizedName)
+    private Task<Result> DispatchAsync(string preferredName)
         => InScopeAsync(async services => await services.GetRequiredService<ICommandDispatcher>()
-            .DispatchAsync(new RegisterAuthorCommand(Guid.CreateVersion7(), authorizedName, null, null), Token));
+            .DispatchAsync(new RegisterAuthorCommand(Guid.CreateVersion7(), preferredName, null, null), Token));
 
     private Task<OutboxDrainOutcome> DrainAsync()
         => _provider.GetRequiredService<OutboxProcessor<CatalogDbContext>>().ProcessAsync(Token);
@@ -148,7 +148,7 @@ public sealed class OutboxTests(SqlServerFixture sqlServer) : IAsyncLifetime
     {
         // The one consumer the strategic design names for Catalog's events, running as a real
         // production handler: before the drain the author exists but answers to nothing, after it
-        // the heading is an access point. Eventual consistency, observed from the outside.
+        // the preferred name is an access point. Eventual consistency, observed from the outside.
         await DispatchAsync("Ndiaye, Marie");
 
         (await AccessPointsAsync("Ndiaye, Marie")).ShouldBeEmpty();
@@ -156,7 +156,7 @@ public sealed class OutboxTests(SqlServerFixture sqlServer) : IAsyncLifetime
         await DrainAsync();
 
         var accessPoint = (await AccessPointsAsync("Ndiaye, Marie")).ShouldHaveSingleItem();
-        accessPoint.IsAuthorized.ShouldBeTrue();
+        accessPoint.IsPreferred.ShouldBeTrue();
         accessPoint.Kind.ShouldBe(AccessPointKind.Author);
     }
 
@@ -175,7 +175,7 @@ public sealed class OutboxTests(SqlServerFixture sqlServer) : IAsyncLifetime
 
         var accessPoint = (await AccessPointsAsync("9782070612758")).ShouldHaveSingleItem();
         accessPoint.Kind.ShouldBe(AccessPointKind.Edition);
-        accessPoint.IsAuthorized.ShouldBeTrue();
+        accessPoint.IsPreferred.ShouldBeTrue();
     }
 
     private Task<List<AccessPoint>> AccessPointsAsync(string form)
@@ -265,8 +265,8 @@ public sealed class EchoingAuthorHandler(IAuthorRepository authors) : IDomainEve
     {
         ArgumentNullException.ThrowIfNull(notification);
 
-        EchoedRegistrations.Seen.Add(notification.AuthorizedName);
-        var name = notification.AuthorizedName.Value;
+        EchoedRegistrations.Seen.Add(notification.PreferredName);
+        var name = notification.PreferredName.Value;
 
         if (name.StartsWith(EchoedRegistrations.Poison, StringComparison.Ordinal))
         {
@@ -279,8 +279,8 @@ public sealed class EchoingAuthorHandler(IAuthorRepository authors) : IDomainEve
             // outbox row, drained next — is answered by silence and the chain ends there.
             var companion = Author.Register(
                 AuthorId.Generate(),
-                PersonName.Create(EchoedRegistrations.CompanionName).Match(
-                    personName => personName,
+                NameForm.Create(EchoedRegistrations.CompanionName).Match(
+                    nameForm => nameForm,
                     errors => throw new InvalidOperationException(errors[0].ToString())),
                 LifeYears.Unknown);
 
@@ -307,7 +307,7 @@ public static class EchoedRegistrations
     /// <summary>The name the companion is registered under, carrying no marker.</summary>
     public const string CompanionName = "Written by a handler";
 
-    public static List<PersonName> Seen { get; } = [];
+    public static List<NameForm> Seen { get; } = [];
 
     public static AuthorId? Companion { get; set; }
 

@@ -7,7 +7,7 @@ namespace LibraryManagement.Catalog.Application.Works.RegisterWork;
 /// Checks the shape of a <see cref="RegisterWorkCommand"/>.
 /// </summary>
 /// <remarks>
-/// Whether the authors <em>exist</em> is not checked here. That is a question about the catalogue
+/// Whether the authors <em>exist</em> is not checked here. That is a question about the catalog
 /// rather than about the request, it needs the store to answer, and the handler asks it.
 /// </remarks>
 public sealed class RegisterWorkCommandValidator : AbstractValidator<RegisterWorkCommand>
@@ -21,7 +21,7 @@ public sealed class RegisterWorkCommandValidator : AbstractValidator<RegisterWor
             .NotEmpty()
             .WithMessage("A work identifier is required.");
 
-        RuleFor(command => command.Title)
+        RuleFor(command => command.PreferredTitle)
             .NotEmpty()
             .WithMessage("A title is required.")
             .MaximumLength(Title.MaxLength)

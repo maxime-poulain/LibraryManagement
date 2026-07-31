@@ -23,7 +23,7 @@ public sealed class AccessPointConfiguration : IEntityTypeConfiguration<AccessPo
         builder.ToTable("AccessPoint");
 
         // The natural key is the fact itself: this form leads to that record. Two authors sharing a
-        // form — homonyms are ordinary in a catalogue — are two rows, distinguished by TargetId.
+        // form — homonyms are ordinary in a catalog — are two rows, distinguished by TargetId.
         builder.HasKey(accessPoint => new { accessPoint.Kind, accessPoint.TargetId, accessPoint.Form });
 
         // Stored as its name rather than its number: a projection table is read by humans when
@@ -33,7 +33,7 @@ public sealed class AccessPointConfiguration : IEntityTypeConfiguration<AccessPo
             .HasMaxLength(16);
 
         builder.Property(accessPoint => accessPoint.Form)
-            .HasMaxLength(Math.Max(PersonName.MaxLength, Title.MaxLength))
+            .HasMaxLength(Math.Max(NameForm.MaxLength, Title.MaxLength))
             .IsRequired();
 
         // The one question this table exists for: which records answer to this form?

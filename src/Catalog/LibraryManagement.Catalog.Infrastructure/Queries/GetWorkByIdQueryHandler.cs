@@ -44,7 +44,7 @@ public sealed class GetWorkByIdQueryHandler(CatalogDbContext context)
 
         // No guard against the empty Guid here. GetWorkByIdQueryValidator rejects it before this
         // runs, and repeating the check would make a malformed request indistinguishable from a work
-        // that is genuinely not catalogued — the exact conflation the validator exists to prevent.
+        // that is genuinely not cataloged — the exact conflation the validator exists to prevent.
         var id = WorkId.Create(query.WorkId);
 
         // No aggregate is materialized: the projection is written into the query, so the database
@@ -59,7 +59,7 @@ public sealed class GetWorkByIdQueryHandler(CatalogDbContext context)
             .Where(candidate => candidate.Id == id)
             .Select(candidate => new
             {
-                candidate.Title,
+                candidate.PreferredTitle,
                 AuthorIds = candidate.AuthorIds.ToList(),
             })
             .FirstOrDefaultAsync(cancellationToken)
@@ -77,26 +77,26 @@ public sealed class GetWorkByIdQueryHandler(CatalogDbContext context)
         var names = await context.Authors
             .AsNoTracking()
             .Where(author => credits.Contains(author.Id))
-            .Select(author => new { author.Id, author.AuthorizedName })
+            .Select(author => new { author.Id, author.PreferredName })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        var headings = names.ToDictionary(author => author.Id, author => author.AuthorizedName.Value);
+        var preferredNames = names.ToDictionary(author => author.Id, author => author.PreferredName.Value);
 
         var credited = credits
-            .Where(headings.ContainsKey)
-            .Select(authorId => new CreditedAuthorDto(authorId.Value, headings[authorId]))
+            .Where(preferredNames.ContainsKey)
+            .Select(authorId => new CreditedAuthorDto(authorId.Value, preferredNames[authorId]))
             .ToArray();
 
         return Result<WorkDetailsDto>.Success(
-            new WorkDetailsDto(query.WorkId, work.Title.Value, credited));
+            new WorkDetailsDto(query.WorkId, work.PreferredTitle.Value, credited));
     }
 
-    // A work that is not catalogued is a failure and not an empty answer. The caller asked for one
+    // A work that is not cataloged is a failure and not an empty answer. The caller asked for one
     // particular work by identity; handing back a null would leave them to tell "there is no such
     // work" apart from "something went wrong", which is what a Result spares them.
     private static Result<WorkDetailsDto> NotFound(Guid workId)
         => Result<WorkDetailsDto>.Failure(
             CatalogErrorCodes.WorkNotFound,
-            $"No work is catalogued under '{workId}'.");
+            $"No work is cataloged under '{workId}'.");
 }

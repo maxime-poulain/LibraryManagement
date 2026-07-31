@@ -17,7 +17,7 @@ namespace LibraryManagement.Catalog.Domain.Editions;
 /// </para>
 /// <para>
 /// The check digit is verified, not stored on faith: it exists precisely to catch the transcription
-/// errors a cataloguing desk produces, and an ISBN that fails its own checksum is a typo by
+/// errors a cataloging desk produces, and an ISBN that fails its own checksum is a typo by
 /// definition. Hyphens and spaces are grouping, not identity, so <c>978-2-07-061275-8</c> and
 /// <c>9782070612758</c> are one value.
 /// </para>

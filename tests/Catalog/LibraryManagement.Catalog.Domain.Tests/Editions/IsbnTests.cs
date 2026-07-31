@@ -1,5 +1,5 @@
 using LibraryManagement.Catalog.Domain.Editions;
-using static LibraryManagement.Catalog.Domain.Tests.Catalogue;
+using static LibraryManagement.Catalog.Domain.Tests.Catalog;
 
 namespace LibraryManagement.Catalog.Domain.Tests.Editions;
 
@@ -51,7 +51,7 @@ public sealed class IsbnTests
     [Fact]
     public void AMistypedDigit_IsCaughtByTheCheckDigit()
     {
-        // The entire reason the check digit exists: one wrong digit at a cataloguing desk.
+        // The entire reason the check digit exists: one wrong digit at a cataloging desk.
         var result = Isbn.Create("9782070612757");
 
         ErrorsOf(result).Single().ErrorCode.ShouldBe(CatalogErrorCodes.InvalidIsbn);

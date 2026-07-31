@@ -17,7 +17,7 @@ public sealed class RetitleWorkCommandValidator : AbstractValidator<RetitleWorkC
             .NotEmpty()
             .WithMessage("A work identifier is required.");
 
-        RuleFor(command => command.Title)
+        RuleFor(command => command.NewPreferredTitle)
             .NotEmpty()
             .WithMessage("A title is required.")
             .MaximumLength(Title.MaxLength)

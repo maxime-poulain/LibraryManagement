@@ -37,7 +37,7 @@ public sealed class RetitleWorkCommandValidatorTests
 
         outcome.IsValid.ShouldBeFalse();
         outcome.Errors.ShouldContain(
-            error => error.PropertyName == nameof(RetitleWorkCommand.Title));
+            error => error.PropertyName == nameof(RetitleWorkCommand.NewPreferredTitle));
     }
 
     [Fact]
@@ -47,6 +47,6 @@ public sealed class RetitleWorkCommandValidatorTests
 
         outcome.IsValid.ShouldBeFalse();
         outcome.Errors.ShouldContain(
-            error => error.PropertyName == nameof(RetitleWorkCommand.Title));
+            error => error.PropertyName == nameof(RetitleWorkCommand.NewPreferredTitle));
     }
 }

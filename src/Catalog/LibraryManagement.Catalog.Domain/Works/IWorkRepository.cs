@@ -15,11 +15,11 @@ public interface IWorkRepository
     /// </summary>
     /// <param name="id">The work to get.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The work, or <see langword="null"/> when none is catalogued under that identifier.</returns>
+    /// <returns>The work, or <see langword="null"/> when none is cataloged under that identifier.</returns>
     ValueTask<Work?> GetByIdAsync(WorkId id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Determines whether a work is catalogued under an identifier.
+    /// Determines whether a work is cataloged under an identifier.
     /// </summary>
     /// <param name="id">The work to look for.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
@@ -33,7 +33,7 @@ public interface IWorkRepository
     ValueTask<bool> ExistsAsync(WorkId id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Adds a newly catalogued work.
+    /// Adds a newly cataloged work.
     /// </summary>
     /// <param name="work">The work to add.</param>
     /// <remarks>

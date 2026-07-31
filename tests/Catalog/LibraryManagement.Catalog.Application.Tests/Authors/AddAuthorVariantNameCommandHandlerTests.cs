@@ -14,8 +14,8 @@ public sealed class AddAuthorVariantNameCommandHandlerTests
         => new AddAuthorVariantNameCommandHandler(_authors)
             .Handle(command, TestContext.Current.CancellationToken);
 
-    private static PersonName NameOf(string value)
-        => PersonName.Create(value).Match(name => name, _ => throw new InvalidOperationException());
+    private static NameForm NameOf(string value)
+        => NameForm.Create(value).Match(name => name, _ => throw new InvalidOperationException());
 
     private static Author AnAuthor(string name = "Vian, Boris")
         => Author.Register(AuthorId.Generate(), NameOf(name), LifeYears.Unknown);
@@ -37,7 +37,7 @@ public sealed class AddAuthorVariantNameCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AnAuthorNobodyCatalogued_Fails()
+    public async Task Handle_AnAuthorNobodyCataloged_Fails()
     {
         var result = await Handle(new AddAuthorVariantNameCommand(Guid.CreateVersion7(), "Sullivan, Vernon"));
 
@@ -57,7 +57,7 @@ public sealed class AddAuthorVariantNameCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_TheHeadingItself_IsRefusedAsAVariant()
+    public async Task Handle_ThePreferredNameItself_IsRefusedAsAVariant()
     {
         var author = AnAuthor("Vian, Boris");
         _authors.With(author);

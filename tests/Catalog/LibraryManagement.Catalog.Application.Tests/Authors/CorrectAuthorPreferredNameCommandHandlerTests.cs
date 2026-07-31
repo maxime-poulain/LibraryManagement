@@ -1,4 +1,4 @@
-using LibraryManagement.Catalog.Application.Authors.CorrectAuthorHeading;
+using LibraryManagement.Catalog.Application.Authors.CorrectAuthorPreferredName;
 using LibraryManagement.Catalog.Application.Tests.TestDoubles;
 using LibraryManagement.Catalog.Domain.Authors;
 using LibraryManagement.Shared.Domain.Errors;
@@ -6,16 +6,16 @@ using LibraryManagement.Shared.Domain.Results;
 
 namespace LibraryManagement.Catalog.Application.Tests.Authors;
 
-public sealed class CorrectAuthorHeadingCommandHandlerTests
+public sealed class CorrectAuthorPreferredNameCommandHandlerTests
 {
     private readonly InMemoryAuthorRepository _authors = new();
 
-    private ValueTask<Result> Handle(CorrectAuthorHeadingCommand command)
-        => new CorrectAuthorHeadingCommandHandler(_authors)
+    private ValueTask<Result> Handle(CorrectAuthorPreferredNameCommand command)
+        => new CorrectAuthorPreferredNameCommandHandler(_authors)
             .Handle(command, TestContext.Current.CancellationToken);
 
-    private static PersonName NameOf(string value)
-        => PersonName.Create(value).Match(name => name, _ => throw new InvalidOperationException());
+    private static NameForm NameOf(string value)
+        => NameForm.Create(value).Match(name => name, _ => throw new InvalidOperationException());
 
     private static Author AnAuthor(string name = "Hugo, Vicotr")
         => Author.Register(AuthorId.Generate(), NameOf(name), LifeYears.Unknown);
@@ -24,15 +24,15 @@ public sealed class CorrectAuthorHeadingCommandHandlerTests
         => result.Match(() => throw new InvalidOperationException("Expected a failure."), errors => errors);
 
     [Fact]
-    public async Task Handle_RepairsTheHeading()
+    public async Task Handle_RepairsThePreferredName()
     {
         var author = AnAuthor("Hugo, Vicotr");
         _authors.With(author);
 
-        var result = await Handle(new CorrectAuthorHeadingCommand(author.Id.Value, "Hugo, Victor"));
+        var result = await Handle(new CorrectAuthorPreferredNameCommand(author.Id.Value, "Hugo, Victor"));
 
         result.Match(() => true, _ => false).ShouldBeTrue();
-        author.AuthorizedName.Value.ShouldBe("Hugo, Victor");
+        author.PreferredName.Value.ShouldBe("Hugo, Victor");
     }
 
     [Fact]
@@ -43,26 +43,26 @@ public sealed class CorrectAuthorHeadingCommandHandlerTests
         var author = AnAuthor("Hugo, Vicotr");
         _authors.With(author);
 
-        await Handle(new CorrectAuthorHeadingCommand(author.Id.Value, "Hugo, Victor"));
+        await Handle(new CorrectAuthorPreferredNameCommand(author.Id.Value, "Hugo, Victor"));
 
         author.VariantNames.ShouldNotContain(NameOf("Hugo, Vicotr"));
     }
 
     [Fact]
-    public async Task Handle_AnAuthorNobodyCatalogued_Fails()
+    public async Task Handle_AnAuthorNobodyCataloged_Fails()
     {
-        var result = await Handle(new CorrectAuthorHeadingCommand(Guid.CreateVersion7(), "Hugo, Victor"));
+        var result = await Handle(new CorrectAuthorPreferredNameCommand(Guid.CreateVersion7(), "Hugo, Victor"));
 
         ErrorsOf(result).Single().ErrorCode.ShouldBe(CatalogErrorCodes.AuthorNotFound);
     }
 
     [Fact]
-    public async Task Handle_CorrectingToTheCurrentHeading_Fails()
+    public async Task Handle_CorrectingToTheCurrentPreferredName_Fails()
     {
         var author = AnAuthor("Hugo, Victor");
         _authors.With(author);
 
-        var result = await Handle(new CorrectAuthorHeadingCommand(author.Id.Value, "Hugo, Victor"));
+        var result = await Handle(new CorrectAuthorPreferredNameCommand(author.Id.Value, "Hugo, Victor"));
 
         ErrorsOf(result).Single().ErrorCode.ShouldBe(CatalogErrorCodes.DuplicateName);
     }

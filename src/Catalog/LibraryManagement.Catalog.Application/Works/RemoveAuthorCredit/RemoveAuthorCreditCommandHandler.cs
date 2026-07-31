@@ -27,7 +27,7 @@ public sealed class RemoveAuthorCreditCommandHandler(IWorkRepository works)
         {
             return Result.Failure(
                 CatalogErrorCodes.WorkNotFound,
-                $"No work is catalogued under '{workId}'.");
+                $"No work is cataloged under '{workId}'.");
         }
 
         // The domain answers with a fact — removed, or never credited — and neither is a refusal:

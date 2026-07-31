@@ -1,13 +1,13 @@
-using LibraryManagement.Catalog.Application.Authors.CorrectAuthorHeading;
+using LibraryManagement.Catalog.Application.Authors.CorrectAuthorPreferredName;
 using LibraryManagement.Catalog.Domain.Authors;
 
 namespace LibraryManagement.Catalog.Application.Tests.Authors;
 
-public sealed class CorrectAuthorHeadingCommandValidatorTests
+public sealed class CorrectAuthorPreferredNameCommandValidatorTests
 {
-    private readonly CorrectAuthorHeadingCommandValidator _validator = new();
+    private readonly CorrectAuthorPreferredNameCommandValidator _validator = new();
 
-    private static CorrectAuthorHeadingCommand ACorrection(
+    private static CorrectAuthorPreferredNameCommand ACorrection(
         Guid? authorId = null,
         string correctedName = "Hugo, Victor")
         => new(authorId ?? Guid.CreateVersion7(), correctedName);
@@ -25,7 +25,7 @@ public sealed class CorrectAuthorHeadingCommandValidatorTests
 
         outcome.IsValid.ShouldBeFalse();
         outcome.Errors.ShouldContain(
-            error => error.PropertyName == nameof(CorrectAuthorHeadingCommand.AuthorId));
+            error => error.PropertyName == nameof(CorrectAuthorPreferredNameCommand.AuthorId));
     }
 
     [Theory]
@@ -37,16 +37,16 @@ public sealed class CorrectAuthorHeadingCommandValidatorTests
 
         outcome.IsValid.ShouldBeFalse();
         outcome.Errors.ShouldContain(
-            error => error.PropertyName == nameof(CorrectAuthorHeadingCommand.CorrectedName));
+            error => error.PropertyName == nameof(CorrectAuthorPreferredNameCommand.CorrectedName));
     }
 
     [Fact]
-    public void ANameLongerThanAHeadingMayBe_IsRejected()
+    public void ANameLongerThanANameFormMayRun_IsRejected()
     {
-        var outcome = _validator.Validate(ACorrection(correctedName: new string('x', PersonName.MaxLength + 1)));
+        var outcome = _validator.Validate(ACorrection(correctedName: new string('x', NameForm.MaxLength + 1)));
 
         outcome.IsValid.ShouldBeFalse();
         outcome.Errors.ShouldContain(
-            error => error.PropertyName == nameof(CorrectAuthorHeadingCommand.CorrectedName));
+            error => error.PropertyName == nameof(CorrectAuthorPreferredNameCommand.CorrectedName));
     }
 }

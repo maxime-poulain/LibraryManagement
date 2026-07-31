@@ -116,14 +116,14 @@ public sealed class QueryContractRulesTests
 // declared by the contract it implements, which is all the rule reads.
 public sealed record WorkSummary(Guid WorkId, string Title);
 
-public sealed record CatalogueEntryDto(Guid WorkId, string Title);
+public sealed record CatalogEntryDto(Guid WorkId, string Title);
 
 public sealed record BareAnswerQuery : IQuery<WorkSummary>;
 
 public sealed record ManyBareAnswersQuery : IQuery<IReadOnlyList<WorkSummary>>;
 
-public sealed record CompliantQuery : IQuery<CatalogueEntryDto>;
+public sealed record CompliantQuery : IQuery<CatalogEntryDto>;
 
-public sealed record CompliantCollectionQuery : IQuery<IReadOnlyList<CatalogueEntryDto>>;
+public sealed record CompliantCollectionQuery : IQuery<IReadOnlyList<CatalogEntryDto>>;
 
 public sealed record WorkCountQuery : IQuery<int>;

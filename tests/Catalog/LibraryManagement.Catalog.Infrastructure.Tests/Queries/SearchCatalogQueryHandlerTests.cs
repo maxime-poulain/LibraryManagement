@@ -1,4 +1,4 @@
-using LibraryManagement.Catalog.Application.Search.SearchCatalogue;
+using LibraryManagement.Catalog.Application.Search.SearchCatalog;
 using LibraryManagement.Catalog.Infrastructure.Queries;
 using LibraryManagement.Catalog.Infrastructure.Search;
 
@@ -13,7 +13,7 @@ namespace LibraryManagement.Catalog.Infrastructure.Tests.Queries;
 /// how the index is read back.
 /// </remarks>
 [Collection(SqlServerCollection.Name)]
-public sealed class SearchCatalogueQueryHandlerTests(SqlServerFixture sqlServer)
+public sealed class SearchCatalogQueryHandlerTests(SqlServerFixture sqlServer)
 {
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
@@ -24,8 +24,8 @@ public sealed class SearchCatalogueQueryHandlerTests(SqlServerFixture sqlServer)
     // prefix is exactly what a prefix search must never be handed by accident.
     private static string AStem() => $"Zz{Guid.NewGuid():N}"[..10];
 
-    private static AccessPoint APoint(AccessPointKind kind, Guid targetId, string form, bool authorized)
-        => new() { Kind = kind, TargetId = targetId, Form = form, IsAuthorized = authorized };
+    private static AccessPoint APoint(AccessPointKind kind, Guid targetId, string form, bool preferred)
+        => new() { Kind = kind, TargetId = targetId, Form = form, IsPreferred = preferred };
 
     private async Task SeedAsync(params AccessPoint[] points)
     {
@@ -34,56 +34,56 @@ public sealed class SearchCatalogueQueryHandlerTests(SqlServerFixture sqlServer)
         await context.SaveChangesAsync(Token);
     }
 
-    private async Task<IReadOnlyList<CatalogueEntryDto>> SearchAsync(string term)
+    private async Task<IReadOnlyList<CatalogEntryDto>> SearchAsync(string term)
     {
         await using var reader = sqlServer.NewContext();
 
-        var result = await new SearchCatalogueQueryHandler(reader)
-            .Handle(new SearchCatalogueQuery(term), Token);
+        var result = await new SearchCatalogQueryHandler(reader)
+            .Handle(new SearchCatalogQuery(term), Token);
 
         return result.Match(entries => entries, _ => throw new InvalidOperationException("Expected success."));
     }
 
     [Fact]
-    public async Task AHeading_IsItsOwnEntry()
+    public async Task APreferredName_IsItsOwnEntry()
     {
         var stem = AStem();
         var authorId = Guid.CreateVersion7();
-        await SeedAsync(APoint(AccessPointKind.Author, authorId, $"{stem}, Annie", authorized: true));
+        await SeedAsync(APoint(AccessPointKind.Author, authorId, $"{stem}, Annie", preferred: true));
 
         var entry = (await SearchAsync(stem)).ShouldHaveSingleItem();
 
-        entry.Kind.ShouldBe(CatalogueEntryKind.Author);
+        entry.Kind.ShouldBe(CatalogEntryKind.Author);
         entry.RecordId.ShouldBe(authorId);
         entry.Form.ShouldBe($"{stem}, Annie");
-        entry.AuthorizedForm.ShouldBe(entry.Form);
+        entry.PreferredForm.ShouldBe(entry.Form);
     }
 
     [Fact]
     public async Task AVariantMatch_IsASeeReference()
     {
-        // The line a variant exists to produce: the form that matched, and the heading it leads
+        // The line a variant exists to produce: the form that matched, and the preferred name it leads
         // to — Sullivan, Vernon *see* Vian, Boris.
         var stem = AStem();
         var authorId = Guid.CreateVersion7();
-        var heading = $"Gary, Romain ({stem})";
+        var preferred = $"Gary, Romain ({stem})";
         await SeedAsync(
-            APoint(AccessPointKind.Author, authorId, heading, authorized: true),
-            APoint(AccessPointKind.Author, authorId, $"{stem} Ajar, Émile", authorized: false));
+            APoint(AccessPointKind.Author, authorId, preferred, preferred: true),
+            APoint(AccessPointKind.Author, authorId, $"{stem} Ajar, Émile", preferred: false));
 
         var entry = (await SearchAsync(stem)).ShouldHaveSingleItem();
 
         entry.Form.ShouldBe($"{stem} Ajar, Émile");
-        entry.AuthorizedForm.ShouldBe(heading);
+        entry.PreferredForm.ShouldBe(preferred);
     }
 
     [Fact]
     public async Task TheSearch_ReadsAPrefixAndNotASubstring()
     {
-        // The browse behaviour of a catalogue: headings are filed surname-first and titles as
+        // The browse behaviour of a catalog: preferred names are filed surname-first and titles as
         // printed precisely so the beginning is the search. A middle is not a way in.
         var stem = AStem();
-        await SeedAsync(APoint(AccessPointKind.Author, Guid.CreateVersion7(), $"{stem}-Ernaux, Annie", authorized: true));
+        await SeedAsync(APoint(AccessPointKind.Author, Guid.CreateVersion7(), $"{stem}-Ernaux, Annie", preferred: true));
 
         (await SearchAsync(stem)).ShouldHaveSingleItem();
         (await SearchAsync("-Ernaux, Annie")).ShouldBeEmpty();
@@ -95,7 +95,7 @@ public sealed class SearchCatalogueQueryHandlerTests(SqlServerFixture sqlServer)
         // The term is typed by an employee, so '%' is punctuation and never a pattern. Unescaped,
         // the second search would read LIKE '%…%' and match this very row by containment.
         var stem = AStem();
-        await SeedAsync(APoint(AccessPointKind.Work, Guid.CreateVersion7(), $"{stem} 100% vrai", authorized: true));
+        await SeedAsync(APoint(AccessPointKind.Work, Guid.CreateVersion7(), $"{stem} 100% vrai", preferred: true));
 
         (await SearchAsync($"{stem} 100%")).ShouldHaveSingleItem();
         (await SearchAsync($"%{stem}")).ShouldBeEmpty();
@@ -110,8 +110,8 @@ public sealed class SearchCatalogueQueryHandlerTests(SqlServerFixture sqlServer)
         var first = Guid.CreateVersion7();
         var second = Guid.CreateVersion7();
         await SeedAsync(
-            APoint(AccessPointKind.Author, first, $"{stem}, Jane", authorized: true),
-            APoint(AccessPointKind.Author, second, $"{stem}, Jane", authorized: true));
+            APoint(AccessPointKind.Author, first, $"{stem}, Jane", preferred: true),
+            APoint(AccessPointKind.Author, second, $"{stem}, Jane", preferred: true));
 
         var entries = await SearchAsync(stem);
 
@@ -122,18 +122,18 @@ public sealed class SearchCatalogueQueryHandlerTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task AuthorsAndWorks_InterfileInFilingOrder()
     {
-        // The dictionary catalogue: one alphabet for persons and titles, so whoever typed the
+        // The dictionary catalog: one alphabet for persons and titles, so whoever typed the
         // term does not have to say what kind of thing they are looking for before they may look.
         var stem = AStem();
         await SeedAsync(
-            APoint(AccessPointKind.Work, Guid.CreateVersion7(), $"{stem} bb, the title", authorized: true),
-            APoint(AccessPointKind.Author, Guid.CreateVersion7(), $"{stem} aa, the person", authorized: true));
+            APoint(AccessPointKind.Work, Guid.CreateVersion7(), $"{stem} bb, the title", preferred: true),
+            APoint(AccessPointKind.Author, Guid.CreateVersion7(), $"{stem} aa, the person", preferred: true));
 
         var entries = await SearchAsync(stem);
 
         entries.Count.ShouldBe(2);
-        entries[0].Kind.ShouldBe(CatalogueEntryKind.Author);
-        entries[1].Kind.ShouldBe(CatalogueEntryKind.Work);
+        entries[0].Kind.ShouldBe(CatalogEntryKind.Author);
+        entries[1].Kind.ShouldBe(CatalogEntryKind.Work);
     }
 
     [Fact]
@@ -142,29 +142,29 @@ public sealed class SearchCatalogueQueryHandlerTests(SqlServerFixture sqlServer)
         // The first page of the browse, in filing order. Paging waits for the interface that
         // needs it; the cap only keeps a one-letter search from carting the index across.
         var stem = AStem();
-        var beyondTheCap = SearchCatalogueQuery.MaxResults + 10;
+        var beyondTheCap = SearchCatalogQuery.MaxResults + 10;
         await SeedAsync([.. Enumerable.Range(0, beyondTheCap)
-            .Select(i => APoint(AccessPointKind.Work, Guid.CreateVersion7(), $"{stem} {i:D3}", authorized: true))]);
+            .Select(i => APoint(AccessPointKind.Work, Guid.CreateVersion7(), $"{stem} {i:D3}", preferred: true))]);
 
         var entries = await SearchAsync(stem);
 
-        entries.Count.ShouldBe(SearchCatalogueQuery.MaxResults);
+        entries.Count.ShouldBe(SearchCatalogQuery.MaxResults);
         entries[0].Form.ShouldBe($"{stem} 000");
-        entries[^1].Form.ShouldBe($"{stem} {SearchCatalogueQuery.MaxResults - 1:D3}");
+        entries[^1].Form.ShouldBe($"{stem} {SearchCatalogQuery.MaxResults - 1:D3}");
     }
 
     [Fact]
     public async Task AnIsbn_LeadsToItsEdition()
     {
         // The third kind of line the index carries, mapped to the contract's own enum: an ISBN is
-        // an access point exactly as a heading or a title is.
+        // an access point exactly as a preferred name or a title is.
         var stem = AStem();
         var editionId = Guid.CreateVersion7();
-        await SeedAsync(APoint(AccessPointKind.Edition, editionId, $"{stem}9782070612758", authorized: true));
+        await SeedAsync(APoint(AccessPointKind.Edition, editionId, $"{stem}9782070612758", preferred: true));
 
         var entry = (await SearchAsync(stem)).ShouldHaveSingleItem();
 
-        entry.Kind.ShouldBe(CatalogueEntryKind.Edition);
+        entry.Kind.ShouldBe(CatalogEntryKind.Edition);
         entry.RecordId.ShouldBe(editionId);
     }
 
@@ -174,7 +174,7 @@ public sealed class SearchCatalogueQueryHandlerTests(SqlServerFixture sqlServer)
         // The collation's decision, not this handler's — and this test is what pins it, so a
         // database set up case-sensitively fails loudly instead of quietly answering less.
         var stem = AStem();
-        await SeedAsync(APoint(AccessPointKind.Author, Guid.CreateVersion7(), $"{stem}, Annie", authorized: true));
+        await SeedAsync(APoint(AccessPointKind.Author, Guid.CreateVersion7(), $"{stem}, Annie", preferred: true));
 
         (await SearchAsync(stem.ToUpperInvariant())).ShouldHaveSingleItem();
     }
@@ -187,7 +187,7 @@ public sealed class SearchCatalogueQueryHandlerTests(SqlServerFixture sqlServer)
         await using var reader = sqlServer.NewContext();
 
         await Should.ThrowAsync<ArgumentException>(
-            async () => await new SearchCatalogueQueryHandler(reader)
-                .Handle(new SearchCatalogueQuery("   "), Token));
+            async () => await new SearchCatalogQueryHandler(reader)
+                .Handle(new SearchCatalogQuery("   "), Token));
     }
 }
