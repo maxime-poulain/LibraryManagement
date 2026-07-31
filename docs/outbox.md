@@ -55,6 +55,13 @@ assembly bump orphans nothing. The flip side is a rule worth stating twice: **re
 event type is a breaking change to every stored row that carries it.** Either the table drains
 first, or the rename ships with a migration rewriting the stored names.
 
+**The same holds one level down, and it is easier to miss.** An event is a `record`, and each of its
+positional parameters becomes a property name in the stored payload. Renaming
+`AuthorRegistered(AuthorId, AuthorizedName)` to `(AuthorId, PreferredName)` leaves the address
+intact and breaks every row all the same: the deserializer finds no `PreferredName` and hands the
+handler a null the domain refuses. Type name and parameter names are one contract, and a rename of
+either is the same decision — drain the table, or ship the migration.
+
 ## 4. Delivery
 
 `OutboxProcessor<TContext>` drains one module's table: **one message, one scope, one save**. The

@@ -1,6 +1,6 @@
 # Tactical design — Circulation
 
-The core context. Everything a library does with an item once it owns it: lending it, taking it
+The core context. Everything a library does with a copy once it owns it: lending it, taking it
 back, extending it, queuing people for it, and giving up on it.
 
 Boundaries come from [strategic-design.md](strategic-design.md). This document decides aggregates,
@@ -13,7 +13,7 @@ an aggregate — a decision of the library must not be a deployment.
 
 | Setting | Value | Note |
 |---|---|---|
-| `MaxConcurrentItems` | 5 | Loans **and** holds together, see §2 |
+| `MaxLoansAndHolds` | 5 | Loans **and** holds together, see §2 |
 | `LoanDuration` | 21 days | |
 | `MaxRenewals` | 2 | Refused outright if anyone is queuing, see §5 |
 | `PickupPeriod` | 7 days | How long a trapped copy waits |
@@ -23,10 +23,10 @@ an aggregate — a decision of the library must not be a deployment.
 | `BlockingDebt` | any amount owed | No threshold, by decision |
 
 One flat set of values. There is no table per member category: a child and an adult may borrow the
-same five items. The policy is still a value object rather than five constants, so indexing it by
+same five copies. The policy is still a value object rather than five constants, so indexing it by
 category later is an addition rather than a rewrite.
 
-## 2. The five-item cap
+## 2. The cap of five
 
 > `active loans` + `queued holds` + `holds awaiting pickup` ≤ 5
 
@@ -34,14 +34,19 @@ All three count. A trapped copy waiting on the hold shelf is immobilised for tha
 occupies a place exactly as a borrowed one does. The transition from hold to loan leaves the count
 unchanged, so nothing has to be reconciled at pickup.
 
+**The setting is named after what it counts.** It was `MaxConcurrentItems`, and none of the three
+things it counts is an item: a hold is a claim on an *edition*, and `Item` is in any case the word
+FRBR uses for what this model calls a `Copy`. `MaxLoansAndHolds` is blunt and cannot be misread,
+which is the whole requirement of a policy setting.
+
 **The cap constrains the act, not the state.** It is checked inside `Checkout` and `PlaceHold`, and
 nowhere else — never as an invariant of a borrower aggregate. If it were, lowering the cap from ten
-to five would make every borrower holding eight items *invalid*, which is nonsense: they are in
+to five would make every borrower holding eight copies *invalid*, which is nonsense: they are in
 perfect order, they borrowed under the previous rule. A cap is a rule about what may be added, not a
 statement about what exists.
 
 The count is therefore computed at the moment of the operation, not stored. That leaves a race — two
-checkouts to the same borrower at the same instant could both pass the check and produce six items.
+checkouts to the same borrower at the same instant could both pass the check and produce six copies.
 It is tolerated: the borrower is physically standing at one desk, and the consequence is a sixth
 book. Should it ever matter, the fix is a small `BorrowerAccount` aggregate carrying the count, at
 the price of a transaction spanning it and the loan.
@@ -54,7 +59,7 @@ Being at the cap does not prevent a **renewal**: nothing is added.
 > A borrower may always **return**.
 
 The last line is not a courtesy. A block that prevents returning creates the opposite incentive to
-the one intended — the borrower keeps the item because there is nothing else to do with it — and it
+the one intended — the borrower keeps the copy because there is nothing else to do with it — and it
 is often the return itself that settles the debt.
 
 The threshold lives here, in the circulation policy, not in Charges. Charges owns *what is owed*;
@@ -62,6 +67,13 @@ Circulation owns *what being owed forbids*. Charges exposes the balance; if it e
 the rule would have moved into the wrong context. The vocabulary keeps the two apart: `Balance` is
 the Charges word for the amount, `Standing` is the Circulation word for the judgement, and neither
 context ever utters the other's.
+
+`Debt` is the third word, and it belongs **here**. It names the same figure as `Balance`, seen as
+something that forbids rather than something that is owed — which is why it appears in
+`BlockingDebt` and in `HoldsCancelledForDebt` and never in anything Charges publishes. Charges
+announces `MemberBalanceBecameOwing`; Circulation reads it and forms its own `Debt` and its own
+`Standing`. That translation is the anticorruption layer doing its job, and it is what keeps the
+rule above from being a slogan.
 
 ### A debt cancels existing holds
 
@@ -93,7 +105,7 @@ around.
 
 ### `Loan`
 
-One copy, one borrower, one period. The root of everything that happens to an item while it is out.
+One copy, one borrower, one period. The root of everything that happens to a copy while it is out.
 
 ```
 Loan
@@ -104,7 +116,7 @@ Loan
   DueDate
   RenewalCount
   ReturnedOn?
-  Status          Active | Returned | Lost
+  Status          Active | Returned | DeclaredLost
   RemindersSent   which of the scheduled reminders have gone out
 ```
 
@@ -120,9 +132,14 @@ scan must be able to run twice without sending anything twice, and only the loan
 already announced. It is a set, not a flag — adding a reminder to the schedule later must not be a
 migration.
 
-`Status` distinguishes `Returned` from `Lost` because loan statistics depend on it. A library's
-budget is argued from its circulation figures, and an item that never came back is not a completed
-loan.
+`Status` distinguishes `Returned` from `DeclaredLost` because loan statistics depend on it. A
+library's budget is argued from its circulation figures, and a copy that never came back is not a
+completed loan.
+
+The participle carries the difference from Holdings' own `Lost`, and it is not a nicety. A copy is
+`Lost` when nobody knows where it is — a state discovered. A loan is `DeclaredLost` when the library
+decides, after thirty days, to stop waiting — a state chosen. Calling both `Lost` would put the same
+word on an observation and on a decision.
 
 ### `HoldQueue`
 
@@ -176,7 +193,7 @@ history belongs, in a read model fed by the events.
 * Not while a copy is available on the shelf — that is a checkout, and allowing it would make the
   queue meaningless.
 * Not while the borrower owes money.
-* Not while at the five-item cap.
+* Not while at the cap of five.
 
 ## 5. The moments
 
@@ -260,7 +277,7 @@ No penalty attaches, for the same reasons §9 declines to punish the no-show.
 
 ### A debt is incurred
 
-Circulation reacts to `MemberDebtIncurred` from Charges:
+Circulation reacts to `MemberBalanceBecameOwing` from Charges:
 
 1. Every queued hold of that borrower is cancelled.
 2. Every hold of theirs awaiting pickup is cancelled, and its trapped copy is released back to the
@@ -333,7 +350,7 @@ the borrower owes money, someone is waiting — and they call for three differen
 borrower. "We could not renew your loan" without saying which is a message that wastes a trip to the
 library.
 
-For the same reason the courtesy reminder should say whether the item can be renewed at all. Three
+For the same reason the courtesy reminder should say whether the loan can be renewed at all. Three
 days before a due date on an edition with a queue, the useful message is not *"renew it"* but
 *"someone is waiting, please bring it back"*.
 
@@ -341,18 +358,22 @@ days before a due date on an edition with a queue, the useful message is not *"r
 
 | Event | From | Effect |
 |---|---|---|
-| `MemberDebtIncurred` | Charges | Cancel the borrower's holds |
-| `MemberDebtCleared` | Charges | Nothing in the model — the borrower is simply able to act again |
+| `MemberBalanceBecameOwing` | Charges | Cancel the borrower's holds |
+| `MemberBalanceSettled` | Charges | Nothing in the model — the borrower is simply able to act again |
 
 ## 8. Notifications
 
 Circulation's events are facts; Notifications turns some of them into messages. Two things belong
 here because they shape what Circulation must publish.
 
-**Transactional or informational.** A message announcing a consequence the borrower did not choose —
+**Consequential or courtesy.** A message announcing a consequence the borrower did not choose —
 a fine, a block, a cancelled hold, a copy ready — always goes out. A confirmation of a checkout or a
-return is informational and may be declined. The distinction is made now because retrofitting it
+return is a courtesy and may be declined. The distinction is made now because retrofitting it
 means asking every member for a preference they were never offered.
+
+Not *transactional*, the word the messaging industry uses for this split: it means a database
+transaction everywhere else in this repository — the whole of [outbox.md](outbox.md) rests on the
+other sense — and `CourtesyReminder` in §1 already gives the pair its second half.
 
 **Three outcomes, not two.** Sent, failed, and *no channel available*. The third is not an error: a
 member may legitimately have no email, and the system must surface a work list for staff to phone or

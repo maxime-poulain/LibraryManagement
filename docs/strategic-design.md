@@ -67,31 +67,53 @@ single language has to win, or every concept acquires two names and they drift. 
 this glossary is the bridge to the domain experts rather than a translation exercise: the French
 term is what a librarian actually says, and it is the authority when the two disagree.
 
+**Which English, in full.** American spelling, and `Catalog` never `Catalogue` — including in
+prose, comments and document titles. Naming a language without naming its variety leaves the
+question open at every file, and it was answered twice: the schema, the error codes and the
+assemblies were spelled one way and the queries and the prose the other. The immovable half won,
+because a schema name and an error code are contracts and a document is not.
+
 ### Catalog
 
 | Code | Métier | Meaning |
 |---|---|---|
 | `Work` | Œuvre | An intellectual creation, independent of any printing. *Le Petit Prince* is one work. |
-| `Edition` | Édition | One published form of a work, identified by an ISBN. Gallimard 2015 paperback. |
-| `Author` | Auteur | A person or body responsible for a work. |
-| `AuthorizedName` | Vedette | The heading a person is filed under. The profession's prose says *heading*; the code says `AuthorizedName`; they are one concept, and this row is what keeps the synonym from becoming two. |
+| `PreferredTitle` | Titre privilégié | The title a work is filed under. It is a cataloger's decision, not a description: *Le Petit Prince*, *The Little Prince* and *Der kleine Prinz* are one work whose preferred title is one of the three. Plain `Title` is refused — an edition will one day carry the title on its own title page, and the word would then mean two things in one context. |
+| `Edition` | Édition | One published form of a work, identified by an ISBN when it bears one. Gallimard 2015 paperback. Equivalent to the **Manifestation** of the IFLA LRM; the day Expression is modelled, this type already stands in its place. |
+| `EditionStatement` | Mention d'édition | The statement printed on the book — *2ᵉ édition revue et corrigée*, ISBD area 2. It is a fact **carried by** an `Edition` and **is not** one. The row exists because the profession says *édition* for both, and the model may only say it for one. |
+| `Author` | Auteur | A person or body responsible for a work. The type is an authority record, and the name is a role: the day a second role is modelled — translator, illustrator — `Author` becomes an `Agent` of the LRM with an `AgentKind`, `Work.AuthorIds` becomes a set of `Contribution { AgentId, Role }`, and `LifeYears` becomes `ExistenceDates`. Named here so the rename is a decision rather than a discovery. |
+| `PreferredName` | Vedette | The name form a person or body is filed under. The profession's prose says *heading* and RDA says *preferred name*; they are one concept, and this row is what keeps the synonym from becoming two — so the code says `PreferredName`, once, and never `Heading` or `AuthorizedName`. |
+| `VariantName` | Forme rejetée | Another form the same person or body is known by, which leads back to the record. Pairs with `PreferredName`: *preferred* and *variant* is the one figure of speech this context uses, for names as for titles. |
+| `NameForm` | Forme du nom | A name in filing order — family name first, as in `"Saint-Exupéry, Antoine de"`. Not `PersonName`: the same type carries corporate bodies, sovereigns and mononyms, none of which is a person's name in the ordinary sense. |
 | `Publisher` | Éditeur | Note the false friend: `Editor` is *not* the French *éditeur*. |
 | `Series` | Collection | A named publisher's series an edition belongs to. |
 | `Subject` | Sujet | A subject heading assigned to a work. |
-| `Classification` | Indice | The class number derived from subject analysis — Dewey, UDC. Bibliographic: the same for every library using the scheme. What it feeds — the shelfmark on each copy — is a Holdings fact. |
+| `ClassificationScheme` | Plan de classement | The scheme the class number is drawn from — Dewey, UDC, a local scheme. A library may run two. |
+| `ClassNumber` | Indice | The class number itself, derived from subject analysis. Bibliographic: the same for every library using the scheme. Only the pair `(scheme, number)` identifies it. What it feeds — the shelfmark on each copy — is a Holdings fact. |
+| `MaterialType` | Type de document | Book, DVD, periodical. A bibliographic fact, owned here: it describes what the thing *is*, and Circulation merely indexes its rules by it — the same division that puts `MemberCategory` in Members and the borrowing limits in Circulation. |
 
 ### Holdings
 
 | Code | Métier | Meaning |
 |---|---|---|
-| `Copy` | Exemplaire | One physical object the library owns, of one edition. |
+| `Copy` | Exemplaire | One physical object the library owns, of one edition. The word for it everywhere: *item* is refused, because the cap in §2 of the tactical design counted loans and holds under that name and neither of them is one. |
 | `Barcode` | Code-barres | The label that identifies a copy at the desk. Unique in the library. |
-| `Shelfmark` | Cote | The call number that decides where *this copy* stands. Per copy, not per edition: one copy of a title may live in the children's section and another in the reserve. Built from the classification Catalog assigns, owned here. |
+| `Shelfmark` | Cote | The term for the call number that decides where *this copy* stands — `Shelfmark` in code and in prose, *call number* never. Per copy, not per edition: one copy of a title may live in the children's section and another in the reserve. Built from the class number Catalog assigns, owned here. |
 | `Condition` | État | The physical state of a copy: good, worn, damaged. |
-| `Withdrawn` | Désherbé | Removed from the collection **on purpose**. *Désherbage* is the librarian's word for weeding: routine work, not a loss. |
-| `Lost` | Perdu | Unaccounted for. Distinct from withdrawn — nobody decided it. |
-| `ReferenceOnly` | Exclu du prêt | Held, consultable on site, never lent. |
+| `AcquisitionDate` | Date d'acquisition | When the library took the copy into its collection. Not the edition's publication date, which is bibliographic and belongs to Catalog. |
 | `Stocktake` | Récolement | The physical check of the shelves against the records. Note this is what a librarian means by *inventaire*, which is why this context is not called Inventory. |
+
+**The status of a copy — the whole set, stated once.** It is written here and nowhere else; §6 and
+the tactical design point at this row rather than re-enumerating it, because an enumeration written
+three times is an enumeration that has not been decided.
+
+| Code | Métier | Meaning |
+|---|---|---|
+| `OnShelf` | En rayon | Available to be lent, as far as Holdings can tell. Whether it is out on loan is a Circulation fact — see §6. |
+| `InRepair` | En réparation | Temporarily out of the lendable stock, and expected back in it. |
+| `ReferenceOnly` | Exclu du prêt | Held, consultable on site, never lent. |
+| `Withdrawn` | Désherbé | Removed from the collection **on purpose**. *Désherbage* is the librarian's word for weeding: routine work, not a loss. |
+| `Lost` | Perdu | Unaccounted for. Distinct from withdrawn — nobody decided it. Distinct too from a loan's `DeclaredLost`, which *is* a decision: see the Circulation glossary. |
 
 ### Circulation
 
@@ -107,8 +129,10 @@ term is what a librarian actually says, and it is the authority when the two dis
 | `HoldQueue` | File d'attente | The ordered claims on one edition. |
 | `Trapped` | Mis de côté | A returned copy set aside for the first hold instead of being shelved. |
 | `PickupDeadline` | Délai de retrait | How long a trapped copy waits before the claim lapses. |
-| `Borrower` | Emprunteur | A member, seen as circulation sees them: an identity, a category, a current load, a standing. |
+| `DeclaredLost` | Déclaré perdu | The terminal state of a loan that ended by a decision rather than by a return. The participle is the point: Holdings' `Lost` is something nobody decided, this is something someone did. |
+| `Borrower` | Emprunteur | A member, seen as circulation sees them: an identity, a category, a current load, a standing. `BorrowerId` and `MemberId` carry the **same** value — it is the model that the anticorruption layer translates, never the identity. Nobody should go looking for a correspondence table. |
 | `CirculationPolicy` | Règles de circulation | How many, how long, how often — and what a debt forbids. It governs holds and pickup deadlines as much as loans, which is why it is not called a loan policy. |
+| `Debt` | Dette | A balance the borrower has not settled, **seen from here**. Charges says `Balance` and never `Debt`; Circulation says `Debt` and never `Balance`. One amount, two words, because each context names what it does with it: Charges records it, Circulation is what it forbids. |
 | `Standing` | Situation | Whether what a borrower owes forbids borrowing, renewing or placing a hold. Judged **here**, from the balance Charges exposes: Charges states an amount and never the consequence. |
 
 ### Members
@@ -119,6 +143,7 @@ term is what a librarian actually says, and it is the authority when the two dis
 | `Membership` | Abonnement | The period during which that entitlement holds. |
 | `MemberCategory` | Catégorie | Adult, child, student. Decides what circulation allows, but is not itself a circulation concept. |
 | `LibraryCard` | Carte | What the member presents at the desk. |
+| `Guardian` | Représentant légal | Who a minor is reached through. A member has an identity, and separately a way of being reached that may belong to somebody else — which is why this is a Members concept and not a Notifications one. |
 
 ### Charges
 
@@ -127,7 +152,8 @@ term is what a librarian actually says, and it is the authority when the two dis
 | `OverdueFine` | Amende de retard | Charged for time. Small, frequent, often waived. |
 | `ReplacementCharge` | Frais de remplacement | Charged for an item that will not come back. Large, rare, a different decision entirely. |
 | `Waiver` | Remise gracieuse | A charge cancelled by a decision rather than by payment. |
-| `Balance` | Solde | What a member currently owes, every charge and payment netted. A statement of money, never of rights: what a balance forbids is Circulation's judgement, recorded there as `Standing`. |
+| `Payment` | Règlement | Money received against what a member owes. Distinct from a `Waiver`: one settles the charge, the other cancels it, and a library counts the two separately. |
+| `Balance` | Solde | What a member currently owes, every charge and payment netted. A statement of money, never of rights: what a balance forbids is Circulation's judgement, recorded there as `Standing`. This context's only word for the amount — it never says `Debt`, which is the Circulation word for the same figure seen as a consequence. |
 
 ## 5. Subdomains
 
@@ -164,11 +190,12 @@ refuses to own.
 
 ### Catalog
 
-**Owns.** Work, Edition, Author, Publisher, Series, Subject, Classification.
+**Owns.** Work, Edition, Author, Publisher, Series, Subject, class number and classification scheme,
+material type.
 
 **Refuses.** How many copies exist, where they stand, whether one can be borrowed. A catalog is
-meaningful for a library that owns nothing. The shelfmark went with the copies: the *classification*
-of a work is bibliographic, the *call number* built from it belongs to each copy, and two copies of
+meaningful for a library that owns nothing. The shelfmark went with the copies: the *class number*
+of a work is bibliographic, the *shelfmark* built from it belongs to each copy, and two copies of
 one edition may stand in two sections.
 
 **Publishes.** An `EditionId` and a bibliographic summary — enough for another context to name an
@@ -176,7 +203,7 @@ edition without reproducing its description.
 
 **Fed by import, not by typing.** This is the reason the subdomain is supporting: a record for a
 given ISBN is the same everywhere, so records come from an upstream bibliographic supplier — a
-national library, a union catalogue — in a MARC-family format. That upstream is external and does
+national library, a union catalog — in a MARC-family format. That upstream is external and does
 not negotiate, so the relationship is Conformist and the translation is an anticorruption layer at
 the border: nothing shaped like MARC crosses into the model. The manual commands remain as the
 fallback for what no supplier describes — local grey literature, self-published works — not as the
@@ -185,8 +212,8 @@ the design.
 
 ### Holdings
 
-**Owns.** Copy, barcode, shelfmark, acquisition date, condition, and the copy's own
-status: on the shelf, in repair, lost, withdrawn, reference-only.
+**Owns.** Copy, barcode, shelfmark, acquisition date, condition, and the copy's own status — whose
+values are enumerated once, in the Holdings glossary of §4, and nowhere else.
 
 **Refuses.** The bibliographic description — it holds an `EditionId` and nothing more. And who
 currently has a copy: that is a circulation fact, not a property of the object.
@@ -299,6 +326,13 @@ This is where strict command-query separation stops being a matter of style and 
 **the read side may cross boundaries precisely because it changes nothing and can therefore break no
 invariant.** Only the write side owes them anything.
 
+**Two things will be called search, so they get two names now.** `AccessPoint` is the catalog's
+own index, local to Catalog and fed by Catalog's events: every heading, variant form and title is an
+access point, and it answers *which records answer to this form?* — the profession's word, kept.
+`Discovery` is the name reserved for the cross-module projection described above, the one that adds
+copies and availability. Naming the second only when it is built would mean naming it *search*,
+which the first already answers to.
+
 ## 8. Context map
 
 ```mermaid
@@ -341,7 +375,7 @@ are queries and projections: they carry no authority and change nothing.
 | Members | Circulation | Customer / Supplier + ACL | Same, plus a translation: `Member` becomes `Borrower`, and most of the member is dropped on the way. |
 | Circulation | Charges | Published Language, via events | Circulation announces facts. Charges prices them. |
 | Charges | Circulation | Published Language, via events | A new debt cancels the borrower's holds. |
-| Charges | Circulation | Open Host Service | One question, one answer: how much does this member owe? The threshold that turns the amount into a refusal stays in Circulation. |
+| Charges | Circulation | Customer / Supplier + ACL, dependency-inverted | One question, one answer: how much does this member owe? The threshold that turns the amount into a refusal stays in Circulation. Not an Open Host Service, though it looks like one: an OHS is a protocol published *by the upstream* for an open set of consumers, and here the downstream declares the port for its own single use — see the inversion described below. |
 | Circulation | Notifications | Published Language, via events | Circulation does not know anyone is listening. |
 | Members, Catalog | Notifications | Open Host Service | A message needs an address and a title. Circulation supplies neither, and must not learn either. |
 
@@ -477,14 +511,15 @@ composition point is the backend-for-frontend, already standing where it belongs
 
 * Where a translation's contributors live. `Edition` itself is settled — a root of its own holding
   a `WorkId`, because hold queues key on an edition and it must therefore be independently
-  addressable; registering one requires the work already catalogued, the same cross-aggregate rule
+  addressable; registering one requires the work already cataloged, the same cross-aggregate rule
   crediting an author follows — but it is deliberately thin: an identity, its work, the ISBN it
   bears when it bears one. A translator or an illustrator is an edition-level fact in a three-level
-  model — FRBR would put them on the Expression this model deliberately lacks — and `Work.Title` is
-  then the *uniform title* while each edition carries the title on its own title page. To settle
+  model — FRBR would put them on the Expression this model deliberately lacks. The vocabulary is
+  already laid out for it: the work carries a `PreferredTitle` and the edition will carry a
+  `TitleProper`, the title on its own title page, so the two never contend for one word. To settle
   when the edition grows those facts, alongside the publisher and the format. A body among the
   authors raises a question of the same kind: `LifeYears` is a person's fact, and a corporate
-  author simply carries `Unknown`.
+  author simply carries `Unknown` — the `Agent` reservation in §4 records where that leads.
 * Whether a hold may be placed on a *work* — any edition will do — as well as on an edition. Members
   ask for both, and the queue rules differ.
 * Whether a copy's loan history stays in Circulation forever or is archived. It is the only thing in
