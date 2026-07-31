@@ -53,7 +53,8 @@ corrupt column.
 **The stored type name is an address**: `"{FullName}, {AssemblySimpleName}"`, no version, so an
 assembly bump orphans nothing. The flip side is a rule worth stating twice: **renaming or moving an
 event type is a breaking change to every stored row that carries it.** Either the table drains
-first, or the rename ships with a migration rewriting the stored names.
+first, or the rename ships with a migration rewriting the stored names — and today only the first of
+those exists, for the reasons [migrations.md](migrations.md) records.
 
 **The same holds one level down, and it is easier to miss.** An event is a `record`, and each of its
 positional parameters becomes a property name in the stored payload. Renaming

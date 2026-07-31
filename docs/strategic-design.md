@@ -459,6 +459,12 @@ and that is the point: an integrity constraint across modules is a coupling the 
 with five schemas would compile, and one `DbSet<Copy>` referenced from a Circulation handler would
 end the separation without anything failing.
 
+**Creating that schema is the host's decision, exactly as the provider is.** A module describes
+tables and indexes and creates none, and a migration names an engine, which a module may not. Today
+only the test fixtures build a schema, and they do it with `EnsureCreated`;
+[migrations.md](migrations.md) records why there are no migrations yet, the shape they will take,
+and what has to happen first.
+
 That settled the question left open when the shared infrastructure was written: **a unit of work
 cannot be resolved by type alone**, because five modules register five implementations of one
 interface and the last one answers for all of them. A command belongs to exactly one module — the
