@@ -1,0 +1,106 @@
+name: SonarCloud
+
+# The hosted half of Sonar. SonarAnalyzer.CSharp already runs locally on every build as a Roslyn
+# analyzer; this workflow adds what only the service can hold — the quality gate, pull-request
+# decoration, history, coverage. During a scanner-wrapped build the ruleset Sonar injects takes
+# precedence over the local package; a version gap between the two is at worst a warning, never a
+# silent divergence.
+#
+# Deliberately a separate workflow, and deliberately not blocking. The required check stays
+# `Build and unit tests`: fast, secret-free, and owned by this repository alone. This one needs
+# Java, a token and a full instrumented build, and coupling the right to merge to an external
+# service is a decision to take after the gate has been observed on real changes — not before.
+#
+# It is also where the integration tests run automatically. Hosted runners have Docker, so the
+# suite runs whole here — the pull-request gate keeps excluding Category=Integration for speed,
+# and this workflow closes the gap that exclusion left.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Reads the repository and talks to sonarcloud.io with its own token. Nothing here needs a GitHub
+# token that can write; pull-request decoration is done server-side by SonarCloud's GitHub app.
+permissions:
+  contents: read
+
+concurrency:
+  group: sonarcloud-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: SonarCloud analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # A pull request from a fork cannot read SONAR_TOKEN, so the analysis is skipped rather than
+    # failed: a contributor's build should not go red for a secret they were never going to have.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+
+    env:
+      # Public identifiers, not secrets — they name the project, they do not grant anything.
+      # Verify against sonarcloud.io → project page → Project Information ("Organization Key",
+      # "Project Key"); a mismatch fails the run loudly with "project not found".
+      SONAR_ORGANIZATION: 9c1eb57d24115cbbd103219f
+      SONAR_PROJECT_KEY: 9c1eb57d24115cbbd103219f_LibraryManagement
+
+    steps:
+      # Full history, not a shallow clone: blame and new-code detection read it, and a shallow
+      # clone degrades both silently — the analysis still passes, it just attributes wrongly.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # The scanner is a Java application; the .NET tool is a wrapper around it.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Same key as ci.yml, so both workflows share one cache instead of racing two.
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Cache Sonar scanner packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+
+      # The scanner version is pinned in .config/dotnet-tools.json, like every other version here.
+      - name: Restore the scanner
+        run: dotnet tool restore
+
+      - name: Begin analysis
+        run: >
+          dotnet dotnet-sonarscanner begin
+          /k:"${{ env.SONAR_PROJECT_KEY }}"
+          /o:"${{ env.SONAR_ORGANIZATION }}"
+          /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+          /d:sonar.host.url="https://sonarcloud.io"
+          /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+
+      # The build the scanner instruments. No --no-restore: this job restores on its own schedule.
+      - name: Build (Release)
+        run: dotnet build LibraryManagement.slnx --configuration Release
+
+      # The whole suite, unfiltered — integration tests included, on the runner's own Docker.
+      # Coverage comes from coverlet.collector, already referenced by every test project; opencover
+      # is the format the begin step declared.
+      - name: Test with coverage
+        run: >
+          dotnet test LibraryManagement.slnx --configuration Release --no-build
+          --collect:"XPlat Code Coverage;Format=opencover"
+
+      - name: End analysis
+        run: dotnet dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"

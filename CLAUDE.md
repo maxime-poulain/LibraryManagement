@@ -57,6 +57,11 @@ integration classes carry `[Collection(SqlServerCollection.Name)]` and
 `[Trait("Category", "Integration")]` as a pair. An unmarked test runs everywhere — the failure
 mode of forgetting is a slow build, never a silent hole in the gate.
 
+A second workflow, `.github/workflows/sonarcloud.yml`, is not required for merging: it runs the
+**whole** suite (hosted runners have Docker, so this is where the integration tests run
+automatically) and sends coverage to SonarCloud. It needs the `SONAR_TOKEN` secret and skips on
+forked pull requests.
+
 ## Layout
 
 ```
