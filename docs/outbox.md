@@ -148,7 +148,7 @@ options.PipelineBehaviors =
 ```
 
 Inline, because the source generator parses that very syntax and emits one closed registration per
-message and behavior, honouring each behavior's constraints — and once per assembly, because a
+message and behavior, honoring each behavior's constraints — and once per assembly, because a
 second `AddMediator` carrying a different array would leave the generator to pick a winner. The
 order is the guarantee: logging outermost so refusals still leave a line, validation before the
 unit of work so a malformed command never writes.

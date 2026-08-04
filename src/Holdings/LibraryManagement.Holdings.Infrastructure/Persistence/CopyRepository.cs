@@ -17,7 +17,7 @@ public sealed class CopyRepository(HoldingsDbContext context) : ICopyRepository
         ArgumentNullException.ThrowIfNull(id);
 
         // No Include: a copy owns nothing. Everything it holds is a value on the row itself, which
-        // is what a physical object modelled honestly looks like.
+        // is what a physical object modeled honestly looks like.
         return await context.Copies
             .FirstOrDefaultAsync(copy => copy.Id == id, cancellationToken)
             .ConfigureAwait(false);

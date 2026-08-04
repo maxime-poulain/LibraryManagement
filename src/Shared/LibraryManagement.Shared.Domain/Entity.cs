@@ -145,7 +145,7 @@ public abstract class Entity<TEntityId> : Entity, IAuditable
 /// <summary>
 /// Marker class for entities, letting infrastructure discover them without knowing their
 /// identifier type. Mirrors the <see cref="ValueObject"/> / <see cref="ValueObject{TSelf}"/>
-/// pairing: the non-generic type is the marker, the generic one carries the behaviour.
+/// pairing: the non-generic type is the marker, the generic one carries the behavior.
 /// </summary>
 [SuppressMessage(
     "Minor Code Smell",

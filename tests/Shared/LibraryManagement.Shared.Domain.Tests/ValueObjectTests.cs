@@ -133,7 +133,7 @@ public sealed class ValueObjectTests
     // Pins the trap documented on GetEqualityComponents: a component that is itself a collection is
     // compared with EqualityComparer<object>.Default, which for a list means reference equality.
     // Two value objects holding equal-but-distinct collections are therefore NOT equal. This test
-    // exists so the behaviour cannot drift silently — change it deliberately or not at all.
+    // exists so the behavior cannot drift silently — change it deliberately or not at all.
     [Fact]
     public void ACollectionComponent_IsComparedByReference_NotByContent()
     {

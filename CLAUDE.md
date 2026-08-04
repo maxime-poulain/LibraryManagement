@@ -7,7 +7,7 @@ session needs to build, test and contribute without rediscovering the rules the 
 ## What this is
 
 A library management system for the staff of a single public library: a modular monolith on
-.NET 10, organised as five DDD bounded contexts — Catalog, Holdings, Circulation (core), Members,
+.NET 10, organized as five DDD bounded contexts — Catalog, Holdings, Circulation (core), Members,
 Charges — over a small technical shared kernel. The project is design-first: every context is
 decided on paper in `docs/` before it is coded, and the documents record rejected alternatives,
 not just outcomes.

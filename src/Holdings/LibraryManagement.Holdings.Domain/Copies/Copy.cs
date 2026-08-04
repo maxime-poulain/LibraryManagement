@@ -287,7 +287,7 @@ public sealed class Copy : AggregateRoot<CopyId>
     /// <returns>Success, or the reason the copy could not be declared lost.</returns>
     /// <remarks>
     /// Reachable from this context's own initiative, and not only from a circulation event. A
-    /// stocktake that failed to find a copy is the other way in, and the day it is modelled it must
+    /// stocktake that failed to find a copy is the other way in, and the day it is modeled it must
     /// find a route already here.
     /// </remarks>
     public Result DeclareLost()

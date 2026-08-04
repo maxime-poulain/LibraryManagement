@@ -16,7 +16,7 @@ namespace LibraryManagement.Catalog.Domain.Works;
 /// </para>
 /// <para>
 /// A work with no author at all is valid, and not an oversight: anonymous works, traditional tales
-/// and many mediaeval texts have none. A model that demanded one would force a librarian to invent
+/// and many medieval texts have none. A model that demanded one would force a librarian to invent
 /// an author for <em>Le Roman de Renart</em>.
 /// </para>
 /// <para>

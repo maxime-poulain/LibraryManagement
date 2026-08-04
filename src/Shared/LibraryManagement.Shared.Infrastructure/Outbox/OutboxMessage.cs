@@ -5,7 +5,7 @@ namespace LibraryManagement.Shared.Infrastructure.Outbox;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Deliberately anemic — settable properties, no invariants, no behaviour. This is not a domain
+/// Deliberately anemic — settable properties, no invariants, no behavior. This is not a domain
 /// object that fell short; it is infrastructure's own bookkeeping, the persisted form of "this
 /// still has to be delivered", and the processor is the only thing that reads or writes it.
 /// </para>
@@ -26,7 +26,7 @@ public sealed class OutboxMessage
     public long Id { get; set; }
 
     /// <summary>
-    /// The event's own identifier, unique in the table. It is also what lets a handler recognise a
+    /// The event's own identifier, unique in the table. It is also what lets a handler recognize a
     /// redelivery: the outbox promises at-least-once, never exactly-once.
     /// </summary>
     public Guid EventId { get; set; }

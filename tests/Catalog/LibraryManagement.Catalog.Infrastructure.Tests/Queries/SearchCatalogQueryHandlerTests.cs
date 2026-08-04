@@ -81,7 +81,7 @@ public sealed class SearchCatalogQueryHandlerTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task TheSearch_ReadsAPrefixAndNotASubstring()
     {
-        // The browse behaviour of a catalog: preferred names are filed surname-first and titles as
+        // The browse behavior of a catalog: preferred names are filed surname-first and titles as
         // printed precisely so the beginning is the search. A middle is not a way in.
         var stem = AStem();
         await SeedAsync(APoint(AccessPointKind.Author, Guid.CreateVersion7(), $"{stem}-Ernaux, Annie", preferred: true));

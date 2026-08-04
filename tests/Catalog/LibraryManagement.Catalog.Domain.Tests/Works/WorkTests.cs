@@ -25,7 +25,7 @@ public sealed class WorkTests
     [Fact]
     public void Register_WithNoAuthorAtAll_Succeeds()
     {
-        // Anonymous works, traditional tales and many mediaeval texts have none. Demanding an author
+        // Anonymous works, traditional tales and many medieval texts have none. Demanding an author
         // would force a librarian to invent one for Le Roman de Renart.
         AWork().AuthorIds.ShouldBeEmpty();
     }

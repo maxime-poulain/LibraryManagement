@@ -30,7 +30,7 @@ category later is an addition rather than a rewrite.
 
 > `active loans` + `queued holds` + `holds awaiting pickup` ≤ 5
 
-All three count. A trapped copy waiting on the hold shelf is immobilised for that borrower, so it
+All three count. A trapped copy waiting on the hold shelf is immobilized for that borrower, so it
 occupies a place exactly as a borrowed one does. The transition from hold to loan leaves the count
 unchanged, so nothing has to be reconciled at pickup.
 
@@ -176,7 +176,7 @@ two people to the front, or trap two copies for the same one. Removing a hold fr
 the debt rule does constantly — must close the gap behind it in the same breath, and only the queue
 can do that.
 
-The cost is one lock per edition. Two holds placed on the same popular title serialise. At library
+The cost is one lock per edition. Two holds placed on the same popular title serialize. At library
 scale that is invisible: holds arrive a few per minute, not a few per millisecond.
 
 **A hold that ends leaves the aggregate.** Fulfilled, expired or cancelled, its outcome is published
@@ -383,7 +383,7 @@ to somebody else.
 
 ## 9. Deliberately left out
 
-**A borrower who never collects is not penalised.** Each uncollected hold immobilises a copy for the
+**A borrower who never collects is not penalised.** Each uncollected hold immobilizes a copy for the
 whole pickup period, and a borrower can repeat it at no cost — they owe nothing, so nothing blocks
 them. Some libraries count no-shows and suspend the right to place holds after three or four.
 

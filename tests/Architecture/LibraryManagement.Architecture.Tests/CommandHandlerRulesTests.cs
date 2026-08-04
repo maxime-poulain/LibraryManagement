@@ -24,8 +24,8 @@ public sealed class CommandHandlerRulesTests
     [Fact]
     public void TheScan_FindsTheHandlersTheModulesDeclare()
     {
-        // Reaching an assembly is not the same as recognising what is in it, and this names the two
-        // handlers that exist rather than counting them: a rule that quietly stopped recognising
+        // Reaching an assembly is not the same as recognizing what is in it, and this names the two
+        // handlers that exist rather than counting them: a rule that quietly stopped recognizing
         // ICommandHandler would still see every assembly and still report no violation.
         //
         // Compared by name rather than by type, for the reason ProductionCode gives.

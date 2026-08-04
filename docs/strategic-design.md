@@ -79,9 +79,9 @@ because a schema name and an error code are contracts and a document is not.
 |---|---|---|
 | `Work` | Œuvre | An intellectual creation, independent of any printing. *Le Petit Prince* is one work. |
 | `PreferredTitle` | Titre privilégié | The title a work is filed under. It is a cataloger's decision, not a description: *Le Petit Prince*, *The Little Prince* and *Der kleine Prinz* are one work whose preferred title is one of the three. Plain `Title` is refused — an edition will one day carry the title on its own title page, and the word would then mean two things in one context. |
-| `Edition` | Édition | One published form of a work, identified by an ISBN when it bears one. Gallimard 2015 paperback. Equivalent to the **Manifestation** of the IFLA LRM; the day Expression is modelled, this type already stands in its place. |
+| `Edition` | Édition | One published form of a work, identified by an ISBN when it bears one. Gallimard 2015 paperback. Equivalent to the **Manifestation** of the IFLA LRM; the day Expression is modeled, this type already stands in its place. |
 | `EditionStatement` | Mention d'édition | The statement printed on the book — *2ᵉ édition revue et corrigée*, ISBD area 2. It is a fact **carried by** an `Edition` and **is not** one. The row exists because the profession says *édition* for both, and the model may only say it for one. |
-| `Author` | Auteur | A person or body responsible for a work. The type is an authority record, and the name is a role: the day a second role is modelled — translator, illustrator — `Author` becomes an `Agent` of the LRM with an `AgentKind`, `Work.AuthorIds` becomes a set of `Contribution { AgentId, Role }`, and `LifeYears` becomes `ExistenceDates`. Named here so the rename is a decision rather than a discovery. |
+| `Author` | Auteur | A person or body responsible for a work. The type is an authority record, and the name is a role: the day a second role is modeled — translator, illustrator — `Author` becomes an `Agent` of the LRM with an `AgentKind`, `Work.AuthorIds` becomes a set of `Contribution { AgentId, Role }`, and `LifeYears` becomes `ExistenceDates`. Named here so the rename is a decision rather than a discovery. |
 | `PreferredName` | Vedette | The name form a person or body is filed under. The profession's prose says *heading* and RDA says *preferred name*; they are one concept, and this row is what keeps the synonym from becoming two — so the code says `PreferredName`, once, and never `Heading` or `AuthorizedName`. |
 | `VariantName` | Forme rejetée | Another form the same person or body is known by, which leads back to the record. Pairs with `PreferredName`: *preferred* and *variant* is the one figure of speech this context uses, for names as for titles. |
 | `NameForm` | Forme du nom | A name in filing order — family name first, as in `"Saint-Exupéry, Antoine de"`. Not `PersonName`: the same type carries corporate bodies, sovereigns and mononyms, none of which is a person's name in the ordinary sense. |
@@ -163,12 +163,12 @@ the library would be worse at being a library without it, not when it is pleasan
 **Core — Circulation.** Every rule that makes a library more than a warehouse. How many items a
 category of member may hold at once, for how long, how often a loan may be renewed, who is next in a
 hold queue, what a returned copy does when someone is waiting for it. Stateful, temporal, and
-specific to how this library chooses to operate. This is where modelling effort belongs.
+specific to how this library chooses to operate. This is where modeling effort belongs.
 
-**Supporting — Catalog.** Essential and mostly standardised. Bibliographic description follows rules
+**Supporting — Catalog.** Essential and mostly standardized. Bibliographic description follows rules
 the profession settled long ago; a library does not become better by inventing its own. A record for
 a given ISBN is the same everywhere, which is why records are imported rather than typed. Rich in
-structure, thin in behaviour.
+structure, thin in behavior.
 
 **Supporting — Holdings.** What *this* library owns. The counterpart of the catalog's universality: a
 bibliographic record is shared with every library in the world, a copy with a barcode and a worn

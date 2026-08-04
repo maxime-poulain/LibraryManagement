@@ -14,7 +14,7 @@ namespace LibraryManagement.Composition.Tests;
 /// source generator parses this very syntax at compile time: the behaviors must be inline
 /// <c>typeof</c> expressions, and there must be exactly one such call per assembly — a second one
 /// carrying a different array would leave the generator to pick a winner. From the array it emits
-/// one closed registration per message and behavior, honouring each behavior's constraints, so
+/// one closed registration per message and behavior, honoring each behavior's constraints, so
 /// the unit of work is never even constructed for a query.
 /// </para>
 /// <para>
