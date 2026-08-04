@@ -621,3 +621,5 @@ fabric.properties
 !.idea/runConfigurations
 
 # End of https://www.toptal.com/developers/gitignore/api/aspnetcore,dotnetcore,csharp,jetbrains+all
+# SonarScanner for .NET working directory, written at the root during begin/end
+.sonarqube/
