@@ -44,7 +44,7 @@ jobs:
       # Verify against sonarcloud.io → project page → Project Information ("Organization Key",
       # "Project Key"); a mismatch fails the run loudly with "project not found".
       SONAR_ORGANIZATION: 9c1eb57d24115cbbd103219f
-      SONAR_PROJECT_KEY: 9c1eb57d24115cbbd103219f_LibraryManagement
+      SONAR_PROJECT_KEY: maxime-poulain_LibraryManagement
 
     steps:
       # Full history, not a shallow clone: blame and new-code detection read it, and a shallow
