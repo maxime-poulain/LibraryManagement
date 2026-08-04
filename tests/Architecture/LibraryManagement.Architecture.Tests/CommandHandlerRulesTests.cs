@@ -1,6 +1,7 @@
 using LibraryManagement.Catalog.Application.Authors.RegisterAuthor;
 using LibraryManagement.Catalog.Application.Works.RegisterWork;
 using LibraryManagement.Holdings.Application.Copies.AcquireCopy;
+using LibraryManagement.Members.Application.Members.EnrollMember;
 using LibraryManagement.Shared.Application.CQS;
 using LibraryManagement.Shared.Domain.Results;
 
@@ -41,6 +42,7 @@ public sealed class CommandHandlerRulesTests
         // project's references is a failing test rather than a silently narrower scan. Green over
         // one module reads exactly like green over two.
         handlers.ShouldContain(typeof(AcquireCopyCommandHandler).FullName);
+        handlers.ShouldContain(typeof(EnrollMemberCommandHandler).FullName);
     }
 
     // --- The rule itself, exercised against deliberate violations --------------------------------

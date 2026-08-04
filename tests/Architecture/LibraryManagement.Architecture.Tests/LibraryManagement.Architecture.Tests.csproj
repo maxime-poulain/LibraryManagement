@@ -20,6 +20,7 @@
              can see, and the scan reads whatever this project puts in its output directory. -->
         <ProjectReference Include="..\..\..\src\Catalog\LibraryManagement.Catalog.Infrastructure\LibraryManagement.Catalog.Infrastructure.csproj" />
         <ProjectReference Include="..\..\..\src\Holdings\LibraryManagement.Holdings.Infrastructure\LibraryManagement.Holdings.Infrastructure.csproj" />
+        <ProjectReference Include="..\..\..\src\Members\LibraryManagement.Members.Infrastructure\LibraryManagement.Members.Infrastructure.csproj" />
     </ItemGroup>
 
     <!-- Deliberately no Mediator.SourceGenerator, which is what separates this project from the

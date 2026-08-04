@@ -12,7 +12,7 @@ Charges — over a small technical shared kernel. The project is design-first: e
 decided on paper in `docs/` before it is coded, and the documents record rejected alternatives,
 not just outcomes.
 
-**State.** Shared kernel, Catalog and Holdings are implemented and tested. Circulation, Members
+**State.** Shared kernel, Catalog, Holdings and Members are implemented and tested. Circulation
 and Charges exist as design only. There is no runnable host — the composition root lives in the
 composition tests — and no EF migrations, deliberately (`docs/migrations.md`).
 
@@ -26,7 +26,7 @@ is a bug: fix the pair in the same change.
 | `docs/strategic-design.md` | Boundaries, subdomains, context map. §4 is the **glossary — the binding ubiquitous language**. §10 is the codebase rules. |
 | `docs/tactical-design-circulation.md` | Circulation's aggregates, invariants and moments. Not yet implemented. |
 | `docs/tactical-design-holdings.md` | Holdings' aggregate and moments. Implemented; §10 records what building it taught. |
-| `docs/tactical-design-members.md` | Members' aggregate and moments. Not yet implemented. |
+| `docs/tactical-design-members.md` | Members' aggregate and moments. Implemented; §10 records what building it taught. |
 | `docs/outbox.md` | Domain events: same-save storage, drain, failure semantics, and what renames break. |
 | `docs/migrations.md` | Why `EnsureCreated` for now, the shape migrations will take, and the trigger for the switch. |
 

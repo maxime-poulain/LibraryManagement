@@ -255,7 +255,30 @@ Circulation's judgement, and the strategic design already holds the question ope
 input to that judgement. Adding a `Suspended` here would put the verdict in the context that keeps
 the facts.
 
-## 10. Open questions
+## 10. Consequences and open questions
+
+**What building it added.** Three things the design did not anticipate and the code settled, all
+in the same corner: this is the first module whose values have parts — a name of two, a guardian
+of a name and channels — where every earlier module's values were single scalars.
+
+A composite value cannot arrive through a constructor. The store binds only scalar-mapped
+properties to constructor parameters, so the aggregate's constructor takes the scalars and the
+name, the channels and the guardian arrive through their setters — one construction path, used by
+`Enroll` and the materializer alike, rather than a second constructor kept for the store's
+benefit.
+
+An optional composite needs a presence column. With every guardian column nullable, the store
+cannot tell "no guardian" from a guardian it never heard about; the guardian's direct members are
+themselves values, so none of their columns can discriminate alone. `Guardian_Present` is that
+one bit, engine-managed, named for the question it answers.
+
+And the outbox now holds its first object-shaped payloads: a name, channels and a guardian
+serialize as objects, not strings, because flattening a value with parts invents a syntax someone
+would eventually parse back. Their property names are contract exactly as an event record's
+positional parameters are — renaming a part is the same decision as renaming a parameter, and
+[outbox.md](outbox.md) §3's rule now reaches one level further down.
+
+Open, and each deferred for a stated reason rather than forgotten:
 
 * **Erasure.** Data-protection law gives a member the right to be forgotten, and loans in
   Circulation hold `BorrowerId` forever — the one history that grows without bound. Deletion
