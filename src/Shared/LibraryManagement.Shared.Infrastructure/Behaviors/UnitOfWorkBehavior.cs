@@ -17,7 +17,7 @@ namespace LibraryManagement.Shared.Infrastructure.Behaviors;
 /// <remarks>
 /// <para>
 /// Constrained to <see cref="ICommandBase"/>, so a query is never wrapped by it — a query changes
-/// nothing and has nothing to write. That constraint is honoured by the container rather than by a
+/// nothing and has nothing to write. That constraint is honored by the container rather than by a
 /// runtime check, and a test in the composition project pins it.
 /// </para>
 /// <para>

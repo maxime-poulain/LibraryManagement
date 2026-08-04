@@ -19,9 +19,9 @@ namespace LibraryManagement.Composition.Tests.Pipeline;
 /// <remarks>
 /// <para>
 /// Validation applies to every message; the unit of work applies to commands alone. If the
-/// constraint were not honoured, the unit of work would have to stay in a dispatcher and the
-/// migration would be pointless. The generator honours it at compile time — the generated
-/// registrations close a command-constrained behavior over no query — and the container honours
+/// constraint were not honored, the unit of work would have to stay in a dispatcher and the
+/// migration would be pointless. The generator honors it at compile time — the generated
+/// registrations close a command-constrained behavior over no query — and the container honors
 /// it for behaviors added through DI, which is the path the fixtures below take.
 /// </para>
 /// <para>
@@ -75,7 +75,7 @@ public sealed class ConstrainedBehaviorTests
     [Fact]
     public async Task Behaviors_RunInRegistrationOrder()
     {
-        // The order is the guarantee, not the behaviour. Validation must run before the unit of
+        // The order is the guarantee, not the behavior. Validation must run before the unit of
         // work, or a message rejected for a missing field would still reach the store — and nothing
         // else would report a wrong registration order.
         Seen.Clear();

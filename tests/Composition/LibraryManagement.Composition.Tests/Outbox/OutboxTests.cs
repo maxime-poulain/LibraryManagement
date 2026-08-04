@@ -21,7 +21,7 @@ namespace LibraryManagement.Composition.Tests.Outbox;
 /// the processor delivers them later, each in a transaction of its own.
 /// </summary>
 /// <remarks>
-/// The processor is invoked directly rather than through a scheduler, deliberately: every behaviour
+/// The processor is invoked directly rather than through a scheduler, deliberately: every behavior
 /// here is deterministic. What Hangfire adds — a clock — is proven once, in
 /// <see cref="HangfireDrainTests"/>, and nowhere else.
 /// </remarks>
@@ -295,7 +295,7 @@ public sealed class EchoingAuthorHandler(IAuthorRepository authors) : IDomainEve
 
 /// <summary>
 /// What the handler saw, read back by the test that caused it. The tests sharing this run one at a
-/// time, on the collection that also serialises access to the database.
+/// time, on the collection that also serializes access to the database.
 /// </summary>
 public static class EchoedRegistrations
 {

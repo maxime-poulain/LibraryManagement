@@ -11,7 +11,7 @@ namespace LibraryManagement.Catalog.Domain.Editions;
 /// <para>
 /// An aggregate root of its own, holding a <see cref="Works.WorkId"/> — this settles the question
 /// the strategic design left open, and the hold model is what settled it: reservation queues key on
-/// an edition, so an edition must be independently addressable whichever way the modelling fell.
+/// an edition, so an edition must be independently addressable whichever way the modeling fell.
 /// A work knows nothing of its editions, exactly as an author knows nothing of the works credited
 /// to them; "the editions of this work" is a query, not a navigation.
 /// </para>
@@ -20,7 +20,7 @@ namespace LibraryManagement.Catalog.Domain.Editions;
 /// No ISBN is not an oversight — grey literature, self-published works and everything printed
 /// before 1970 carry none, and those are exactly what the manual commands exist to catalog. The
 /// publisher, the format and a translation's contributors arrive with their own concepts the day
-/// they are modelled; a thin edition is what lets Holdings attach copies without waiting for them.
+/// they are modeled; a thin edition is what lets Holdings attach copies without waiting for them.
 /// </para>
 /// </remarks>
 public sealed class Edition : AggregateRoot<EditionId>

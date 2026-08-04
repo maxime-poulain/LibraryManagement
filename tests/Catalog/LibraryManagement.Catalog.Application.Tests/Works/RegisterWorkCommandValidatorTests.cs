@@ -26,7 +26,7 @@ public sealed class RegisterWorkCommandValidatorTests
     [Fact]
     public void AWorkCreditedToNobody_IsAccepted()
     {
-        // Anonymous works, traditional tales and many mediaeval texts have no author, and a rule
+        // Anonymous works, traditional tales and many medieval texts have no author, and a rule
         // demanding one would force a librarian to invent one for Le Roman de Renart. The empty list
         // is the case being accepted here; a null one is not, and is rejected below.
         _validator.Validate(ARegistration(authorIds: [])).IsValid.ShouldBeTrue();

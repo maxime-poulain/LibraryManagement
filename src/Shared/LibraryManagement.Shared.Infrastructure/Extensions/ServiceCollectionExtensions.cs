@@ -31,7 +31,7 @@ public static class ServiceCollectionExtensions
     /// <strong>The pipeline itself is not registered here.</strong> The behaviors are declared to
     /// <c>AddMediator</c> (<c>options.PipelineBehaviors</c>), inline at the composition root,
     /// because that is the mediator's own surface for them: the source generator parses that very
-    /// syntax and emits one closed registration per message and behavior, honouring each
+    /// syntax and emits one closed registration per message and behavior, honoring each
     /// behavior's constraints. An open generic added here would run beside the generated
     /// registrations, and every behavior would execute twice per message. The order the root must
     /// declare — logging, validation, unit of work — is recorded on

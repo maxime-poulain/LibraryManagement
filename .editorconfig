@@ -129,7 +129,7 @@ dotnet_diagnostic.CA1513.severity = warning
 
 # CA1711: Identifiers should not have incorrect suffix
 # Reserves suffixes such as `Collection`, `EventHandler` or `Exception` for types that actually
-# honour the matching framework contract. Our domain vocabulary reuses some of them for unrelated
+# honor the matching framework contract. Our domain vocabulary reuses some of them for unrelated
 # concepts — `IDomainEventHandler` is DDD/CQRS naming and has nothing to do with the .NET event
 # pattern — so the rule reports naming collisions rather than defects.
 dotnet_diagnostic.CA1711.severity = silent

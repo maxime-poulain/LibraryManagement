@@ -6,7 +6,7 @@ namespace LibraryManagement.Catalog.Infrastructure.Search;
 /// </summary>
 /// <remarks>
 /// <para>
-/// A read-model row, deliberately anemic like <c>OutboxMessage</c>: no invariants, no behaviour.
+/// A read-model row, deliberately anemic like <c>OutboxMessage</c>: no invariants, no behavior.
 /// The truth lives in the aggregates; this table is a projection of it, fed by their events through
 /// the outbox, and rebuildable from them. It answers the question the write model is shaped wrong
 /// for — "which records answer to this form?" — without loading a single aggregate.

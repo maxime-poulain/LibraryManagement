@@ -138,7 +138,7 @@ public sealed class UnitOfWorkBehaviorTests
     public void TheBehavior_AcceptsOnlyCommands()
     {
         // A query changes nothing and has nothing to write. The constraint is what keeps it out,
-        // and the container honouring it is pinned by a test in the composition project.
+        // and the container honoring it is pinned by a test in the composition project.
         var messageParameter = typeof(UnitOfWorkBehavior<,>).GetGenericArguments()[0];
 
         messageParameter.GetGenericParameterConstraints().ShouldContain(typeof(ICommandBase));

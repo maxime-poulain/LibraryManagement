@@ -12,7 +12,7 @@ namespace LibraryManagement.Shared.Infrastructure.Tests.CQS;
 /// </summary>
 /// <remarks>
 /// The assertions that used to live here did not disappear — they moved to
-/// <c>ValidationBehaviorTests</c> and <c>UnitOfWorkBehaviorTests</c>, which is where the behaviour
+/// <c>ValidationBehaviorTests</c> and <c>UnitOfWorkBehaviorTests</c>, which is where the behavior
 /// they describe now lives.
 /// </remarks>
 public sealed class MediatorCommandDispatcherTests

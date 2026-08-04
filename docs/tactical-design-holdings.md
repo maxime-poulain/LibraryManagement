@@ -99,7 +99,7 @@ Saint-Exupéry — often behind a section prefix, `JEUN 843.912 SAI`.
 The important word is *once*. A shelfmark is not a computed view of Catalog data; it is a decision
 taken when the copy is processed, printed on a label, and stuck to a spine. When a cataloger later
 corrects an author's preferred name, **the shelfmarks do not move** — the labels on the shelves have
-not moved, and a system claiming otherwise would send staff to the wrong shelf. Modelling it as a
+not moved, and a system claiming otherwise would send staff to the wrong shelf. Modeling it as a
 derived property would be the natural mistake and would be wrong in the only way that matters, which
 is physically.
 
@@ -220,11 +220,11 @@ One is a decision, the other an observation, which is why they are two words.
 ## 8. Stocktake, deliberately deferred
 
 *Récolement*: the physical sweep of the shelves against the records, which a library runs section by
-section over weeks. It is named in the glossary and it is not modelled here.
+section over weeks. It is named in the glossary and it is not modeled here.
 
 It needs concepts this context does not yet have — a session with a scope and a date, a scanning
 pass, a reconciliation report — and every one of them is shaped by the interface staff will actually
-hold, which does not exist. Modelling it now would be guessing at a workflow.
+hold, which does not exist. Modeling it now would be guessing at a workflow.
 
 One thing it forces today, though, and the reason it is discussed at all: **`Lost` must be reachable
 from Holdings' own initiative**, not only from Circulation's event. Were the only route in the
