@@ -45,6 +45,10 @@ jobs:
       # "Project Key"); a mismatch fails the run loudly with "project not found".
       SONAR_ORGANIZATION: 9c1eb57d24115cbbd103219f
       SONAR_PROJECT_KEY: maxime-poulain_LibraryManagement
+      # The token enters through the environment, never through the rendered script: an expression
+      # expanded inside `run:` becomes part of the script text, which is what SonarCloud's own
+      # workflow analysis flags. The shell reads $SONAR_TOKEN from here instead.
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     steps:
       # Full history, not a shallow clone: blame and new-code detection read it, and a shallow
@@ -86,7 +90,7 @@ jobs:
           dotnet dotnet-sonarscanner begin
           /k:"${{ env.SONAR_PROJECT_KEY }}"
           /o:"${{ env.SONAR_ORGANIZATION }}"
-          /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+          /d:sonar.token="$SONAR_TOKEN"
           /d:sonar.host.url="https://sonarcloud.io"
           /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
 
@@ -103,4 +107,4 @@ jobs:
           --collect:"XPlat Code Coverage;Format=opencover"
 
       - name: End analysis
-        run: dotnet dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+        run: dotnet dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
