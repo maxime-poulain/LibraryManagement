@@ -74,3 +74,51 @@ jobs:
         run: >
           dotnet test LibraryManagement.slnx --configuration Release --no-build
           --filter "Category!=Integration"
+
+  # Only for agent branches — claude/** — and by job-level `if`, because that is the only place the
+  # source branch is expressible: `on.pull_request.branches` filters the BASE branch, and
+  # expressions have no glob, so startsWith on github.head_ref IS the claude/** pattern.
+  #
+  # A separate job rather than a conditional step in the gate: it runs in parallel, carries its own
+  # name so a red integration test is attributable at a glance, and leaves the required check's
+  # speed and meaning untouched. The full suite also runs inside "SonarCloud analysis" on every
+  # internal pull request — this job exists so an agent driving a branch to green gets a signal
+  # that names the failure and does not depend on an external service's token.
+  #
+  # Not a required check, and it must not become one as-is: a check that only sometimes runs leaves
+  # every other pull request pending forever. The day it should gate, remove this `if` and put the
+  # condition on the test step instead, so the check always reports.
+  integration-tests:
+    name: Integration tests
+    if: startsWith(github.head_ref, 'claude/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Same key as the gate's, so the two jobs share one cache instead of racing two.
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Restore
+        run: dotnet restore LibraryManagement.slnx
+
+      - name: Build (Release)
+        run: dotnet build LibraryManagement.slnx --configuration Release --no-restore
+
+      # The complement of the gate's filter: everything in SqlServerCollection, on the runner's own
+      # Docker. The two filters partition the suite exactly — a test is in one of them or the other,
+      # never both, never neither.
+      - name: Integration tests
+        run: >
+          dotnet test LibraryManagement.slnx --configuration Release --no-build
+          --filter "Category=Integration"
