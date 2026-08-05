@@ -57,6 +57,23 @@ internal sealed class InMemoryLoanRepository : ILoanRepository
             .Select(loan => loan.CopyId)
             .ToList());
 
+    public ValueTask<IReadOnlyList<Loan>> ActiveDueBetweenAsync(
+        DateOnly from,
+        DateOnly to,
+        CancellationToken cancellationToken = default)
+        => ValueTask.FromResult<IReadOnlyList<Loan>>(_loans.Values
+            .Where(loan => loan.Status == LoanStatus.Active
+                && loan.DueDate >= from
+                && loan.DueDate <= to)
+            .ToList());
+
+    public ValueTask<IReadOnlyList<Loan>> ActiveOverdueAsync(
+        DateOnly today,
+        CancellationToken cancellationToken = default)
+        => ValueTask.FromResult<IReadOnlyList<Loan>>(_loans.Values
+            .Where(loan => loan.Status == LoanStatus.Active && loan.DueDate < today)
+            .ToList());
+
     public void Add(Loan loan) => _loans[loan.Id] = loan;
 }
 
@@ -87,6 +104,14 @@ internal sealed class InMemoryHoldQueueRepository : IHoldQueueRepository
         => ValueTask.FromResult(_queues.Values
             .SelectMany(queue => queue.Holds)
             .Count(hold => hold.BorrowerId == borrowerId));
+
+    public ValueTask<IReadOnlyList<HoldQueue>> WithHoldsAwaitingPickupThroughAsync(
+        DateOnly lastDeadline,
+        CancellationToken cancellationToken = default)
+        => ValueTask.FromResult<IReadOnlyList<HoldQueue>>(_queues.Values
+            .Where(queue => queue.Holds.Any(hold =>
+                hold.Status == HoldStatus.AwaitingPickup && hold.PickupDeadline <= lastDeadline))
+            .ToList());
 
     public void Add(HoldQueue queue) => _queues[queue.Id] = queue;
 }

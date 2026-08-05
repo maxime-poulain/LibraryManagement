@@ -316,15 +316,29 @@ job but five queries, each idempotent — running it twice must change nothing a
 
 | Query | Outcome |
 |---|---|
-| Loans due in 3 days, courtesy reminder not sent | `LoanDueSoon` |
-| Loans overdue by 1, 7 or 14 days, that reminder not sent | `LoanBecameOverdue` |
+| Loans due within 3 days, courtesy reminder not sent | `LoanDueSoon` |
+| Loans overdue by at least 1, 7 or 14 days, that reminder not sent | `LoanBecameOverdue` |
 | Loans overdue by 30 days | Declare lost: loan terminal, copy `Lost` in Holdings, `ReplacementCharge` in Charges |
-| Trapped holds expiring tomorrow | `HoldExpiringSoon` |
+| Trapped holds expiring today or tomorrow, not yet warned | `HoldExpiringSoon` |
 | Trapped holds past their deadline | Expire, release the copy, promote the next in queue |
 
-Idempotence rests entirely on `RemindersSent`. Without it the run either notifies daily — which
+**Every stage reads as *at least*, not exactly.** A run that did not happen for three days finds a
+loan nine days late with neither the first nor the seventh stage announced. It marks both spent and
+sends one message, naming the real nine days. On an exact reading the missed stages would be owed to
+the borrower forever and never sent; announcing each of them in turn would deliver three messages in
+one morning, which is the noise the schedule exists to avoid. The same reading gives the courtesy
+reminder its window rather than its day, and the imminent-expiry warning the two days above:
+a deadline is a date the run must not step over, and a run only ever fires once a day.
+
+Idempotence rests entirely on what the aggregates remember. `RemindersSent` carries it for loans;
+a hold keeps its own `ExpiryWarningSent`, because a hold's schedule is not the loan's and a shared
+memory would tie two unrelated cadences together. Without it the run either notifies daily — which
 teaches borrowers to filter every message from the library, destroying the value of all of them — or
 requires the notification layer to remember, which puts a circulation fact in a generic context.
+
+Renewing clears the memory. A renewal moves the due date, so every appointment recorded against the
+old one is about a date that no longer exists; kept, they would silence the courtesy reminder for the
+whole of the new period.
 
 This makes a controllable clock non-negotiable: none of these five queries is testable against the
 system clock. `TimeProvider` is injected, never `DateTimeOffset.UtcNow`.
@@ -340,10 +354,9 @@ moves.
 | Event | Consumed by |
 |---|---|
 | `LoanCheckedOut` | read model |
-| `LoanRenewed` | read model, Notifications |
 | `LoanReturned(…, daysLate)` | Charges, read model |
-| `LoanDueSoon` | Notifications |
-| `LoanBecameOverdue` | Notifications |
+| `LoanDueSoon(…, anyoneIsWaiting)` | Notifications |
+| `LoanBecameOverdue(…, daysOverdue)` | Notifications |
 | `LoanDeclaredLost` | Holdings, Charges, Notifications |
 | `RenewalRefused(…, reason)` | Notifications |
 | `RenewalGranted(…, newDueDate)` | Notifications, read model |
@@ -354,6 +367,15 @@ moves.
 | `HoldExpired` | Notifications |
 | `HoldCancelled` | read model, Notifications |
 | `HoldsCancelledForDebt` | Notifications |
+
+This table once listed `LoanRenewed` beside `RenewalGranted`. They were one fact under two names —
+a renewal succeeded and the due date moved — and a reader had no way to tell which to subscribe to.
+`RenewalGranted` is the one, because it names the outcome and carries the new date; nothing was ever
+published under the other name.
+
+`LoanBecameOverdue` carries the days actually elapsed and not the stage that fired it. A borrower
+told they are nine days late can act; one told they have reached "stage two" cannot, and after a run
+that missed a day or two the stage is no longer even true.
 
 `LoanReturned` carries `daysLate` and not a price. Whether a return was late is a circulation fact;
 what lateness costs is a money question, and Charges answers it. A `daysLate` of zero is published
@@ -413,9 +435,9 @@ This is a rule to write when someone asks for it.
 ## 10. Consequences and open questions
 
 **What building the desk moments added.** The five synchronous moments — checkout, return,
-renewal, placing and cancelling a hold — are implemented; §6's scheduled process, the reactions
-to Charges' events and `RemindersSent` await the phase that builds the cross-module event
-mechanism [outbox.md](outbox.md) §9 defers. Building the desk taught four things this document
+renewal, placing and cancelling a hold — are implemented, and so is §6's scheduled process; only
+the reactions to Charges' events await the phase that builds the cross-module event mechanism
+[outbox.md](outbox.md) §9 defers. Building the desk taught four things this document
 now carries in place: the entitlement precondition the checkout list omitted, the cap moving
 after the trap resolution, the renewal rule reading *queued* rather than *empty*, and
 `HoldFulfilled` joining the events table — §4 promised every outcome an event, and the table had
@@ -436,7 +458,33 @@ Two things the design did not anticipate, settled by the code:
   which is what the desk sees anyway. The courtesy-reminder wording in §7 depends on the same
   decision.
 
+**What building the scheduled process added.** §6 said *five queries, each idempotent* and left the
+shape of the memory open. Three things the design did not anticipate:
+
+* **A hold's memory is its own.** The design read as though `RemindersSent` carried the whole run's
+  idempotence. It cannot: a hold's deadline has nothing to do with a loan's due date, and one
+  memory shared across both cadences would make a renewal forget a pickup warning. The hold keeps
+  a flag of its own, reset when a copy is trapped for it — the same copy set aside twice for two
+  borrowers is two promises and deserves two warnings.
+* **Every stage reads as *at least*.** Written into §6 above. The exact reading looked right until
+  the first run that did not happen, at which point the missed message becomes unsendable forever.
+* **The fan-out belongs to the host, not to a handler.** Five commands, five scopes, five saves.
+  A single command doing all five would make the day one unit of consistency — a hold that could
+  not expire would roll back the morning's reminders — and a handler dispatching the other four
+  would break the rule against nested dispatch. So the loop lives in the scheduled job, which is
+  where "what the day consists of" is a host decision anyway.
+
+One defect the process uncovered, whose reach went well past Circulation: an owned collection whose
+key EF believes it generates is a key EF believes already has a row. A reminder recorded against a
+loan already on file therefore arrived marked `Modified` rather than `Added`, and — the table being
+nothing but its key — no statement was written at all. The same convention silently dropped an
+author's credit in Catalog and turned a second hold on an existing queue into a concurrency failure.
+Every owned key now says `ValueGeneratedNever`, and a rule over each model holds it.
+
 Open:
 
 * Does loan history stay in `Loan` forever, or is it archived? It is the only thing in the system
   that grows without bound.
+* The declaration of loss ends the loan in Circulation, but marking the copy `Lost` in Holdings and
+  raising the replacement charge both wait on the cross-module event mechanism. Until then a
+  declared-lost loan is a fact Circulation holds alone.

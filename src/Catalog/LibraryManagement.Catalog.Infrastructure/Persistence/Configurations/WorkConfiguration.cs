@@ -34,7 +34,12 @@ public sealed class WorkConfiguration : AggregateRootConfiguration<Work, WorkId>
         {
             credit.ToTable("WorkAuthor");
             credit.WithOwner().HasForeignKey("WorkId");
-            credit.Property(id => id.Value).HasColumnName("AuthorId");
+            // The identifier is the author's own and the engine never invents one. Said explicitly
+            // because the convention reads a Guid key as store-generated, and a credit added to a
+            // work already on file then arrives with its key non-default: EF concludes the row
+            // exists, marks it Modified, and — the table being nothing but its key — has nothing
+            // to update and writes no statement at all. The credit would vanish without an error.
+            credit.Property(id => id.Value).HasColumnName("AuthorId").ValueGeneratedNever();
             credit.HasKey("WorkId", "Value");
             credit.HasIndex(id => id.Value);
         });

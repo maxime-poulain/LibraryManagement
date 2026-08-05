@@ -17,8 +17,10 @@ public sealed class LoanRepository(CirculationDbContext context) : ILoanReposito
     {
         ArgumentNullException.ThrowIfNull(id);
 
-        // No Include: a loan owns nothing. Everything it holds is a value on the row itself.
+        // The reminders come with the loan. They are what the scheduled process reads to know what
+        // it has already said, and a loan loaded without them would announce everything twice.
         return await context.Loans
+            .Include(loan => loan.RemindersSent)
             .FirstOrDefaultAsync(loan => loan.Id == id, cancellationToken)
             .ConfigureAwait(false);
     }
@@ -33,9 +35,37 @@ public sealed class LoanRepository(CirculationDbContext context) : ILoanReposito
         // SingleOrDefault, not First: the filtered unique index promises at most one, and a
         // second would be corruption worth throwing over rather than silently picking from.
         return await context.Loans
+            .Include(loan => loan.RemindersSent)
             .SingleOrDefaultAsync(
                 loan => loan.CopyId == copyId && loan.Status == LoanStatus.Active,
                 cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async ValueTask<IReadOnlyList<Loan>> ActiveDueBetweenAsync(
+        DateOnly from,
+        DateOnly to,
+        CancellationToken cancellationToken = default)
+    {
+        return await context.Loans
+            .Include(loan => loan.RemindersSent)
+            .Where(loan => loan.Status == LoanStatus.Active
+                && loan.DueDate >= from
+                && loan.DueDate <= to)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async ValueTask<IReadOnlyList<Loan>> ActiveOverdueAsync(
+        DateOnly today,
+        CancellationToken cancellationToken = default)
+    {
+        return await context.Loans
+            .Include(loan => loan.RemindersSent)
+            .Where(loan => loan.Status == LoanStatus.Active && loan.DueDate < today)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }
 

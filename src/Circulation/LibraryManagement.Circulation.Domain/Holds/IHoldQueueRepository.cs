@@ -36,6 +36,21 @@ public interface IHoldQueueRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the queues holding a set-aside copy whose pickup deadline falls on or before a day.
+    /// </summary>
+    /// <param name="lastDeadline">The furthest deadline of interest.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The queues, live holds included, possibly none.</returns>
+    /// <remarks>
+    /// One question for both hold moments of the scheduled process: the warning asks about
+    /// tomorrow, the expiry about yesterday, and each aggregate decides which of its own claims
+    /// the day concerns.
+    /// </remarks>
+    ValueTask<IReadOnlyList<HoldQueue>> WithHoldsAwaitingPickupThroughAsync(
+        DateOnly lastDeadline,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Adds a queue opened by its first claim.
     /// </summary>
     /// <param name="queue">The queue to add.</param>

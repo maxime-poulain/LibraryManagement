@@ -79,6 +79,23 @@ public sealed class CatalogDbContextTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public void NoKeyOfAnOwnedCollection_IsLeftForTheEngineToGenerate()
+    {
+        // A key EF believes it generates is a key EF believes already has a row. An entry added to
+        // a collection of an aggregate the store already holds arrives with that key filled in, so
+        // EF marks it Modified rather than Added — and when the table is nothing but its key,
+        // there is nothing to update and no statement is written at all. The addition disappears
+        // without an error, which is why this is a rule over the model and not one test per table.
+        var generated = Model().GetEntityTypes()
+            .Where(entity => entity.IsOwned())
+            .SelectMany(entity => entity.FindPrimaryKey()?.Properties ?? [])
+            .Where(property => property.ValueGenerated != ValueGenerated.Never)
+            .Select(property => $"{property.DeclaringType.DisplayName()}.{property.Name}");
+
+        generated.ShouldBeEmpty();
+    }
+
+    [Fact]
     public void AWork_HasNoNavigationToItsAuthors()
     {
         // Two aggregates. A work holds the identity of its authors and never the authors themselves,

@@ -22,6 +22,8 @@ namespace LibraryManagement.Circulation.Domain.Loans;
 /// </remarks>
 public sealed class Loan : AggregateRoot<LoanId>
 {
+    private readonly List<Reminder> _remindersSent = [];
+
     private Loan(
         LoanId id,
         CopyId copyId,
@@ -60,6 +62,20 @@ public sealed class Loan : AggregateRoot<LoanId>
 
     /// <summary>Gets where the loan stands.</summary>
     public LoanStatus Status { get; private set; }
+
+    /// <summary>Gets the reminder appointments this loan has already announced.</summary>
+    /// <remarks>
+    /// <para>
+    /// The whole of the scheduled process's idempotence: running the daily run twice must change
+    /// nothing and notify nobody twice, and only the loan knows what it has already said. Kept on
+    /// the aggregate rather than in a notification layer, which would put a circulation fact in a
+    /// generic context.
+    /// </para>
+    /// <para>
+    /// A set and not a flag — adding a stage to the schedule must not be a migration.
+    /// </para>
+    /// </remarks>
+    public IReadOnlyList<Reminder> RemindersSent => _remindersSent.AsReadOnly();
 
     /// <summary>
     /// Starts a loan.
@@ -140,9 +156,128 @@ public sealed class Loan : AggregateRoot<LoanId>
         RenewalCount++;
         DueDate = DueDate.AddDays(policy.LoanDurationInDays);
 
+        // The schedule starts again with the period. Keeping the sent reminders would silence the
+        // courtesy reminder of every renewed loan — the borrower was told about a due date that no
+        // longer exists, and would never be told about the one that replaced it.
+        _remindersSent.Clear();
+
         AddDomainEvent(new RenewalGranted(Id, DueDate));
 
         return Result.Success();
+    }
+
+    /// <summary>
+    /// Announces that the copy is due back soon, once, if it is and nobody has said so yet.
+    /// </summary>
+    /// <param name="today">The day the scheduled process is running.</param>
+    /// <param name="anyoneIsWaiting">
+    /// Whether the edition has a queue, which decides what the message should ask for: three days
+    /// before a due date on an edition somebody is waiting for, the useful sentence is not
+    /// <em>renew it</em> but <em>please bring it back</em>.
+    /// </param>
+    /// <param name="policy">The circulation policy, which decides how far ahead the courtesy goes.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="policy"/> is null.</exception>
+    /// <remarks>
+    /// Silent when the loan is not active, when the day is not yet in reach, when the due date has
+    /// already passed — an overdue loan gets the overdue reminder, not a courtesy — and when the
+    /// appointment has already gone out. Saying nothing is the ordinary outcome: the run asks
+    /// every loan every day.
+    /// </remarks>
+    public void RemindOfDueDate(DateOnly today, bool anyoneIsWaiting, CirculationPolicy policy)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+
+        if (Status != LoanStatus.Active)
+        {
+            return;
+        }
+
+        var reminder = Reminder.Courtesy(policy.CourtesyReminderDaysBeforeDue);
+        var daysUntilDue = DueDate.DayNumber - today.DayNumber;
+
+        if (daysUntilDue < 0
+            || daysUntilDue > policy.CourtesyReminderDaysBeforeDue
+            || _remindersSent.Contains(reminder))
+        {
+            return;
+        }
+
+        _remindersSent.Add(reminder);
+
+        AddDomainEvent(new LoanDueSoon(Id, CopyId, BorrowerId, DueDate, anyoneIsWaiting));
+    }
+
+    /// <summary>
+    /// Announces that the copy is late, once per stage of the schedule.
+    /// </summary>
+    /// <param name="today">The day the scheduled process is running.</param>
+    /// <param name="policy">The circulation policy, which holds the stages.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="policy"/> is null.</exception>
+    /// <remarks>
+    /// <para>
+    /// <strong>Every stage the loan has passed is marked, and one message goes out.</strong> A run
+    /// that did not happen for three days finds a loan nine days late with neither the first nor
+    /// the seventh stage announced; it says so once, at the ninth day, and marks both stages
+    /// spent. Announcing each missed stage in turn would deliver three messages in one morning,
+    /// which teaches a borrower to filter everything the library sends — the very thing the
+    /// schedule exists to avoid.
+    /// </para>
+    /// <para>
+    /// Reading a stage as <em>at least</em> that many days rather than exactly is what makes the
+    /// catch-up possible at all: on the exact reading, a run that missed the day would owe the
+    /// borrower a message it could never send.
+    /// </para>
+    /// </remarks>
+    public void RemindOfBeingOverdue(DateOnly today, CirculationPolicy policy)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+
+        if (Status != LoanStatus.Active)
+        {
+            return;
+        }
+
+        var daysOverdue = today.DayNumber - DueDate.DayNumber;
+
+        if (daysOverdue <= 0)
+        {
+            return;
+        }
+
+        var passed = policy.OverdueReminderDaysAfterDue
+            .Where(stage => stage <= daysOverdue)
+            .Select(Reminder.Overdue)
+            .Where(reminder => !_remindersSent.Contains(reminder))
+            .ToList();
+
+        if (passed.Count == 0)
+        {
+            return;
+        }
+
+        _remindersSent.AddRange(passed);
+
+        AddDomainEvent(new LoanBecameOverdue(Id, CopyId, BorrowerId, DueDate, daysOverdue));
+    }
+
+    /// <summary>
+    /// Determines whether the library has waited long enough to stop waiting.
+    /// </summary>
+    /// <param name="today">The day the scheduled process is running.</param>
+    /// <param name="policy">The circulation policy, which holds how long that is.</param>
+    /// <returns><see langword="true"/> when an active loan is overdue past the policy's patience.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="policy"/> is null.</exception>
+    /// <remarks>
+    /// A question and not a decision, so that <see cref="DeclareLost"/> stays the one act — the
+    /// scheduled process asks this, and a librarian who gives up early one day will not have to
+    /// find the deciding somewhere else.
+    /// </remarks>
+    public bool IsLongOverdue(DateOnly today, CirculationPolicy policy)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+
+        return Status == LoanStatus.Active
+            && today.DayNumber - DueDate.DayNumber >= policy.DeclaredLostAfterDays;
     }
 
     /// <summary>

@@ -67,6 +67,29 @@ public sealed class HoldQueuePersistenceTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public async Task AHoldPlacedInAQueueAlreadyOnFile_ReachesTheTable()
+    {
+        // The second hold on an edition, which is the ordinary case: the queue row itself does not
+        // change, and only the new claim has to be written.
+        var queue = HoldQueue.For(EditionId.Generate());
+        var first = BorrowerId.Generate();
+        var second = BorrowerId.Generate();
+        queue.PlaceHold(HoldId.Generate(), first, ThisMorning);
+        await StoredAsync(queue);
+
+        await using (var updating = sqlServer.NewContext())
+        {
+            var loaded = await new HoldQueueRepository(updating).GetByEditionAsync(queue.Id, Token);
+            loaded!.PlaceHold(HoldId.Generate(), second, ThisMorning.AddHours(2));
+            await updating.SaveChangesAsync(Token);
+        }
+
+        var found = await ReadBackAsync(queue.Id);
+
+        found.QueuedBorrowersInOrder().ShouldBe([first, second]);
+    }
+
+    [Fact]
     public async Task AClaimThatEnds_LeavesTheTable()
     {
         var queue = HoldQueue.For(EditionId.Generate());
@@ -129,5 +152,84 @@ public sealed class HoldQueuePersistenceTests(SqlServerFixture sqlServer)
         // Queued and awaiting pickup alike: a trapped copy occupies a place exactly as a borrowed
         // one does.
         count.ShouldBe(2);
+    }
+
+    // --- What the scheduled process reads and writes ---------------------------------------------
+
+    [Fact]
+    public async Task AWarningAlreadySent_SurvivesTheRoundTrip()
+    {
+        // The hold shelf's own memory, without which every run would announce the same imminent
+        // expiry again.
+        var queue = HoldQueue.For(EditionId.Generate());
+        queue.PlaceHold(HoldId.Generate(), BorrowerId.Generate(), ThisMorning);
+        queue.TrapOldestQueued(CopyId.Generate(), Today, NobodyBlocked);
+        await StoredAsync(queue);
+
+        await using (var updating = sqlServer.NewContext())
+        {
+            var loaded = await new HoldQueueRepository(updating).GetByEditionAsync(queue.Id, Token);
+            loaded!.WarnOfImminentExpiry(Today);
+            await updating.SaveChangesAsync(Token);
+        }
+
+        var found = await ReadBackAsync(queue.Id);
+
+        found.Holds.Single().ExpiryWarningSent.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task WithHoldsAwaitingPickupThrough_FindsTheQueuesTheDayConcerns()
+    {
+        var soon = HoldQueue.For(EditionId.Generate());
+        soon.PlaceHold(HoldId.Generate(), BorrowerId.Generate(), ThisMorning);
+        soon.TrapOldestQueued(CopyId.Generate(), Today, NobodyBlocked);
+        await StoredAsync(soon);
+
+        var later = HoldQueue.For(EditionId.Generate());
+        later.PlaceHold(HoldId.Generate(), BorrowerId.Generate(), ThisMorning);
+        later.TrapOldestQueued(CopyId.Generate(), Today.AddDays(5), NobodyBlocked);
+        await StoredAsync(later);
+
+        await using var reading = sqlServer.NewContext();
+        var found = await new HoldQueueRepository(reading)
+            .WithHoldsAwaitingPickupThroughAsync(Today, Token);
+
+        var editions = found.Select(queue => queue.Id).ToList();
+        editions.ShouldContain(soon.Id);
+        editions.ShouldNotContain(later.Id);
+    }
+
+    [Fact]
+    public async Task WithHoldsAwaitingPickupThrough_IgnoresAQueueWhereNobodysCopyIsSetAside()
+    {
+        var waiting = HoldQueue.For(EditionId.Generate());
+        waiting.PlaceHold(HoldId.Generate(), BorrowerId.Generate(), ThisMorning);
+        await StoredAsync(waiting);
+
+        await using var reading = sqlServer.NewContext();
+        var found = await new HoldQueueRepository(reading)
+            .WithHoldsAwaitingPickupThroughAsync(Today.AddYears(1), Token);
+
+        found.Select(queue => queue.Id).ShouldNotContain(waiting.Id);
+    }
+
+    [Fact]
+    public async Task TheHoldsComeBackWithTheirQueue_WhenTheDayFindsIt()
+    {
+        // The query has to include what the aggregate will read, or the expiry would look at an
+        // empty queue and end nothing.
+        var queue = HoldQueue.For(EditionId.Generate());
+        queue.PlaceHold(HoldId.Generate(), BorrowerId.Generate(), ThisMorning);
+        queue.PlaceHold(HoldId.Generate(), BorrowerId.Generate(), ThisMorning.AddHours(1));
+        queue.TrapOldestQueued(CopyId.Generate(), Today.AddDays(-1), NobodyBlocked);
+        await StoredAsync(queue);
+
+        await using var reading = sqlServer.NewContext();
+        var found = (await new HoldQueueRepository(reading)
+                .WithHoldsAwaitingPickupThroughAsync(Today.AddDays(-1), Token))
+            .Single(other => other.Id == queue.Id);
+
+        found.Holds.Count.ShouldBe(2);
     }
 }

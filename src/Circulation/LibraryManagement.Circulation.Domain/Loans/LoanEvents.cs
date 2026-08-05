@@ -38,6 +38,45 @@ public sealed record LoanReturned(
     int DaysLate) : DomainEvent;
 
 /// <summary>
+/// A copy is due back soon, and the borrower has not been told yet.
+/// </summary>
+/// <param name="LoanId">The loan.</param>
+/// <param name="CopyId">The copy to bring back.</param>
+/// <param name="BorrowerId">Who has it.</param>
+/// <param name="DueDate">When it is expected.</param>
+/// <param name="AnyoneIsWaiting">
+/// Whether somebody is queued for the edition. Carried because it decides what the message should
+/// ask for — <em>renew it</em>, or <em>please bring it back</em> — and a message that says the
+/// wrong one wastes a trip to the library. A fact at the moment of announcing, like every fact an
+/// event carries.
+/// </param>
+public sealed record LoanDueSoon(
+    LoanId LoanId,
+    CopyId CopyId,
+    BorrowerId BorrowerId,
+    DateOnly DueDate,
+    bool AnyoneIsWaiting) : DomainEvent;
+
+/// <summary>
+/// A copy is late, and the borrower has not been told at this stage of the schedule yet.
+/// </summary>
+/// <param name="LoanId">The loan.</param>
+/// <param name="CopyId">The copy that has not come back.</param>
+/// <param name="BorrowerId">Who has it.</param>
+/// <param name="DueDate">When it was expected.</param>
+/// <param name="DaysOverdue">
+/// How late it actually is on the day of announcing — not the stage of the schedule that
+/// triggered the message. A run that missed days announces the truth, not the appointment it is
+/// catching up on.
+/// </param>
+public sealed record LoanBecameOverdue(
+    LoanId LoanId,
+    CopyId CopyId,
+    BorrowerId BorrowerId,
+    DateOnly DueDate,
+    int DaysOverdue) : DomainEvent;
+
+/// <summary>
 /// A renewal was granted and the due date moved.
 /// </summary>
 /// <param name="LoanId">The loan renewed.</param>

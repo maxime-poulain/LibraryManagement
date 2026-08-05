@@ -107,6 +107,55 @@ public sealed class CatalogPersistenceTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public async Task RenamingAnAuthorAlreadyOnFile_FilesTheOutgoingNameAsAVariant()
+    {
+        // The path RenameAuthorCommandHandler actually takes: load, rename, save. The test above
+        // proves the insert of a whole new author; this one proves the far commoner case, a
+        // variant added to a record the store already holds.
+        var author = AnAuthor();
+        await SaveAsync(context => new AuthorRepository(context).Add(author));
+
+        await using (var updating = sqlServer.NewContext())
+        {
+            var loaded = await new AuthorRepository(updating).GetByIdAsync(author.Id, Token);
+            loaded!.Rename(Name("Saint-Exupéry, A. de"));
+            await new CatalogUnitOfWork(updating).SaveChangesAsync(Token);
+        }
+
+        await using var reader = sqlServer.NewContext();
+        var found = await new AuthorRepository(reader).GetByIdAsync(author.Id, Token);
+
+        found.ShouldNotBeNull();
+        found.PreferredName.ShouldBe(Name("Saint-Exupéry, A. de"));
+        found.VariantNames.ShouldBe([Name("Saint-Exupéry, Antoine de")]);
+    }
+
+    [Fact]
+    public async Task CreditingAnAuthorToAWorkAlreadyOnFile_KeepsTheCredit()
+    {
+        var author = AnAuthor("Deleuze, Gilles");
+        var work = AWork(TitleOf("L'Anti-Œdipe"));
+
+        await SaveAsync(context =>
+        {
+            new AuthorRepository(context).Add(author);
+            new WorkRepository(context).Add(work);
+        });
+
+        await using (var updating = sqlServer.NewContext())
+        {
+            var loaded = await new WorkRepository(updating).GetByIdAsync(work.Id, Token);
+            loaded!.CreditAuthor(author.Id).HasErrors().ShouldBeFalse();
+            await new CatalogUnitOfWork(updating).SaveChangesAsync(Token);
+        }
+
+        await using var reader = sqlServer.NewContext();
+        var found = await new WorkRepository(reader).GetByIdAsync(work.Id, Token);
+
+        found.ShouldNotBeNull().AuthorIds.ShouldBe([author.Id]);
+    }
+
+    [Fact]
     public async Task ExistsAsync_AnswersWithoutLoadingTheRecord()
     {
         var author = AnAuthor();

@@ -30,6 +30,12 @@ public sealed class HoldQueueConfiguration : AggregateRootConfiguration<HoldQueu
 
             hold.Property(h => h.Id)
                 .HasConversion(id => id.Value, value => HoldId.Create(value))
+                // The identifier comes from the aggregate, never from the engine. Said explicitly
+                // because the convention reads a Guid key as store-generated, and a hold placed in
+                // a queue already on file then arrives with its key non-default: EF concludes the
+                // row exists and issues an UPDATE that matches nothing, which surfaces as a
+                // concurrency failure at the desk rather than as the mapping mistake it is.
+                .ValueGeneratedNever()
                 .IsRequired();
 
             hold.HasKey("EditionId", "Id");
@@ -58,6 +64,10 @@ public sealed class HoldQueueConfiguration : AggregateRootConfiguration<HoldQueu
                 .HasFilter("[TrappedCopyId] IS NOT NULL");
 
             hold.Property(h => h.PickupDeadline);
+
+            // The hold shelf's own memory, so a second run of the day does not announce the same
+            // imminent expiry again.
+            hold.Property(h => h.ExpiryWarningSent).IsRequired();
         });
 
         builder.Navigation(queue => queue.Holds)
