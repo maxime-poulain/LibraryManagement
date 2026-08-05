@@ -91,3 +91,29 @@ public sealed record HoldCancelled(
     EditionId EditionId,
     HoldId HoldId,
     BorrowerId BorrowerId) : DomainEvent;
+
+/// <summary>
+/// A claim ended because its borrower owes money.
+/// </summary>
+/// <param name="EditionId">The edition.</param>
+/// <param name="HoldId">The claim cancelled, gone from the queue.</param>
+/// <param name="BorrowerId">Who owes.</param>
+/// <remarks>
+/// <para>
+/// Consequential rather than informational, in the notification design's terms: the borrower did
+/// not choose this, so the message always goes out — unlike <see cref="HoldCancelled"/>, which
+/// confirms an act they chose and may be declined.
+/// </para>
+/// <para>
+/// <strong>One per claim, not one per borrower.</strong> The design named this in the plural, and
+/// the plural could not survive the aggregate boundary: a borrower's claims live in as many queues
+/// as there are editions, an event is raised by the aggregate whose state changed, and there is no
+/// aggregate here that spans them. Grouping several of these into one message is Notifications'
+/// work, which is where it belongs — the borrower wants one message, and that is a fact about
+/// messages rather than about queues.
+/// </para>
+/// </remarks>
+public sealed record HoldCancelledForDebt(
+    EditionId EditionId,
+    HoldId HoldId,
+    BorrowerId BorrowerId) : DomainEvent;

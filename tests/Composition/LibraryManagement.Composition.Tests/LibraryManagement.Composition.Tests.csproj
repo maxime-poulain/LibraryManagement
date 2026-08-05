@@ -39,6 +39,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\src\Catalog\LibraryManagement.Catalog.Infrastructure\LibraryManagement.Catalog.Infrastructure.csproj" />
+        <ProjectReference Include="..\..\..\src\Charges\LibraryManagement.Charges.Infrastructure\LibraryManagement.Charges.Infrastructure.csproj" />
         <ProjectReference Include="..\..\..\src\Circulation\LibraryManagement.Circulation.Infrastructure\LibraryManagement.Circulation.Infrastructure.csproj" />
         <ProjectReference Include="..\..\..\src\Holdings\LibraryManagement.Holdings.Infrastructure\LibraryManagement.Holdings.Infrastructure.csproj" />
         <ProjectReference Include="..\..\..\src\Members\LibraryManagement.Members.Infrastructure\LibraryManagement.Members.Infrastructure.csproj" />

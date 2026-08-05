@@ -284,6 +284,47 @@ public sealed class HoldQueue : AggregateRoot<EditionId>
     public sealed record Cancellation(CopyId? ReleasedCopyId);
 
     /// <summary>
+    /// Ends a borrower's claim because they owe money.
+    /// </summary>
+    /// <param name="borrowerId">Whose claim to end.</param>
+    /// <returns>
+    /// The cancellation when this queue held a claim of theirs, or <see langword="null"/> when it
+    /// held none. Absence is not a failure here: the caller sweeps every queue a borrower appears
+    /// in and cannot know in advance which of them still holds a live claim.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="borrowerId"/> is null.</exception>
+    /// <remarks>
+    /// <para>
+    /// The same removal as <see cref="CancelFor"/> and a different announcement, which is the whole
+    /// difference: one confirms a choice, the other reports a consequence nobody chose. Merging them
+    /// into one event with a reason would make <em>why did I lose my place</em> a question about a
+    /// flag, and it is the first question the borrower asks.
+    /// </para>
+    /// <para>
+    /// Not suspended — removed. A borrower who pays an hour later does not get their place back, and
+    /// the rule buys an invariant stronger than itself: nobody in a hold queue owes money, checkable
+    /// at any instant rather than only when someone reaches the front.
+    /// </para>
+    /// </remarks>
+    public Cancellation? CancelForDebt(BorrowerId borrowerId)
+    {
+        ArgumentNullException.ThrowIfNull(borrowerId);
+
+        var hold = _holds.Find(held => held.BorrowerId == borrowerId);
+
+        if (hold is null)
+        {
+            return null;
+        }
+
+        _holds.Remove(hold);
+
+        AddDomainEvent(new HoldCancelledForDebt(Id, hold.Id, borrowerId));
+
+        return new Cancellation(hold.TrappedCopyId);
+    }
+
+    /// <summary>
     /// Ends a borrower's claim because they changed their mind. The ordinary exit from a queue,
     /// and it must exist: a hold occupies one of the five places the cap counts, and a borrower
     /// who cannot free a place is punished for having reserved at all.

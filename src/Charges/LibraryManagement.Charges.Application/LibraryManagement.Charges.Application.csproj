@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <PackageReference Include="FluentValidation" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Shared\LibraryManagement.Shared.Application\LibraryManagement.Shared.Application.csproj" />
+        <ProjectReference Include="..\LibraryManagement.Charges.Domain\LibraryManagement.Charges.Domain.csproj" />
+        <!-- No published language of another module. Charges is told what happened and prices it;
+             nothing here asks another context a question, which is what being purely downstream of
+             events looks like. -->
+    </ItemGroup>
+
+</Project>

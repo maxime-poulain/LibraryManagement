@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <RootNamespace>LibraryManagement.Charges.Infrastructure</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Relational, not a provider. The module's mapping is tables and schemas; which database
+             serves them is the host's decision, made once at startup. -->
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+        <!-- Registering the module's validators is part of registering the module. -->
+        <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Shared\LibraryManagement.Shared.Infrastructure\LibraryManagement.Shared.Infrastructure.csproj" />
+        <ProjectReference Include="..\LibraryManagement.Charges.Application\LibraryManagement.Charges.Application.csproj" />
+        <!-- The module announces its own published language. -->
+        <ProjectReference Include="..\LibraryManagement.Charges.PublishedLanguage\LibraryManagement.Charges.PublishedLanguage.csproj" />
+        <!-- And answers the port Circulation declared for it, and listens to the two facts
+             Circulation announces. Published languages only — both reference nothing themselves. -->
+        <ProjectReference Include="..\..\Circulation\LibraryManagement.Circulation.PublishedLanguage\LibraryManagement.Circulation.PublishedLanguage.csproj" />
+    </ItemGroup>
+
+</Project>

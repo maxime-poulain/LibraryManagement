@@ -55,4 +55,19 @@ public interface IHoldQueueRepository
     /// </summary>
     /// <param name="queue">The queue to add.</param>
     void Add(HoldQueue queue);
+
+    /// <summary>
+    /// Finds every queue in which a borrower holds a live claim.
+    /// </summary>
+    /// <param name="borrowerId">The borrower.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The queues, with their claims.</returns>
+    /// <remarks>
+    /// The one query that starts from a borrower rather than from an edition, and it exists for one
+    /// moment: a debt arrives and every place that borrower occupies has to go. The index on the
+    /// borrower — the same one the cap counts through — is what keeps it from being a scan.
+    /// </remarks>
+    ValueTask<IReadOnlyList<HoldQueue>> WithHoldsForBorrowerAsync(
+        BorrowerId borrowerId,
+        CancellationToken cancellationToken = default);
 }
