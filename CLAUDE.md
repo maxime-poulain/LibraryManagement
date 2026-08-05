@@ -12,9 +12,11 @@ Charges — over a small technical shared kernel. The project is design-first: e
 decided on paper in `docs/` before it is coded, and the documents record rejected alternatives,
 not just outcomes.
 
-**State.** Shared kernel, Catalog, Holdings and Members are implemented and tested. Circulation
-and Charges exist as design only. There is no runnable host — the composition root lives in the
-composition tests — and no EF migrations, deliberately (`docs/migrations.md`).
+**State.** Shared kernel, Catalog, Holdings and Members are implemented and tested. Circulation's
+desk moments — checkout, return, renewal, holds — are implemented; its scheduled process and its
+reactions to Charges await the cross-module event mechanism, and Charges is design only. There is
+no runnable host — the composition root lives in the composition tests — and no EF migrations,
+deliberately (`docs/migrations.md`).
 
 ## The documents are the authority
 
@@ -24,7 +26,7 @@ is a bug: fix the pair in the same change.
 | Document | Decides |
 |---|---|
 | `docs/strategic-design.md` | Boundaries, subdomains, context map. §4 is the **glossary — the binding ubiquitous language**. §10 is the codebase rules. |
-| `docs/tactical-design-circulation.md` | Circulation's aggregates, invariants and moments. Not yet implemented. |
+| `docs/tactical-design-circulation.md` | Circulation's aggregates, invariants and moments. Desk moments implemented; §10 records what building them taught and what awaits the cross-module event mechanism. |
 | `docs/tactical-design-holdings.md` | Holdings' aggregate and moments. Implemented; §10 records what building it taught. |
 | `docs/tactical-design-members.md` | Members' aggregate and moments. Implemented; §10 records what building it taught. |
 | `docs/outbox.md` | Domain events: same-save storage, drain, failure semantics, and what renames break. |

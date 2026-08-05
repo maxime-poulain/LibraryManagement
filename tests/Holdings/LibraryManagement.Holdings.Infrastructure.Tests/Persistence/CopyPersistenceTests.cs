@@ -167,10 +167,12 @@ public sealed class CopyPersistenceTests(SqlServerFixture sqlServer)
         await using var reading = sqlServer.NewContext();
         var lendability = new CopyLendability(reading);
 
-        (await lendability.OfAsync(lendable.Id.Value, Token)).ShouldBe(Lendability.Lendable);
+        (await lendability.OfAsync(lendable.Id.Value, Token))
+            .Lendability.ShouldBe(Lendability.Lendable);
         lendable.MayBeLent().ShouldBeTrue();
 
-        (await lendability.OfAsync(reference.Id.Value, Token)).ShouldBe(Lendability.NotLendable);
+        (await lendability.OfAsync(reference.Id.Value, Token))
+            .Lendability.ShouldBe(Lendability.NotLendable);
         reference.MayBeLent().ShouldBeFalse();
     }
 
@@ -183,6 +185,6 @@ public sealed class CopyPersistenceTests(SqlServerFixture sqlServer)
 
         var answer = await new CopyLendability(reading).OfAsync(Guid.CreateVersion7(), Token);
 
-        answer.ShouldBe(Lendability.NoSuchCopy);
+        answer.Lendability.ShouldBe(Lendability.NoSuchCopy);
     }
 }

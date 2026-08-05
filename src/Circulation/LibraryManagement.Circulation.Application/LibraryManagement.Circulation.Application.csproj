@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <PackageReference Include="FluentValidation" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Shared\LibraryManagement.Shared.Application\LibraryManagement.Shared.Application.csproj" />
+        <ProjectReference Include="..\LibraryManagement.Circulation.Domain\LibraryManagement.Circulation.Domain.csproj" />
+        <!-- The suppliers' published languages, and only those. Not their domains, not their
+             applications: Circulation names a copy and a person without describing either. -->
+        <ProjectReference Include="..\..\Holdings\LibraryManagement.Holdings.PublishedLanguage\LibraryManagement.Holdings.PublishedLanguage.csproj" />
+        <ProjectReference Include="..\..\Members\LibraryManagement.Members.PublishedLanguage\LibraryManagement.Members.PublishedLanguage.csproj" />
+        <!-- Its own published language too, for the one port that runs the other way: Circulation
+             declared the balance question there so that Charges may implement it, and consumes it
+             here. -->
+        <ProjectReference Include="..\LibraryManagement.Circulation.PublishedLanguage\LibraryManagement.Circulation.PublishedLanguage.csproj" />
+    </ItemGroup>
+
+</Project>

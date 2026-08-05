@@ -3,6 +3,8 @@ using Hangfire.SqlServer;
 using LibraryManagement.Catalog.Application.Authors.RegisterAuthor;
 using LibraryManagement.Catalog.Infrastructure.Extensions;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
+using LibraryManagement.Circulation.Infrastructure.Extensions;
+using LibraryManagement.Circulation.PublishedLanguage;
 using LibraryManagement.Holdings.Infrastructure.Extensions;
 using LibraryManagement.Members.Infrastructure.Extensions;
 using LibraryManagement.Shared.Application.CQS;
@@ -39,6 +41,9 @@ public sealed class HangfireDrainTests(SqlServerFixture sqlServer) : IAsyncLifet
             .AddCatalogModule(options => options.UseSqlServer(sqlServer.ConnectionString))
             .AddHoldingsModule(options => options.UseSqlServer(sqlServer.ConnectionString))
             .AddMembersModule(options => options.UseSqlServer(sqlServer.ConnectionString))
+            .AddCirculationModule(options => options.UseSqlServer(sqlServer.ConnectionString))
+            // Circulation's inverted port, answered by the host until Charges exists.
+            .AddSingleton<IMemberBalance, NoChargesYet>()
             .AddTransient<OutboxJobs>()
             .BuildServiceProvider();
 

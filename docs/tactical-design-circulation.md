@@ -111,6 +111,7 @@ One copy, one borrower, one period. The root of everything that happens to a cop
 Loan
   LoanId          identity
   CopyId          from Holdings — an identifier, never the copy itself
+  EditionId       from Catalog  — the queue this copy answers to, recorded at checkout
   BorrowerId      from Members  — an identifier, never the member
   CheckedOutOn
   DueDate
@@ -188,6 +189,8 @@ history belongs, in a read model fed by the events.
 
 **Refusals at placement.**
 
+* Not by someone the registry does not know, or whose membership has lapsed — the same entitlement
+  question the checkout opens with.
 * Not on an edition the borrower already has on loan.
 * Not twice in the same queue.
 * Not while a copy is available on the shelf — that is a checkout, and allowing it would make the
@@ -201,14 +204,20 @@ history belongs, in a read model fed by the events.
 
 Preconditions, in order — cheapest and most likely to fail first:
 
-1. The borrower is in good standing (their balance, queried from Charges, judged here).
-2. The borrower is below the cap.
+1. The borrower is entitled to borrow (query to Members: enrolled, and the membership current).
+   The check the strategic design always implied and this list once omitted, added when the
+   module was built: a person the registry does not know cannot be judged for debt, which is also
+   why it runs first.
+2. The borrower is in good standing (their balance, queried from Charges, judged here).
 3. The copy exists and may be lent (query to Holdings: not reference-only, not in repair, not lost,
    not withdrawn).
 4. The copy is not already on loan.
 5. If the copy is trapped for a hold, it is trapped for *this* borrower.
+6. The borrower is below the cap — last, not second as this list first had it, and skipped
+   entirely when the checkout collects the borrower's own trapped hold: the transition from hold
+   to loan leaves the count unchanged (§2), so a pickup is never refused for the cap.
 
-Then: `Loan` is created, and if this checkout fulfils a hold, that hold is fulfilled and leaves the
+Then: `Loan` is created, and if this checkout fulfills a hold, that hold is fulfilled and leaves the
 queue — the outcome travels in the event, not in a status the queue keeps.
 
 Step 5 is what stops a walk-in from being handed a copy someone is waiting for.
@@ -218,10 +227,14 @@ Step 5 is what stops a walk-in from being handed a copy someone is waiting for.
 1. The loan is still active.
 2. `RenewalCount` is below `MaxRenewals`.
 3. The borrower is in good standing.
-4. **The edition's hold queue is empty.**
+4. **Nobody is queued on the edition.**
 
 The fourth is what makes a queue move. Without it a borrower renews indefinitely and the five people
 behind them never get anything: the queue exists but does not turn, and a hold stops being a promise.
+It reads *queued* deliberately, where this document first said *empty*: a claim already awaiting
+pickup has its copy on the hold shelf, and refusing a renewal for its sake would serve nobody the
+rule exists to serve. The renewal grants another loan period from the current due date — the
+arithmetic the membership renewal decided, for the same reason: renewing early costs nothing.
 
 It is checked against the queue as it stands at that moment. A hold placed a minute after a renewal
 does not undo it — the borrower acted in good faith on the state of the world, and revoking a granted
@@ -335,6 +348,7 @@ moves.
 | `RenewalRefused(…, reason)` | Notifications |
 | `RenewalGranted(…, newDueDate)` | Notifications, read model |
 | `HoldPlaced` | read model |
+| `HoldFulfilled` | read model |
 | `HoldReadyForPickup(…, pickupDeadline)` | Notifications |
 | `HoldExpiringSoon` | Notifications |
 | `HoldExpired` | Notifications |
@@ -396,7 +410,33 @@ the count is already there, measured rather than guessed.
 
 This is a rule to write when someone asks for it.
 
-## 10. Open questions
+## 10. Consequences and open questions
+
+**What building the desk moments added.** The five synchronous moments — checkout, return,
+renewal, placing and cancelling a hold — are implemented; §6's scheduled process, the reactions
+to Charges' events and `RemindersSent` await the phase that builds the cross-module event
+mechanism [outbox.md](outbox.md) §9 defers. Building the desk taught four things this document
+now carries in place: the entitlement precondition the checkout list omitted, the cap moving
+after the trap resolution, the renewal rule reading *queued* rather than *empty*, and
+`HoldFulfilled` joining the events table — §4 promised every outcome an event, and the table had
+skipped the happiest one.
+
+Two things the design did not anticipate, settled by the code:
+
+* **The loan records its `EditionId`.** The return and every renewal must name the queue the copy
+  answers to, and the loan is the only thing at hand that can remember it. Holdings' lendability
+  answer now carries the edition — the Customer/Supplier contract change the context map priced
+  in advance — and the loan keeps it from checkout on, as the queue the copy played in whatever
+  Catalog later does to the edition.
+* **`RenewalRefused` cannot be published as designed.** The pipeline writes the outbox in the
+  same save as the change, and saves only when the command succeeds — a refused renewal saves
+  nothing, so an event raised on the refusal would never be stored. Either a refusal becomes a
+  recorded fact (the command succeeds at recording it) or the event is reworked when
+  Notifications arrives; until that decision, renewals refuse through the command's own result,
+  which is what the desk sees anyway. The courtesy-reminder wording in §7 depends on the same
+  decision.
+
+Open:
 
 * Does loan history stay in `Loan` forever, or is it archived? It is the only thing in the system
   that grows without bound.
