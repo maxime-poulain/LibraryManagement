@@ -302,10 +302,14 @@ Open, each deferred for a stated reason rather than forgotten:
   because no context records what a copy cost. An acquisition price belongs in Holdings — it is a
   fact about this library's object, not about the edition — and the day it exists this setting
   becomes a default rather than the answer.
-* **Erasure, made worse by money.** Members §10 already asks what happens to an erased member who
-  still owes; this context is the other half of that question. A balance is a claim, and a claim that
-  must be kept for accounting is a reason not to erase — which is a legal answer and not a modeling
-  one, unanswered until someone who knows the law is in the room.
+* **Erasure, and what a balance does to it.** The modeling half is settled and lives in Members §10:
+  a member is erased by emptying their record and keeping their identifier, so an account keyed by
+  that identifier needs no change and its charges stay countable. Whether an outstanding balance
+  should stop the erasure in the first place is decided too, and decided *away* from the model —
+  the librarian sees the amount and judges, rather than this context answering a question Members
+  would have to ask across an edge the map does not carry. What genuinely remains is legal: whether
+  a claim for money is a legitimate ground to keep a person's record against their request. Nobody
+  here can answer that.
 * **Currency**, if this library ever holds one that is not the euro (§4).
 * **Whether a waiver needs a reason.** Today it is a decision recorded without a justification, on
   the argument that a librarian waiving forty cents should not have to write an essay. A library
