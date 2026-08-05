@@ -50,8 +50,15 @@ Charge                        an entity within the account
   Amount                      what was charged, see §4
   Paid                        how much has been settled against it
   IncurredOn
-  LoanId                      the circulation fact it prices
+  LoanId                      the loan it prices
+  CopyId                      the copy behind that loan, see §3
 ```
+
+**A charge records the copy as well as the loan, and that is not redundancy.** A charge is *created*
+by a fact from Circulation, which speaks loans — and a replacement charge is *undone* by a fact from
+Holdings, which speaks copies and has never heard of a loan. Recording only the loan would leave
+this context unable to find the charge an arriving reversal concerns: not awkward, impossible.
+The pair is what makes the ending in §3 writable at all.
 
 **Invariants.**
 
@@ -92,7 +99,23 @@ case and a figure in the other. The **occasion** is a return in one case and the
 in the other — and those are two different events from Circulation. The **magnitude** differs by two
 orders, which is why one is waived at the desk as a routine courtesy and the other is a decision
 somebody signs for. And the **ending** differs: a fine ends when it is paid, while a replacement
-charge has a second ending nobody has modeled yet, the day the book turns up (§10).
+charge has a second one — the day the book turns up.
+
+**A copy found cancels a replacement charge that is still outstanding.** It is the common case by
+some distance: a book mislaid behind a radiator reappears in weeks, long before anyone has produced
+€25 at the desk. Cancelling what is still owed needs nothing this context does not already have —
+it is the waiver of §5, reached by a fact rather than by a librarian's decision — which is why this
+half is settled here and not deferred with the other.
+
+**A copy found after the charge was paid is the half that waits**, and it waits on refunds, which §9
+leaves out for reasons of its own. Nothing here pretends otherwise: the money is in the till, and
+giving it back is a concept this context does not have.
+
+Holdings already raises `CopyFound` when it undoes a loss, so what is missing is not a fact but the
+passage carrying it — an edge from Holdings to this context that the strategic design's map does
+not draw. It is deliberately not drawn yet: no code depends on it, and an edge nothing exercises is
+a claim rather than a design. §10 records it as the first thing to settle the day this module is
+built.
 
 One type with a `Kind` enum would put both tariffs in one method and both waiver policies in one
 rule, and the day the library exempts fines for a month it would have to say *which* kind it meant.
@@ -266,8 +289,11 @@ say *you owe two euros* sends the librarian to another screen.
 money back. Both are real in a library that takes cash, and both bring a second sign into every
 arithmetic in this document — a balance that may be negative, an allocation that may run backwards,
 a `Standing` rule that has to say what a credit means. Refusing the overpayment is one line and
-costs a librarian one correction; supporting it costs the model its floor. To revisit when the desk
-reports it happening.
+costs a librarian one correction; supporting it costs the model its floor.
+
+What the omission actually costs is now down to one named case: a copy found after its replacement
+charge was paid (§3). Everything else about a found copy is settled, so the day refunds arrive they
+arrive for a reason somebody can state, rather than as a general capability nobody asked for.
 
 **The till.** Cash drawers, reconciliation at close of day, who was on the desk, what was taken in
 by which method. All real, all a point-of-sale concern rather than a domain one, and the moment
@@ -282,9 +308,9 @@ account. It is a batch of waivers when it arrives, and the waiver is already her
 announces an enrollment or a renewal, the `LoanReturned` shape exactly. Nothing here forbids it, and
 nothing here anticipates it either.
 
-**Interest, escalation, collections.** A debt does not grow while it is unpaid, and nobody is
-referred anywhere. `MaxFinePerLoan` is the whole of this context's opinion on how large a small debt
-may become.
+**Interest, escalation, collections.** A balance does not grow while it is unpaid, and nobody is
+referred anywhere. `MaxFinePerLoan` is the whole of this context's opinion on how large a small
+charge may become.
 
 ## 10. Consequences and open questions
 
@@ -293,11 +319,14 @@ designs earned theirs by being implemented, and this one will.
 
 Open, each deferred for a stated reason rather than forgotten:
 
-* **A copy found after it was paid for.** Holdings can undo `Lost`, and a member who paid €25 for a
-  book that turns up has a claim nobody has modeled. It is the second ending §3 mentions, and it
-  needs an edge the context map does not carry — Holdings announcing a copy found, to a context that
-  today only hears from Circulation. Whether the answer is a refund, a credit, or a waiver of what is
-  still outstanding depends on the refund question above, which is why the two are deferred together.
+* **A copy found after it was *paid* for.** §3 settles the ordinary case — a charge still owed is
+  cancelled — and this is what is left: the member produced €25, the book came back, and giving
+  money back is a concept §9 deliberately withholds. One case, not a question.
+* **The edge from Holdings, to draw when this module is built.** `CopyFound` exists there already;
+  the strategic design's map does not draw an arrow from Holdings to here, because nothing yet
+  travels it. Adding it is the first thing to settle the day this module is written, and it is a
+  wiring decision rather than a design one — the passage `docs/outbox.md` §9 describes carries it,
+  and §2 records the copy on the charge precisely so the arriving fact can find what it concerns.
 * **What a copy is worth.** `ReplacementCharge` is one flat figure for a paperback and for a folio,
   because no context records what a copy cost. An acquisition price belongs in Holdings — it is a
   fact about this library's object, not about the edition — and the day it exists this setting
