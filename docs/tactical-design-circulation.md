@@ -71,9 +71,16 @@ context ever utters the other's.
 `Debt` is the third word, and it belongs **here**. It names the same figure as `Balance`, seen as
 something that forbids rather than something that is owed — which is why it appears in
 `BlockingDebt` and in `HoldsCancelledForDebt` and never in anything Charges publishes. Charges
-announces `MemberBalanceBecameOwing`; Circulation reads it and forms its own `Debt` and its own
-`Standing`. That translation is the anticorruption layer doing its job, and it is what keeps the
+announces `MemberBalanceChanged`, carrying the amount before and the amount after and no opinion
+about either; Circulation reads the pair, applies `BlockingDebt`, and forms its own `Debt` and its
+own `Standing`. That translation is the anticorruption layer doing its job, and it is what keeps the
 rule above from being a slogan.
+
+**The threshold is named on this side only, and that is what makes it movable.** An event announcing
+*became owing* would have carried Charges' assumption that the line is zero; moving the line would
+then have meant changing what the other context publishes. Reading a balance and judging it here
+means the threshold changes in one place — the policy above — and nothing outside this context ever
+learns there is one.
 
 ### A debt cancels existing holds
 
@@ -290,7 +297,8 @@ No penalty attaches, for the same reasons §9 declines to punish the no-show.
 
 ### A debt is incurred
 
-Circulation reacts to `MemberBalanceBecameOwing` from Charges:
+Circulation reacts to `MemberBalanceChanged` from Charges, when the balance it carries crosses
+`BlockingDebt` from below — a movement that stays on one side of the line does nothing:
 
 1. Every queued hold of that borrower is cancelled.
 2. Every hold of theirs awaiting pickup is cancelled, and its trapped copy is released back to the
@@ -358,7 +366,6 @@ moves.
 | `LoanDueSoon(…, anyoneIsWaiting)` | Notifications |
 | `LoanBecameOverdue(…, daysOverdue)` | Notifications |
 | `LoanDeclaredLost` | Holdings, Charges, Notifications |
-| `RenewalRefused(…, reason)` | Notifications |
 | `RenewalGranted(…, newDueDate)` | Notifications, read model |
 | `HoldPlaced` | read model |
 | `HoldFulfilled` | read model |
@@ -381,21 +388,26 @@ that missed a day or two the stage is no longer even true.
 what lateness costs is a money question, and Charges answers it. A `daysLate` of zero is published
 all the same — Charges decides there is nothing to charge.
 
-`RenewalRefused` carries the reason, and it is not optional. There are three — the limit is reached,
-the borrower owes money, someone is waiting — and they call for three different things from the
-borrower. "We could not renew your loan" without saying which is a message that wastes a trip to the
-library.
+**A refusal must say which of the three it is** — the limit is reached, the borrower owes money,
+someone is waiting — because they call for three different things from the borrower. "We could not
+renew your loan" without saying which is a message that wastes a trip to the library.
 
-For the same reason the courtesy reminder should say whether the loan can be renewed at all. Three
-days before a due date on an edition with a queue, the useful message is not *"renew it"* but
-*"someone is waiting, please bring it back"*.
+That requirement is met by the command's own result and not by an event. The three are distinct
+error codes, the librarian reads which one on the screen, and the borrower is standing there to be
+told. This table listed a `RenewalRefused` for Notifications until the requirement was looked at
+squarely: there is no self-service in this system, so a refusal has no remote audience, and §10
+records why the event is gone rather than pending.
+
+The courtesy reminder is where a borrower is spared the trip in the first place. Three days before a
+due date on an edition with a queue, the useful message is not *"renew it"* but *"someone is
+waiting, please bring it back"* — which is why `LoanDueSoon` carries `anyoneIsWaiting`, and why it
+does the work a refusal notice would only ever have done too late.
 
 **Consumed.**
 
 | Event | From | Effect |
 |---|---|---|
-| `MemberBalanceBecameOwing` | Charges | Cancel the borrower's holds |
-| `MemberBalanceSettled` | Charges | Nothing in the model — the borrower is simply able to act again |
+| `MemberBalanceChanged(…, previousBalance, currentBalance)` | Charges | Cancel the borrower's holds, when the pair crosses `BlockingDebt` upwards. A movement that crosses nothing, and a return to good standing, both change nothing in the model — the borrower is simply able to act again |
 
 ## 8. Notifications
 
@@ -450,13 +462,20 @@ Two things the design did not anticipate, settled by the code:
   answer now carries the edition — the Customer/Supplier contract change the context map priced
   in advance — and the loan keeps it from checkout on, as the queue the copy played in whatever
   Catalog later does to the edition.
-* **`RenewalRefused` cannot be published as designed.** The pipeline writes the outbox in the
-  same save as the change, and saves only when the command succeeds — a refused renewal saves
-  nothing, so an event raised on the refusal would never be stored. Either a refusal becomes a
-  recorded fact (the command succeeds at recording it) or the event is reworked when
-  Notifications arrives; until that decision, renewals refuse through the command's own result,
-  which is what the desk sees anyway. The courtesy-reminder wording in §7 depends on the same
-  decision.
+* **`RenewalRefused` could not be published as designed, and turned out not to be wanted.** The
+  pipeline writes the outbox in the same save as the change and saves only when the command
+  succeeds, so an event raised on a refusal would never be stored. That was read as a mechanical
+  obstacle for two phases; looking at what the event was *for* dissolved it. Its only consumer was
+  Notifications, and a renewal is refused at the desk with the borrower standing there — Members §9
+  settles that there is no self-service, so no refusal has a remote audience. The requirement §7
+  actually stated, that a refusal say which of the three reasons it is, is met by the command's
+  result carrying `RenewalLimitReached`, `DebtForbidsIt` or `SomeoneIsWaiting`; and the borrower-
+  facing half was solved better elsewhere, by `LoanDueSoon` carrying `anyoneIsWaiting` three days
+  ahead, which spares the trip a refusal notice could only ever have reported afterwards. The event
+  is removed rather than deferred. What is genuinely lost is measurement — §5 calls the queue rule
+  blunt on purpose, and how often it refuses is exactly what one would want counted before
+  softening it — and the logging behavior, outermost so that refusals still leave a line, is what
+  answers that until somebody asks for it properly.
 
 **What building the scheduled process added.** §6 said *five queries, each idempotent* and left the
 shape of the memory open. Three things the design did not anticipate:
@@ -493,6 +512,19 @@ implicit.
   it `Lost` is Holdings' rule, reached identically by a stocktake that failed to find it. This is
   what keeps the arrow out of the core an announcement rather than an instruction, and §8 of the
   strategic design now says so where the context map records the edge.
+
+**What designing Charges settled here.** This document long said Charges would announce
+`MemberBalanceBecameOwing` and `MemberBalanceSettled`, and writing the other side showed the pair to
+be lacunary rather than merely verbose. They report two crossings, both of zero, which is complete
+for `BlockingDebt` as it stands and for no other value of it: a balance moving from twenty cents to
+twelve euros crosses a ten-euro threshold and announces nothing. The rule would stop firing with no
+error and no failing test — and §3 already records, in its own words, why the threshold is likely to
+move one day.
+
+So Charges announces `MemberBalanceChanged`, carrying the amount before and after, and the crossing
+is computed here. The threshold is named on this side only, which is what makes it movable without
+touching what another context publishes. `MemberBalanceSettled` is not replaced by anything, because
+§7 had already recorded that it changed nothing in this model.
 
 Open:
 

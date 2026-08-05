@@ -310,6 +310,9 @@ a context named after one of its two concepts bends every later one toward it, a
 charge is not a fine, as this paragraph exists to insist. The librarian's own umbrella word is
 *frais*, and Charges is its English.
 
+The aggregate, its invariants and the moments that change it are set out in
+[tactical-design-charges.md](tactical-design-charges.md).
+
 ### Staff access, Notifications — generic
 
 Out of the domain. Notifications reacts to integration events published by Circulation — a hold
@@ -360,7 +363,7 @@ flowchart TD
     MEM -->|"Customer / Supplier + ACL<br/>Member → Borrower"| CIR
     CIR -->|"events<br/>returned late, declared lost"| CHG
     CIR -->|"event<br/>this copy is lost"| HLD
-    CHG -->|"event<br/>this member now owes money"| CIR
+    CHG -->|"event<br/>this member's balance moved"| CIR
     CHG -.->|"how much does this<br/>member owe?"| CIR
     CIR -->|"integration events"| NOT
     MEM -.->|"how to reach them"| NOT

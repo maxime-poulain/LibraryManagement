@@ -278,13 +278,41 @@ would eventually parse back. Their property names are contract exactly as an eve
 positional parameters are — renaming a part is the same decision as renaming a parameter, and
 [outbox.md](outbox.md) §3's rule now reaches one level further down.
 
+**Erasing a member empties the record and keeps the identifier.** Data-protection law will one day
+give a member the right to be forgotten, and the shape of the answer needed no lawyer — only an
+inventory of where a person actually appears.
+
+They appear in two places. The `Member` aggregate holds the whole of it: the name, the date of
+birth, the channels, the guardian, the card. And every downstream context holds a `Guid` and nothing
+else — Circulation refuses the address by design, Charges keys an account by the same identifier,
+and `CreatedBy` names the *employee* who acted and never the member, which is where §6's insistence
+on that distinction quietly pays for itself.
+
+So erasure clears the aggregate's personal fields and leaves `MemberId` standing. **No downstream
+context changes at all**: their identifier stops resolving to a person, which is what anonymization
+means, and the loans and charges that reference it stay countable. Deleting the member instead would
+orphan every one of those references — the merged-edition problem Holdings §10 records, manufactured
+on purpose.
+
+The one copy this misses is the outbox. `MemberRenamed` carries both names, `ContactDetailsChanged`
+the channels, `GuardianChanged` a whole guardian, and those payloads sit in this module's own table
+after they are delivered. Emptying the aggregate and leaving them would be erasure in name only, and
+[outbox.md](outbox.md) §10 now carries the retention window that bounds them — a purge that was
+deferred as a storage convenience and turns out to be a requirement. This module has no projection
+today, so those rows are the *only* second copy; a projection added later inherits the same duty.
+
+**A member who still owes money is a decision at the desk, not a rule in the model.** The balance is
+on the screen, the librarian is the one holding the request, and §7 already draws that line for
+eligibility: the model records who was enrolled, not the paperwork that satisfied the librarian.
+Asking Charges before erasing would add a synchronous edge the context map does not carry, on a path
+walked a few times a year.
+
 Open, and each deferred for a stated reason rather than forgotten:
 
-* **Erasure.** Data-protection law gives a member the right to be forgotten, and loans in
-  Circulation hold `BorrowerId` forever — the one history that grows without bound. Deletion
-  versus anonymization, what happens to an erased member who still owes money, and how long a
-  lapsed membership is kept at all: the first place in this system where the law, not the library,
-  writes the rule. Unanswered until someone who knows the law is in the room.
+* **Erasure**, whose modeling half is settled above and whose remainder is legal: how long a lapsed
+  membership is kept at all, and whether a claim for money is a legitimate ground to keep a person's
+  record past a request to erase it. Neither is a question about aggregates, and neither is
+  answerable until someone who knows the law is in the room.
 * **Duplicates.** The same person enrolled twice under slightly different names is the ordinary
   data quality problem of every membership system. A merge would orphan one `MemberId` in
   Circulation's history — the exact shape of the merged-edition problem Holdings §10 records

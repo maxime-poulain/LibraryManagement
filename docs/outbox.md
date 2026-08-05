@@ -248,3 +248,11 @@ hole in the boundary, whatever it buys.
 
 Processed rows accumulate: a purge policy arrives with the real host, alongside the scheduler that
 owns it. The Hangfire dashboard is a host concern too.
+
+**The purge is a requirement and not only a convenience, and it took another document to notice.**
+A delivered row keeps its payload, and a payload is whatever the event carried — which for Members
+means a name, a set of contact details, a guardian. Nothing else bounds that copy: the aggregate can
+be emptied on request, and those rows would still hold what it used to say. So the window is what
+makes erasure elsewhere real, and a host that never sets one has a second store of personal data it
+did not decide to keep. How long the window is stays the host's call, as the scheduler and the sinks
+are; that there is one is not. `docs/tactical-design-members.md` §10 records the other side.
