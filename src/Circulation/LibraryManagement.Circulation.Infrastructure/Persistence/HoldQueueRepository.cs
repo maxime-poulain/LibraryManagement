@@ -41,6 +41,19 @@ public sealed class HoldQueueRepository(CirculationDbContext context) : IHoldQue
     }
 
     /// <inheritdoc/>
+    public async ValueTask<IReadOnlyList<HoldQueue>> WithHoldsAwaitingPickupThroughAsync(
+        DateOnly lastDeadline,
+        CancellationToken cancellationToken = default)
+    {
+        return await context.HoldQueues
+            .Include(queue => queue.Holds)
+            .Where(queue => queue.Holds.Any(hold =>
+                hold.Status == HoldStatus.AwaitingPickup && hold.PickupDeadline <= lastDeadline))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
     public void Add(HoldQueue queue)
     {
         ArgumentNullException.ThrowIfNull(queue);

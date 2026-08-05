@@ -45,6 +45,38 @@ public sealed record HoldFulfilled(
     CopyId CopyId) : DomainEvent;
 
 /// <summary>
+/// A set-aside copy is about to go back on the shelf.
+/// </summary>
+/// <param name="EditionId">The edition.</param>
+/// <param name="HoldId">The claim about to lapse.</param>
+/// <param name="BorrowerId">Who should come today.</param>
+/// <param name="CopyId">The copy still waiting for them.</param>
+/// <param name="PickupDeadline">The last day it waits.</param>
+/// <remarks>
+/// A consequence the borrower did not choose, so the message always goes out — and the reason the
+/// design declines to penalise the no-show at all: this reminder is what it does instead.
+/// </remarks>
+public sealed record HoldExpiringSoon(
+    EditionId EditionId,
+    HoldId HoldId,
+    BorrowerId BorrowerId,
+    CopyId CopyId,
+    DateOnly PickupDeadline) : DomainEvent;
+
+/// <summary>
+/// A claim ended because nobody came for the copy.
+/// </summary>
+/// <param name="EditionId">The edition.</param>
+/// <param name="HoldId">The claim that lapsed, gone from the queue.</param>
+/// <param name="BorrowerId">Who did not come.</param>
+/// <param name="CopyId">The copy, released and offered to whoever is next.</param>
+public sealed record HoldExpired(
+    EditionId EditionId,
+    HoldId HoldId,
+    BorrowerId BorrowerId,
+    CopyId CopyId) : DomainEvent;
+
+/// <summary>
 /// A claim ended because its borrower changed their mind.
 /// </summary>
 /// <param name="EditionId">The edition.</param>

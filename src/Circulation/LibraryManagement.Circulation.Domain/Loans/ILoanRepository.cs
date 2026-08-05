@@ -81,6 +81,39 @@ public interface ILoanRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the active loans falling due within a span of days, both ends included.
+    /// </summary>
+    /// <param name="from">The first day of the span, ordinarily today.</param>
+    /// <param name="to">The last day, ordinarily as far ahead as the courtesy reminder looks.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The loans, possibly none.</returns>
+    /// <remarks>
+    /// The scheduled process's candidates, not its decisions: whether a given loan has already
+    /// been told is the loan's own question, asked of the aggregate afterwards. Narrowing here and
+    /// deciding there is what keeps the schedule in the domain and the dates in the store.
+    /// </remarks>
+    ValueTask<IReadOnlyList<Loan>> ActiveDueBetweenAsync(
+        DateOnly from,
+        DateOnly to,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the active loans whose due date has passed.
+    /// </summary>
+    /// <param name="today">The day the scheduled process is running.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The loans, possibly none.</returns>
+    /// <remarks>
+    /// One question for two moments: the overdue reminders pick their stage from it, and the
+    /// declaration of loss takes the ones the library has waited long enough for. The whole
+    /// overdue set at library scale is a few hundred rows; the day it is not, the reading is
+    /// batched, and nothing above this line changes.
+    /// </remarks>
+    ValueTask<IReadOnlyList<Loan>> ActiveOverdueAsync(
+        DateOnly today,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Adds a loan that just started.
     /// </summary>
     /// <param name="loan">The loan to add.</param>

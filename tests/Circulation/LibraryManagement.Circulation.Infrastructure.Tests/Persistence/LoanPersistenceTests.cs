@@ -1,4 +1,5 @@
 using LibraryManagement.Circulation.Domain.Loans;
+using LibraryManagement.Circulation.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace LibraryManagement.Circulation.Infrastructure.Tests.Persistence;
@@ -11,13 +12,13 @@ public sealed class LoanPersistenceTests(SqlServerFixture sqlServer)
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
-    private static Loan ALoan(CopyId? copyId = null)
+    private static Loan ALoan(CopyId? copyId = null, DateOnly? checkedOutOn = null)
         => Loan.CheckOut(
             LoanId.Generate(),
             copyId ?? CopyId.Generate(),
             EditionId.Generate(),
             BorrowerId.Generate(),
-            Today,
+            checkedOutOn ?? Today,
             CirculationPolicy.Current);
 
     private async Task<Loan> StoredAsync(Loan loan)
@@ -100,5 +101,94 @@ public sealed class LoanPersistenceTests(SqlServerFixture sqlServer)
         writing.Add(ALoan(copyId));
 
         await writing.SaveChangesAsync(Token);
+    }
+
+    // --- What the scheduled process reads and writes ---------------------------------------------
+
+    [Fact]
+    public async Task TheRemindersALoanHasSent_SurviveTheRoundTrip()
+    {
+        // The whole of the daily run's idempotence: a loan loaded without its reminders would
+        // announce everything a second time.
+        var loan = await StoredAsync(ALoan());
+
+        await using (var updating = sqlServer.NewContext())
+        {
+            var loaded = await new LoanRepository(updating).GetByIdAsync(loan.Id, Token);
+            loaded!.RemindOfBeingOverdue(loan.DueDate.AddDays(9), CirculationPolicy.Current);
+            await updating.SaveChangesAsync(Token);
+        }
+
+        await using var reading = sqlServer.NewContext();
+        var found = await new LoanRepository(reading).GetByIdAsync(loan.Id, Token);
+
+        found!.RemindersSent.ShouldBe(
+            [Reminder.Overdue(1), Reminder.Overdue(7)],
+            ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task ARenewal_ClearsTheStoredReminders()
+    {
+        var loan = await StoredAsync(ALoan());
+
+        await using (var updating = sqlServer.NewContext())
+        {
+            var loaded = await new LoanRepository(updating).GetByIdAsync(loan.Id, Token);
+            loaded!.RemindOfBeingOverdue(loan.DueDate.AddDays(1), CirculationPolicy.Current);
+            loaded.Renew(CirculationPolicy.Current);
+            await updating.SaveChangesAsync(Token);
+        }
+
+        await using var reading = sqlServer.NewContext();
+        var found = await new LoanRepository(reading).GetByIdAsync(loan.Id, Token);
+
+        found!.RemindersSent.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ActiveDueBetween_FindsTheLoansTheCourtesyWindowCovers()
+    {
+        var inside = await StoredAsync(ALoan());
+        var beyond = await StoredAsync(ALoan(checkedOutOn: Today.AddDays(10)));
+
+        await using var reading = sqlServer.NewContext();
+        var found = await new LoanRepository(reading)
+            .ActiveDueBetweenAsync(inside.DueDate, inside.DueDate, Token);
+
+        // By containment rather than by count: the suite shares one database, and a query over
+        // every active loan sees its neighbours' rows too.
+        var identifiers = found.Select(loan => loan.Id).ToList();
+        identifiers.ShouldContain(inside.Id);
+        identifiers.ShouldNotContain(beyond.Id);
+    }
+
+    [Fact]
+    public async Task ActiveOverdue_FindsThePastDueAndLeavesTheRest()
+    {
+        var loan = await StoredAsync(ALoan());
+
+        await using var reading = sqlServer.NewContext();
+        var repository = new LoanRepository(reading);
+
+        (await repository.ActiveOverdueAsync(loan.DueDate.AddDays(1), Token))
+            .Select(found => found.Id).ShouldContain(loan.Id);
+
+        (await repository.ActiveOverdueAsync(loan.DueDate, Token))
+            .Select(found => found.Id).ShouldNotContain(loan.Id);
+    }
+
+    [Fact]
+    public async Task ActiveOverdue_LeavesTheLoansThatEnded()
+    {
+        var loan = ALoan();
+        loan.Return(Today);
+        await StoredAsync(loan);
+
+        await using var reading = sqlServer.NewContext();
+        var found = await new LoanRepository(reading)
+            .ActiveOverdueAsync(loan.DueDate.AddDays(60), Token);
+
+        found.Select(other => other.Id).ShouldNotContain(loan.Id);
     }
 }

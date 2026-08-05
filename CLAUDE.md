@@ -13,8 +13,9 @@ decided on paper in `docs/` before it is coded, and the documents record rejecte
 not just outcomes.
 
 **State.** Shared kernel, Catalog, Holdings and Members are implemented and tested. Circulation's
-desk moments — checkout, return, renewal, holds — are implemented; its scheduled process and its
-reactions to Charges await the cross-module event mechanism, and Charges is design only. There is
+desk moments — checkout, return, renewal, holds — are implemented, and so is its daily scheduled
+process; its reactions to Charges await the cross-module event mechanism, and Charges is design
+only. There is
 no runnable host — the composition root lives in the composition tests — and no EF migrations,
 deliberately (`docs/migrations.md`).
 
@@ -26,7 +27,7 @@ is a bug: fix the pair in the same change.
 | Document | Decides |
 |---|---|
 | `docs/strategic-design.md` | Boundaries, subdomains, context map. §4 is the **glossary — the binding ubiquitous language**. §10 is the codebase rules. |
-| `docs/tactical-design-circulation.md` | Circulation's aggregates, invariants and moments. Desk moments implemented; §10 records what building them taught and what awaits the cross-module event mechanism. |
+| `docs/tactical-design-circulation.md` | Circulation's aggregates, invariants and moments. Desk moments and the daily process implemented; §10 records what building them taught and what awaits the cross-module event mechanism. |
 | `docs/tactical-design-holdings.md` | Holdings' aggregate and moments. Implemented; §10 records what building it taught. |
 | `docs/tactical-design-members.md` | Members' aggregate and moments. Implemented; §10 records what building it taught. |
 | `docs/outbox.md` | Domain events: same-save storage, drain, failure semantics, and what renames break. |
@@ -110,6 +111,12 @@ bug to fix.
 - A query answers with a `Dto`-suffixed type (architecture rule).
 - An aggregate maps through `AggregateRootConfiguration<,>` (architecture rule — it carries the
   key conversion and the `rowversion` concurrency token, whose omission fails silently).
+- **Every key property of an `OwnsMany` collection says `ValueGeneratedNever()`** — the convention
+  reads a `Guid` or `int` key as store-generated, and an entry added to an aggregate the store
+  already holds then arrives with its key filled in, so EF marks it `Modified` and writes an UPDATE
+  that matches nothing. Where the table is nothing but its key, it writes no statement at all and
+  the addition disappears without an error. A model rule in each module's `*DbContextTests` holds
+  it; a test that only ever adds before the *first* save will not.
 - Statuses and enums that humans will read in a table are stored as strings.
 
 **Language.** The glossary is binding, and these are its most-violated edges: `PreferredName`

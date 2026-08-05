@@ -42,6 +42,18 @@ public sealed class Hold
     /// <summary>Gets when the set-aside copy stops waiting, or <see langword="null"/> while queued.</summary>
     public DateOnly? PickupDeadline { get; private set; }
 
+    /// <summary>
+    /// Gets whether the borrower has been told the copy is about to go back on the shelf.
+    /// </summary>
+    /// <remarks>
+    /// The hold shelf's own memory, and the reason the tactical design's claim that idempotence
+    /// rests <em>entirely</em> on the loan's <c>RemindersSent</c> had to be amended: without this,
+    /// every run of the scheduled process would announce the same imminent expiry again. A flag
+    /// where the loan needs a set, because the pickup period has exactly one appointment in it —
+    /// the day before the deadline — while a loan's schedule is a list.
+    /// </remarks>
+    public bool ExpiryWarningSent { get; private set; }
+
     internal static Hold PlacedBy(HoldId id, BorrowerId borrowerId, DateTimeOffset placedOn)
         => new(id, borrowerId, placedOn);
 
@@ -50,12 +62,11 @@ public sealed class Hold
         Status = HoldStatus.AwaitingPickup;
         TrappedCopyId = copyId;
         PickupDeadline = pickupDeadline;
+
+        // A fresh deadline is a fresh appointment: a claim offered a second copy after the first
+        // one's collector cancelled must be warned about the new one too.
+        ExpiryWarningSent = false;
     }
 
-    internal void ReleaseCopy()
-    {
-        Status = HoldStatus.Queued;
-        TrappedCopyId = null;
-        PickupDeadline = null;
-    }
+    internal void NoteExpiryWarned() => ExpiryWarningSent = true;
 }

@@ -197,6 +197,84 @@ public sealed class HoldQueue : AggregateRoot<EditionId>
     }
 
     /// <summary>
+    /// Tells the borrowers whose set-aside copies are about to go back on the shelf, once each.
+    /// </summary>
+    /// <param name="today">The day the scheduled process is running.</param>
+    /// <remarks>
+    /// The window is two days wide — the deadline is today or tomorrow — rather than the single
+    /// day the design's <em>expiring tomorrow</em> suggests, so a run that misses a day still
+    /// warns somebody before their copy goes. <c>ExpiryWarningSent</c> is what keeps the wider
+    /// window from becoming a daily nag. Claims already past their deadline are left alone: they
+    /// are expired in the same run, and <em>hurry up</em> about a copy that has just gone back is
+    /// worse than silence.
+    /// </remarks>
+    public void WarnOfImminentExpiry(DateOnly today)
+    {
+        var expiring = _holds
+            .Where(hold => hold.Status == HoldStatus.AwaitingPickup
+                && !hold.ExpiryWarningSent
+                && hold.PickupDeadline >= today
+                && hold.PickupDeadline <= today.AddDays(1))
+            .ToList();
+
+        foreach (var hold in expiring)
+        {
+            hold.NoteExpiryWarned();
+
+            AddDomainEvent(new HoldExpiringSoon(
+                Id, hold.Id, hold.BorrowerId, hold.TrappedCopyId!, hold.PickupDeadline!.Value));
+        }
+    }
+
+    /// <summary>
+    /// Ends the claims whose borrowers did not come, and offers each released copy to the next
+    /// borrower in good standing.
+    /// </summary>
+    /// <param name="today">The day the scheduled process is running.</param>
+    /// <param name="blocked">
+    /// Borrowers a debt blocks, as the caller judged from the balance. Skipped, never removed —
+    /// the same net the return moment casts.
+    /// </param>
+    /// <param name="policy">The circulation policy, which decides how long the next borrower gets.</param>
+    /// <exception cref="ArgumentNullException">Thrown when a reference argument is null.</exception>
+    /// <remarks>
+    /// <para>
+    /// The deadline is the last day the copy waits, so a claim expires the day <em>after</em> it.
+    /// An expired claim leaves the queue exactly as a cancelled one does — no penalty attaches,
+    /// for the reasons the design gives for declining to punish the no-show — and its copy is
+    /// re-offered here rather than handed back to the caller, because a copy on the hold shelf
+    /// that no live claim owns is a promise to nobody.
+    /// </para>
+    /// <para>
+    /// The copy is released before it is re-offered, so the rule that a trapped copy belongs to
+    /// exactly one claim holds at every instant in between.
+    /// </para>
+    /// </remarks>
+    public void ExpireUncollectedHolds(
+        DateOnly today,
+        IReadOnlySet<BorrowerId> blocked,
+        CirculationPolicy policy)
+    {
+        ArgumentNullException.ThrowIfNull(blocked);
+        ArgumentNullException.ThrowIfNull(policy);
+
+        var uncollected = _holds
+            .Where(hold => hold.Status == HoldStatus.AwaitingPickup && hold.PickupDeadline < today)
+            .ToList();
+
+        foreach (var hold in uncollected)
+        {
+            var releasedCopy = hold.TrappedCopyId!;
+
+            _holds.Remove(hold);
+
+            AddDomainEvent(new HoldExpired(Id, hold.Id, hold.BorrowerId, releasedCopy));
+
+            TrapOldestQueued(releasedCopy, today.AddDays(policy.PickupPeriodInDays), blocked);
+        }
+    }
+
+    /// <summary>
     /// What ending a claim leaves in the caller's hands.
     /// </summary>
     /// <param name="ReleasedCopyId">The copy the claim had set aside, or <see langword="null"/>
