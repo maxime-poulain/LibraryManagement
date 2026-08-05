@@ -2,9 +2,11 @@ using System.Reflection;
 using LibraryManagement.Shared.Application;
 using LibraryManagement.Shared.Application.CQS;
 using LibraryManagement.Shared.Application.DomainEvents;
+using LibraryManagement.Shared.Application.IntegrationEvents;
 using LibraryManagement.Shared.Infrastructure.Auditing;
 using LibraryManagement.Shared.Infrastructure.CQS;
 using LibraryManagement.Shared.Infrastructure.DomainEvents;
+using LibraryManagement.Shared.Infrastructure.IntegrationEvents;
 using LibraryManagement.Shared.Infrastructure.Outbox;
 using LibraryManagement.Shared.Infrastructure.UnitOfWork;
 using LibraryManagement.Shared.Infrastructure.Validation;
@@ -129,6 +131,12 @@ public static class ServiceCollectionExtensions
         // through, resolved per message from the scope the processor opens.
         services.TryAddScoped<IDomainEventPublisher, MediatorDomainEventPublisher>();
         services.TryAddSingleton<OutboxProcessor<TContext>>();
+
+        // The hop to other modules, one level out from the domain event's own delivery. Registered
+        // beside it because it is reached the same way — from a translator running in the drain's
+        // scope — and scoped for the same reason: a subscriber dispatches a command, and that
+        // command's unit of work must be this message's, not the root scope's.
+        services.TryAddScoped<IIntegrationEventPublisher, ContainerIntegrationEventPublisher>();
 
         services.AddDbContext<TContext>((serviceProvider, options) =>
         {

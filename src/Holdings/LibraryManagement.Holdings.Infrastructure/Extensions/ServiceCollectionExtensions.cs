@@ -1,10 +1,12 @@
 using System.Text.Json.Serialization;
 using FluentValidation;
+using LibraryManagement.Circulation.PublishedLanguage;
 using LibraryManagement.Holdings.Application.Copies.AcquireCopy;
 using LibraryManagement.Holdings.Domain.Copies;
 using LibraryManagement.Holdings.Infrastructure.Persistence;
 using LibraryManagement.Holdings.Infrastructure.Serialization;
 using LibraryManagement.Holdings.PublishedLanguage;
+using LibraryManagement.Shared.Application.IntegrationEvents;
 using LibraryManagement.Shared.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -66,6 +68,14 @@ public static class ServiceCollectionExtensions
 
         // What this module publishes to the ones downstream of it — Circulation, when it exists.
         services.AddScoped<ICopyLendability, Infrastructure.PublishedLanguage.CopyLendability>();
+
+        // And what it listens to. Registered unconditionally, even in a composition without
+        // Circulation: a subscriber nobody announces to is never resolved, whereas one registered
+        // only when Circulation happens to be present would make "does Holdings react?" depend on
+        // the order two AddModule calls were written in.
+        services.AddScoped<
+            IIntegrationEventSubscriber<CopyReportedLost>,
+            IntegrationEvents.DeclareCopyLostOnCopyReportedLost>();
 
         // The JSON side of this module's value objects, for the outbox.
         services.AddSingleton<JsonConverter, BarcodeJsonConverter>();

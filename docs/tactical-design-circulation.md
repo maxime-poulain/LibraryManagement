@@ -435,9 +435,9 @@ This is a rule to write when someone asks for it.
 ## 10. Consequences and open questions
 
 **What building the desk moments added.** The five synchronous moments — checkout, return,
-renewal, placing and cancelling a hold — are implemented, and so is §6's scheduled process; only
-the reactions to Charges' events await the phase that builds the cross-module event mechanism
-[outbox.md](outbox.md) §9 defers. Building the desk taught four things this document
+renewal, placing and cancelling a hold — are implemented, and so is §6's scheduled process and the
+first fact this context announces beyond itself. Only the reactions to Charges' events remain, and
+they wait on Charges rather than on any mechanism. Building the desk taught four things this document
 now carries in place: the entitlement precondition the checkout list omitted, the cap moving
 after the trap resolution, the renewal rule reading *queued* rather than *empty*, and
 `HoldFulfilled` joining the events table — §4 promised every outcome an event, and the table had
@@ -481,10 +481,22 @@ nothing but its key — no statement was written at all. The same convention sil
 author's credit in Catalog and turned a second hold on an existing queue into a concurrency failure.
 Every owned key now says `ValueGeneratedNever`, and a rule over each model holds it.
 
+**What announcing a fact beyond the context added.** Declaring a loan lost now reaches Holdings, and
+building that passage — [outbox.md](outbox.md) §9 — settled two things this document had left
+implicit.
+
+* **What crosses is flatter than the event.** `LoanDeclaredLost` carries the loan, the copy and the
+  borrower; what leaves the context is `CopyReportedLost`, carrying the copy and nothing else.
+  Holdings has no use for a borrower, and a contract that offered one would invite it to grow a use.
+  Charges will get its own contract from the same event, carrying what Charges needs.
+* **The fact names no status.** Circulation reports that a copy is unaccounted for; that this makes
+  it `Lost` is Holdings' rule, reached identically by a stocktake that failed to find it. This is
+  what keeps the arrow out of the core an announcement rather than an instruction, and §8 of the
+  strategic design now says so where the context map records the edge.
+
 Open:
 
 * Does loan history stay in `Loan` forever, or is it archived? It is the only thing in the system
   that grows without bound.
-* The declaration of loss ends the loan in Circulation, but marking the copy `Lost` in Holdings and
-  raising the replacement charge both wait on the cross-module event mechanism. Until then a
-  declared-lost loan is a fact Circulation holds alone.
+* The replacement charge a declared loss should raise still waits, and now waits only on Charges
+  existing — the passage that would carry it is built and proven.

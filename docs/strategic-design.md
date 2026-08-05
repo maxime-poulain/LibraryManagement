@@ -359,6 +359,7 @@ flowchart TD
     HLD -->|"Customer / Supplier<br/>may this copy be lent?"| CIR
     MEM -->|"Customer / Supplier + ACL<br/>Member → Borrower"| CIR
     CIR -->|"events<br/>returned late, declared lost"| CHG
+    CIR -->|"event<br/>this copy is lost"| HLD
     CHG -->|"event<br/>this member now owes money"| CIR
     CHG -.->|"how much does this<br/>member owe?"| CIR
     CIR -->|"integration events"| NOT
@@ -382,6 +383,7 @@ are queries and projections: they carry no authority and change nothing.
 | Holdings | Circulation | Customer / Supplier | A loan cannot start on a copy that does not exist or may not be lent. |
 | Members | Circulation | Customer / Supplier + ACL | Same, plus a translation: `Member` becomes `Borrower`, and most of the member is dropped on the way. |
 | Circulation | Charges | Published Language, via events | Circulation announces facts. Charges prices them. |
+| Circulation | Holdings | Published Language, via events | A loan nobody returns ends as a copy nobody has. Circulation announces it; Holdings decides what its own status becomes. |
 | Charges | Circulation | Published Language, via events | A new debt cancels the borrower's holds. |
 | Charges | Circulation | Customer / Supplier + ACL, dependency-inverted | One question, one answer: how much does this member owe? The threshold that turns the amount into a refusal stays in Circulation. Not an Open Host Service, though it looks like one: an OHS is a protocol published *by the upstream* for an open set of consumers, and here the downstream declares the port for its own single use — see the inversion described below. |
 | Circulation | Notifications | Published Language, via events | Circulation does not know anyone is listening. |
@@ -391,9 +393,21 @@ Everything is Customer/Supplier rather than Conformist because one team owns all
 context that finds a contract awkward can have it changed, and should say so rather than work around
 it.
 
-**The Circulation ↔ Charges pair is the one cycle in the map, and it is deliberate.** Circulation is
-upstream for the facts — returned late, declared lost — and downstream for what those facts cost it.
-Two flows run the other way, and the boundary test separates them:
+**Two pairs in the map are cycles, and both are deliberate.** Circulation is upstream for the facts
+it observes and downstream for what those facts mean elsewhere — and in each pair the two directions
+are different questions, asked at different moments, which is what keeps the cycle from being a
+tangle.
+
+**Circulation ↔ Holdings** is the plainer of the two. Holdings answers *may this copy be lent?* at
+the desk, synchronously, because a checkout waits on it. Circulation announces *this copy is lost*
+afterwards, asynchronously, because nobody is standing there when a thirty-day-old loan is given up
+on — and Holdings decides for itself what that means for the copy's status, which is why the arrow
+carries a fact and not an instruction. The same fact reaches Holdings from a stocktake that failed
+to find the copy, and neither route is privileged.
+
+**Circulation ↔ Charges** is the one that needed the inversion. Circulation is upstream for the facts
+— returned late, declared lost — and downstream for what those facts cost it. Two flows run the
+other way, and the boundary test separates them:
 
 * **A new debt cancels the borrower's holds.** Can "this member owes money" and "their holds are
   gone" disagree for a few seconds unnoticed? Yes — nobody is at the desk when a fine is assessed.
@@ -422,9 +436,12 @@ hold `Entity`, `ValueObject`, `Result` and the CQS abstractions — building blo
 concepts. No context shares a domain model with another, and none should: a shared `Book` between
 Catalog and Circulation would be the first step back to a single model with five namespaces.
 
-**Nothing is built on top of Circulation.** The core is downstream of almost everything and upstream
-of nothing that matters. That is the shape to preserve: the rules most likely to change are the ones
-nothing else depends on.
+**Nothing is built on top of Circulation's rules.** The core is downstream of almost everything, and
+what runs the other way carries facts rather than authority: Charges, Holdings and Notifications
+learn that something happened and each decides alone what it means for its own model. No context
+depends on *how Circulation decides* — the cap, the standing, the pickup period, the escalation —
+and that is the shape to preserve, because those are the rules most likely to change. An arrow out
+of the core is safe exactly as long as it announces and never instructs.
 
 ## 9. The model under stress
 

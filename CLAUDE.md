@@ -13,9 +13,9 @@ decided on paper in `docs/` before it is coded, and the documents record rejecte
 not just outcomes.
 
 **State.** Shared kernel, Catalog, Holdings and Members are implemented and tested. Circulation's
-desk moments — checkout, return, renewal, holds — are implemented, and so is its daily scheduled
-process; its reactions to Charges await the cross-module event mechanism, and Charges is design
-only. There is
+desk moments — checkout, return, renewal, holds — are implemented, so is its daily scheduled
+process, and so is the passage that carries a fact from one module to another: declaring a loan
+lost reaches Holdings. Its reactions to Charges wait on Charges, which is design only. There is
 no runnable host — the composition root lives in the composition tests — and no EF migrations,
 deliberately (`docs/migrations.md`).
 
@@ -104,6 +104,13 @@ bug to fix.
   (architecture rule: no nested dispatch, no reads through the query pipeline).
 - No invariant rides on an event handler. Events become outbox rows in the module's own schema,
   in the same save as the change; handlers are idempotent by `EventId` and never save.
+- **A fact crossing to another module is a flat contract, and the reacting module dispatches its own
+  command rather than writing** (`docs/outbox.md` §9). The drain saves the *announcing* module's
+  context, so a subscriber that touched its own aggregates would leave them in a context nobody
+  saves. A translator on the announcing side flattens the domain event into a `*.PublishedLanguage`
+  record of primitives; the subscriber turns it into a command, and `UnitOfWorkBehavior` saves the
+  right store. An architecture rule refuses a subscriber that names anything but a published
+  language.
 - **Renaming a stored event type — or any positional parameter of an event `record` — breaks
   every stored payload** (`docs/outbox.md` §3). Free only while the outbox tables are empty.
 
