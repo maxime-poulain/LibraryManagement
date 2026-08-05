@@ -1,6 +1,7 @@
 using Hangfire;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
 using LibraryManagement.Holdings.Infrastructure.Persistence;
+using LibraryManagement.Members.Infrastructure.Persistence;
 using LibraryManagement.Shared.Infrastructure.Outbox;
 
 namespace LibraryManagement.Composition.Tests.Outbox;
@@ -39,13 +40,17 @@ namespace LibraryManagement.Composition.Tests.Outbox;
 /// </remarks>
 public sealed class OutboxJobs(
     OutboxProcessor<CatalogDbContext> catalog,
-    OutboxProcessor<HoldingsDbContext> holdings)
+    OutboxProcessor<HoldingsDbContext> holdings,
+    OutboxProcessor<MembersDbContext> members)
 {
     /// <summary>The recurring job identifier the host registers the Catalog drain under.</summary>
     public const string CatalogJobId = "catalog-outbox";
 
     /// <summary>The recurring job identifier the host registers the Holdings drain under.</summary>
     public const string HoldingsJobId = "holdings-outbox";
+
+    /// <summary>The recurring job identifier the host registers the Members drain under.</summary>
+    public const string MembersJobId = "members-outbox";
 
     /// <summary>
     /// Drains the Catalog module's outbox.
@@ -77,4 +82,15 @@ public sealed class OutboxJobs(
     [DisableConcurrentExecution(timeoutInSeconds: 60)]
     public Task<OutboxDrainOutcome> DrainHoldingsAsync(CancellationToken cancellationToken)
         => holdings.ProcessAsync(cancellationToken);
+
+    /// <summary>
+    /// Drains the Members module's outbox.
+    /// </summary>
+    /// <param name="cancellationToken">
+    /// Replaced by Hangfire at execution time with the server's shutdown token.
+    /// </param>
+    /// <returns>The run's outcome.</returns>
+    [DisableConcurrentExecution(timeoutInSeconds: 60)]
+    public Task<OutboxDrainOutcome> DrainMembersAsync(CancellationToken cancellationToken)
+        => members.ProcessAsync(cancellationToken);
 }

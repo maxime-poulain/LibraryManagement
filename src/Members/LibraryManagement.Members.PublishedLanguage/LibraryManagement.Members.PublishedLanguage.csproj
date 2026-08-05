@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- References nothing, deliberately, for the reason Catalog's and Holdings' published
+         languages do: a surface that carried the module's domain would export it to every
+         consumer. -->
+
+</Project>

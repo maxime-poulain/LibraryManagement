@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <PackageReference Include="FluentValidation" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Shared\LibraryManagement.Shared.Application\LibraryManagement.Shared.Application.csproj" />
+        <ProjectReference Include="..\LibraryManagement.Members.Domain\LibraryManagement.Members.Domain.csproj" />
+        <!-- No published language of another module, deliberately: Members is upstream of
+             everything it touches, and no precondition here crosses a context boundary. The first
+             module whose moments never leave it. -->
+    </ItemGroup>
+
+</Project>

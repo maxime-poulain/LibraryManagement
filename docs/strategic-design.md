@@ -143,7 +143,9 @@ three times is an enumeration that has not been decided.
 | `Membership` | Abonnement | The period during which that entitlement holds. |
 | `MemberCategory` | Catégorie | Adult, child, student. Decides what circulation allows, but is not itself a circulation concept. |
 | `LibraryCard` | Carte | What the member presents at the desk. |
-| `Guardian` | Représentant légal | Who a minor is reached through. A member has an identity, and separately a way of being reached that may belong to somebody else — which is why this is a Members concept and not a Notifications one. |
+| `Guardian` | Représentant légal | Who a minor is reached through. A member has an identity, and separately a way of being reached that may belong to somebody else — which is why this is a Members concept and not a Notifications one. Wider than *parent* on purpose: a protected adult under *tutelle* has one too. |
+| `Enrollment` | Inscription | The act of becoming a member: identity recorded, category decided, card issued, the first membership period started. A returning member **renews**, never re-enrolls — the identity persists, and the loan history with it. |
+| `Entitlement` | Droit d'emprunter | Whether a membership currently holds, computed against the clock and never stored. What Members answers when Circulation asks — never `Standing`, which is the judgement Circulation forms from money. |
 
 ### Charges
 
@@ -274,6 +276,9 @@ starts copying fields, the boundary has failed.
 **Never an employee.** A member is a *domain* concept: a subscription, a category, an entitlement. An
 employee is an *access* concept: they authenticate and act. Conflating them is a common mistake, and
 it is the employee — not the member — that `IAuditable.CreatedBy` must name.
+
+The aggregate, its invariants and the moments that change it are set out in
+[tactical-design-members.md](tactical-design-members.md).
 
 ### Charges
 

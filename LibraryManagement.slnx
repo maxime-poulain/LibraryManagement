@@ -17,6 +17,12 @@
     <Project Path="src/Holdings/LibraryManagement.Holdings.Infrastructure/LibraryManagement.Holdings.Infrastructure.csproj" />
     <Project Path="src/Holdings/LibraryManagement.Holdings.PublishedLanguage/LibraryManagement.Holdings.PublishedLanguage.csproj" />
   </Folder>
+  <Folder Name="/src/Members/">
+    <Project Path="src/Members/LibraryManagement.Members.Application/LibraryManagement.Members.Application.csproj" />
+    <Project Path="src/Members/LibraryManagement.Members.Domain/LibraryManagement.Members.Domain.csproj" />
+    <Project Path="src/Members/LibraryManagement.Members.Infrastructure/LibraryManagement.Members.Infrastructure.csproj" />
+    <Project Path="src/Members/LibraryManagement.Members.PublishedLanguage/LibraryManagement.Members.PublishedLanguage.csproj" />
+  </Folder>
   <Folder Name="/src/Shared/">
     <Project Path="src/Shared/LibraryManagement.Shared.Application/LibraryManagement.Shared.Application.csproj" />
     <Project Path="src/Shared/LibraryManagement.Shared.Domain/LibraryManagement.Shared.Domain.csproj" />
@@ -38,6 +44,11 @@
     <Project Path="tests/Holdings/LibraryManagement.Holdings.Application.Tests/LibraryManagement.Holdings.Application.Tests.csproj" />
     <Project Path="tests/Holdings/LibraryManagement.Holdings.Domain.Tests/LibraryManagement.Holdings.Domain.Tests.csproj" />
     <Project Path="tests/Holdings/LibraryManagement.Holdings.Infrastructure.Tests/LibraryManagement.Holdings.Infrastructure.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Members/">
+    <Project Path="tests/Members/LibraryManagement.Members.Application.Tests/LibraryManagement.Members.Application.Tests.csproj" />
+    <Project Path="tests/Members/LibraryManagement.Members.Domain.Tests/LibraryManagement.Members.Domain.Tests.csproj" />
+    <Project Path="tests/Members/LibraryManagement.Members.Infrastructure.Tests/LibraryManagement.Members.Infrastructure.Tests.csproj" />
   </Folder>
   <Folder Name="/Tests/Shared/">
     <Project Path="tests/Shared/LibraryManagement.Shared.Domain.Tests/LibraryManagement.Shared.Domain.Tests.csproj" />
