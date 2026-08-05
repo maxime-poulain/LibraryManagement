@@ -71,9 +71,16 @@ context ever utters the other's.
 `Debt` is the third word, and it belongs **here**. It names the same figure as `Balance`, seen as
 something that forbids rather than something that is owed — which is why it appears in
 `BlockingDebt` and in `HoldsCancelledForDebt` and never in anything Charges publishes. Charges
-announces `MemberBalanceBecameOwing`; Circulation reads it and forms its own `Debt` and its own
-`Standing`. That translation is the anticorruption layer doing its job, and it is what keeps the
+announces `MemberBalanceChanged`, carrying the amount before and the amount after and no opinion
+about either; Circulation reads the pair, applies `BlockingDebt`, and forms its own `Debt` and its
+own `Standing`. That translation is the anticorruption layer doing its job, and it is what keeps the
 rule above from being a slogan.
+
+**The threshold is named on this side only, and that is what makes it movable.** An event announcing
+*became owing* would have carried Charges' assumption that the line is zero; moving the line would
+then have meant changing what the other context publishes. Reading a balance and judging it here
+means the threshold changes in one place — the policy above — and nothing outside this context ever
+learns there is one.
 
 ### A debt cancels existing holds
 
@@ -290,7 +297,8 @@ No penalty attaches, for the same reasons §9 declines to punish the no-show.
 
 ### A debt is incurred
 
-Circulation reacts to `MemberBalanceBecameOwing` from Charges:
+Circulation reacts to `MemberBalanceChanged` from Charges, when the balance it carries crosses
+`BlockingDebt` from below — a movement that stays on one side of the line does nothing:
 
 1. Every queued hold of that borrower is cancelled.
 2. Every hold of theirs awaiting pickup is cancelled, and its trapped copy is released back to the
@@ -394,8 +402,7 @@ days before a due date on an edition with a queue, the useful message is not *"r
 
 | Event | From | Effect |
 |---|---|---|
-| `MemberBalanceBecameOwing` | Charges | Cancel the borrower's holds |
-| `MemberBalanceSettled` | Charges | Nothing in the model — the borrower is simply able to act again |
+| `MemberBalanceChanged(…, previousBalance, currentBalance)` | Charges | Cancel the borrower's holds, when the pair crosses `BlockingDebt` upwards. A movement that crosses nothing, and a return to good standing, both change nothing in the model — the borrower is simply able to act again |
 
 ## 8. Notifications
 
@@ -493,6 +500,19 @@ implicit.
   it `Lost` is Holdings' rule, reached identically by a stocktake that failed to find it. This is
   what keeps the arrow out of the core an announcement rather than an instruction, and §8 of the
   strategic design now says so where the context map records the edge.
+
+**What designing Charges settled here.** This document long said Charges would announce
+`MemberBalanceBecameOwing` and `MemberBalanceSettled`, and writing the other side showed the pair to
+be lacunary rather than merely verbose. They report two crossings, both of zero, which is complete
+for `BlockingDebt` as it stands and for no other value of it: a balance moving from twenty cents to
+twelve euros crosses a ten-euro threshold and announces nothing. The rule would stop firing with no
+error and no failing test — and §3 already records, in its own words, why the threshold is likely to
+move one day.
+
+So Charges announces `MemberBalanceChanged`, carrying the amount before and after, and the crossing
+is computed here. The threshold is named on this side only, which is what makes it movable without
+touching what another context publishes. `MemberBalanceSettled` is not replaced by anything, because
+§7 had already recorded that it changed nothing in this model.
 
 Open:
 

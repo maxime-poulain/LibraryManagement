@@ -363,7 +363,7 @@ flowchart TD
     MEM -->|"Customer / Supplier + ACL<br/>Member → Borrower"| CIR
     CIR -->|"events<br/>returned late, declared lost"| CHG
     CIR -->|"event<br/>this copy is lost"| HLD
-    CHG -->|"event<br/>this member now owes money"| CIR
+    CHG -->|"event<br/>this member's balance moved"| CIR
     CHG -.->|"how much does this<br/>member owe?"| CIR
     CIR -->|"integration events"| NOT
     MEM -.->|"how to reach them"| NOT

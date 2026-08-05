@@ -163,20 +163,30 @@ LoanReturned(…, daysLate)  →  an overdue fine, when daysLate is positive
 LoanDeclaredLost(…)        →  a replacement charge
 ```
 
-And back the other way, when the account crosses a line:
+And back the other way, whenever the amount moves:
 
 ```
-zero → owing    MemberBalanceBecameOwing
-owing → zero    MemberBalanceSettled
+MemberBalanceChanged(memberId, previousBalance, currentBalance)
 ```
 
-**These two events are the one place this context comes close to judging.** Circulation cancels a
-borrower's holds on the first and lets them act again on the second, and the crossing point is zero
-— which is right *only* because Circulation's own `BlockingDebt` is "any amount owed", with no
-threshold. The two agree today by decision rather than by accident. If Circulation ever adopted a
-threshold, these events would become Charges' opinion of a Circulation rule, and the honest shape
-would then be a single `MemberBalanceChanged` carrying the amount, leaving the crossing to the
-context that owns the rule. Recorded here so that change is a decision rather than a discovery.
+**One event, carrying both amounts, and no word about owing.** This context says what its own
+arithmetic knows — the balance was this, it is now that — and Circulation reads the pair to decide
+whether anything it cares about was crossed. Which is what makes the anticorruption layer real
+rather than nominal: `Balance` travels, `Debt` and `Standing` are formed on arrival, and no
+threshold is named on this side of the boundary.
+
+**The obvious shape was a pair of transitions, and it was wrong.** *Became owing* and *settled*
+report only two of the balance's crossings, and only from and to zero. They are complete for
+Circulation's rule as it stands — `BlockingDebt` is "any amount owed", with no threshold — and
+lacunary for any other: a balance moving from twenty cents to twelve euros crosses a ten-euro
+threshold and announces nothing at all. The rule would simply stop firing, with no error, no
+failing test and no line in a log; and `tactical-design-circulation.md` §3 records in its own words
+why that day is likely to come. A design that is correct only for the current value of a setting is
+a design waiting to fail silently when the setting changes.
+
+Carrying the previous amount is what removes the need for anyone to remember it. Circulation stores
+no standing, compares no history, and computes any crossing in either direction from the one event —
+including the return to zero, which it deliberately does nothing about.
 
 ## 7. The moments
 
@@ -232,8 +242,12 @@ are the same answer to the desk, and the port returns zero for both.
 | `ReplacementChargeRaised(memberId, chargeId, loanId, amount)` | read model, Notifications |
 | `PaymentTaken(memberId, amount, settled)` | read model |
 | `ChargeWaived(memberId, chargeId, amount)` | read model |
-| `MemberBalanceBecameOwing(memberId, balance)` | Circulation, Notifications |
-| `MemberBalanceSettled(memberId)` | Circulation |
+| `MemberBalanceChanged(memberId, previousBalance, currentBalance)` | Circulation, Notifications |
+
+`MemberBalanceChanged` is published on every act that moves the amount — a fine, a replacement
+charge, a payment, a waiver — and not only on the ones that cross something. Circulation is woken
+for movements it will ignore, which is a few dozen a day in a municipal library and the price of
+never having to ask this context what a threshold is (§6).
 
 `OverdueFineAssessed` carries `daysLate` as well as the amount. The amount is what is owed; the days
 are why, and a member disputing a fine at the desk asks the second question. A message that can only
