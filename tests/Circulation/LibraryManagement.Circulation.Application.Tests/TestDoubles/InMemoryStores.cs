@@ -113,6 +113,13 @@ internal sealed class InMemoryHoldQueueRepository : IHoldQueueRepository
                 hold.Status == HoldStatus.AwaitingPickup && hold.PickupDeadline <= lastDeadline))
             .ToList());
 
+    public ValueTask<IReadOnlyList<HoldQueue>> WithHoldsForBorrowerAsync(
+        BorrowerId borrowerId,
+        CancellationToken cancellationToken = default)
+        => ValueTask.FromResult<IReadOnlyList<HoldQueue>>(_queues.Values
+            .Where(queue => queue.Holds.Any(hold => hold.BorrowerId == borrowerId))
+            .ToList());
+
     public void Add(HoldQueue queue) => _queues[queue.Id] = queue;
 }
 

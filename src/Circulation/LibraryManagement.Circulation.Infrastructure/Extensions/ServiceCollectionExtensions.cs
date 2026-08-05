@@ -4,6 +4,7 @@ using LibraryManagement.Circulation.Domain;
 using LibraryManagement.Circulation.Domain.Holds;
 using LibraryManagement.Circulation.Domain.Loans;
 using LibraryManagement.Circulation.Infrastructure.Persistence;
+using LibraryManagement.Shared.Application.IntegrationEvents;
 using LibraryManagement.Shared.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -65,6 +66,14 @@ public static class ServiceCollectionExtensions
         // Keyed by the assembly declaring this module's commands, like every module's.
         services.AddModuleUnitOfWork<CirculationUnitOfWork>(
             typeof(CheckOutCopyCommand).Assembly);
+
+        // What this module listens to. Registered unconditionally, even in a composition without
+        // Charges: a subscriber nobody announces to is never resolved, whereas one registered only
+        // when Charges happens to be present would make "does a debt cancel holds?" depend on the
+        // order two AddModule calls were written in.
+        services.AddScoped<
+            IIntegrationEventSubscriber<Charges.PublishedLanguage.MemberBalanceChanged>,
+            IntegrationEvents.CancelHoldsWhenDebtBegins>();
 
         // No JSON converters: this module's events carry identifiers, dates and enums, all of
         // which the shared serializer already speaks. No published-language adapter either — the

@@ -1,5 +1,6 @@
 using LibraryManagement.Catalog.Application.Authors.RegisterAuthor;
 using LibraryManagement.Catalog.Application.Works.RegisterWork;
+using LibraryManagement.Charges.Application.Accounts.TakePayment;
 using LibraryManagement.Circulation.Application.Loans.CheckOutCopy;
 using LibraryManagement.Holdings.Application.Copies.AcquireCopy;
 using LibraryManagement.Members.Application.Members.EnrollMember;
@@ -45,6 +46,7 @@ public sealed class CommandHandlerRulesTests
         handlers.ShouldContain(typeof(AcquireCopyCommandHandler).FullName);
         handlers.ShouldContain(typeof(EnrollMemberCommandHandler).FullName);
         handlers.ShouldContain(typeof(CheckOutCopyCommandHandler).FullName);
+        handlers.ShouldContain(typeof(TakePaymentCommandHandler).FullName);
     }
 
     // --- The rule itself, exercised against deliberate violations --------------------------------

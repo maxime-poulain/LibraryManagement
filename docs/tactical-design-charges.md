@@ -314,8 +314,31 @@ charge may become.
 
 ## 10. Consequences and open questions
 
-Nothing is built yet, so this section carries no *what building it taught* — the other tactical
-designs earned theirs by being implemented, and this one will.
+**What building it added.** Three things the design did not anticipate, and the code settled.
+
+* **A charge is not an owned collection, and could not be.** Every other child in this solution is
+  mapped with `OwnsMany`, which is what keeps it unreachable except through its aggregate. Entity
+  Framework does not support inheritance on owned types, and §3 makes the two kinds two types — so a
+  charge is an entity of its own, and the aggregate boundary here is held by the code, which reaches
+  a charge only through its account, rather than by the mapping. It is the one place this module
+  departs from the shape of the others, and the departure is the store's, not the design's.
+* **The balance is netted in memory, and had to be.** §2 says the desk reads it without loading the
+  account, which suggested a `SUM` in the database. It cannot be: the amounts are value objects, and
+  a converted property does not compose with a SQL aggregate. What the query returns is two decimals
+  per outstanding charge and no aggregate at all — which satisfies the requirement for the reason the
+  aggregate was bounded in the first place, since a charge that ends leaves the account and what one
+  person owes is a handful of rows by construction.
+* **Redelivery needed no table.** Delivery across a module boundary is at-least-once, and the
+  obvious answer was a record of event identifiers already seen. The account's own memory turned out
+  to be enough: a charge records the loan it prices, so an account that has already priced a loan
+  refuses to price it twice — per kind, because a fine and a replacement charge for one loan are two
+  legitimate charges.
+
+One thing this document asked of Circulation, which Circulation could not give. §7 there named
+`HoldsCancelledForDebt` in the plural, and the plural did not survive the aggregate boundary: a
+borrower's claims live in as many queues as there are editions, an event is raised by the aggregate
+whose state changed, and none of them spans the others. It is one event per claim, and grouping them
+into a single message is Notifications' work — which is where a fact about messages belongs.
 
 Open, each deferred for a stated reason rather than forgotten:
 

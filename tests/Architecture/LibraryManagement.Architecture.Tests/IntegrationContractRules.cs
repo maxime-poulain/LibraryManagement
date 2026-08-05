@@ -40,7 +40,7 @@ public static class IntegrationContractRules
 
         return FindSubscribers(assemblies)
             .SelectMany(
-                subscriber => ContractsOf(subscriber),
+                ContractsOf,
                 (subscriber, contract) => new { Subscriber = subscriber, Contract = contract })
             .Where(pair => !IsPublishedLanguage(pair.Contract))
             .Select(pair => Describe(pair.Subscriber, pair.Contract))
@@ -62,7 +62,7 @@ public static class IntegrationContractRules
             .ToList();
     }
 
-    private static IReadOnlyList<Type> ContractsOf(Type type)
+    private static List<Type> ContractsOf(Type type)
         => type.GetInterfaces()
             .Where(contract => contract.IsGenericType
                                && contract.GetGenericTypeDefinition()

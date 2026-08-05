@@ -61,4 +61,20 @@ public sealed class HoldQueueRepository(CirculationDbContext context) : IHoldQue
         // Tracked, not written. The module's unit of work writes once the command has succeeded.
         context.HoldQueues.Add(queue);
     }
+
+    /// <inheritdoc/>
+    public async ValueTask<IReadOnlyList<HoldQueue>> WithHoldsForBorrowerAsync(
+        BorrowerId borrowerId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(borrowerId);
+
+        // The claims come with the queue, because cancelling one means finding it and the released
+        // copy has to be offered to whoever is next in the same list.
+        return await context.HoldQueues
+            .Include(queue => queue.Holds)
+            .Where(queue => queue.Holds.Any(hold => hold.BorrowerId == borrowerId))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
 }

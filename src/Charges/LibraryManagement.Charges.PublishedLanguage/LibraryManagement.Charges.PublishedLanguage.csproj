@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- References nothing, deliberately, for the reason every published language here does: a
+         surface that carried the module's domain would export it to every consumer. This one holds
+         the one fact Charges announces outward — an amount that moved — and Money stays inside. -->
+
+</Project>

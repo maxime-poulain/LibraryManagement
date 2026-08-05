@@ -11,6 +11,12 @@
     <Project Path="src/Catalog/LibraryManagement.Catalog.Infrastructure/LibraryManagement.Catalog.Infrastructure.csproj" />
     <Project Path="src/Catalog/LibraryManagement.Catalog.PublishedLanguage/LibraryManagement.Catalog.PublishedLanguage.csproj" />
   </Folder>
+  <Folder Name="/src/Charges/">
+    <Project Path="src/Charges/LibraryManagement.Charges.Application/LibraryManagement.Charges.Application.csproj" />
+    <Project Path="src/Charges/LibraryManagement.Charges.Domain/LibraryManagement.Charges.Domain.csproj" />
+    <Project Path="src/Charges/LibraryManagement.Charges.Infrastructure/LibraryManagement.Charges.Infrastructure.csproj" />
+    <Project Path="src/Charges/LibraryManagement.Charges.PublishedLanguage/LibraryManagement.Charges.PublishedLanguage.csproj" />
+  </Folder>
   <Folder Name="/src/Circulation/">
     <Project Path="src/Circulation/LibraryManagement.Circulation.Application/LibraryManagement.Circulation.Application.csproj" />
     <Project Path="src/Circulation/LibraryManagement.Circulation.Domain/LibraryManagement.Circulation.Domain.csproj" />
@@ -45,6 +51,11 @@
     <Project Path="tests/Catalog/LibraryManagement.Catalog.Application.Tests/LibraryManagement.Catalog.Application.Tests.csproj" />
     <Project Path="tests/Catalog/LibraryManagement.Catalog.Domain.Tests/LibraryManagement.Catalog.Domain.Tests.csproj" />
     <Project Path="tests/Catalog/LibraryManagement.Catalog.Infrastructure.Tests/LibraryManagement.Catalog.Infrastructure.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Charges/">
+    <Project Path="tests/Charges/LibraryManagement.Charges.Application.Tests/LibraryManagement.Charges.Application.Tests.csproj" />
+    <Project Path="tests/Charges/LibraryManagement.Charges.Domain.Tests/LibraryManagement.Charges.Domain.Tests.csproj" />
+    <Project Path="tests/Charges/LibraryManagement.Charges.Infrastructure.Tests/LibraryManagement.Charges.Infrastructure.Tests.csproj" />
   </Folder>
   <Folder Name="/Tests/Circulation/">
     <Project Path="tests/Circulation/LibraryManagement.Circulation.Application.Tests/LibraryManagement.Circulation.Application.Tests.csproj" />
