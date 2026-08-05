@@ -166,9 +166,85 @@ OpenTelemetry are host decisions, exactly as the storage is.
 * A handler never calls `SaveChangesAsync`; the drain's save carries its effects, and the events
   its aggregates raise become new rows in that same save.
 
-## 9. Deferred, deliberately
+## 9. The passage between modules
+
+Everything above carries a domain event **within** its module. A second module reacting to it is a
+different problem, and this section is its answer.
+
+### What crosses
+
+A **flattened contract** — a `record` of primitives, living in the publishing module's
+`*.PublishedLanguage` project — and never a domain type. A domain event crossing a boundary would
+export the model that raised it: the consumer would compile against `LoanId`, `CopyId` and whatever
+those drag along, and every refactoring of the publisher's domain would become a change to somebody
+else's code. That is the coupling the boundaries exist to prevent, and it is the reason the contract
+is dull on purpose.
+
+**The published language references nothing**, and that is load-bearing here rather than incidental.
+It means the contract cannot implement a marker interface from the shared kernel — not
+`IDomainEvent`, not the mediator's `INotification`, nothing. So the mediator cannot carry this hop:
+`IDomainEventHandler<T>` is constrained to `IDomainEvent`, and a contract that satisfied it would be
+a contract that referenced the kernel. Subscribers are resolved from the container directly, by the
+contract's own type, and the genericity is the whole mechanism.
+
+### Who translates
+
+**The publisher.** A handler in the publishing module's infrastructure receives its own domain event
+and publishes the contract. It cannot be the other way round: the consumer is forbidden from
+referencing the publisher's `Domain`, so it could not name the event to subscribe to it.
+
+The translation therefore happens inside the drain's delivery, on the publisher's side of the
+boundary, and what leaves the module is already flat.
+
+### How the consumer saves — the crux
+
+The drain does **one message, one scope, one save**, and the save is on the *publisher's* context
+(§4). A subscriber that wrote to its own module's `DbContext` would write to a context nobody saves:
+the change would be tracked, never persisted, and nothing would report a failure. That is the exact
+shape of silent loss the owned-collection defect had, and it is not a shape to build a mechanism on.
+
+So a subscriber does not write. **It translates the contract into a command of its own module and
+dispatches it.** `UnitOfWorkBehavior` then saves the right context, keyed by the command's declaring
+assembly — the machinery that already exists, doing the thing it was built for. The consumer's
+change lands in the consumer's transaction, decided by the consumer's own validators and handler,
+and the publisher learns nothing about it.
+
+The rule against nested dispatch is untouched: it forbids a **command** handler from depending on a
+dispatcher, so that a use case cannot quietly become two. A subscriber is not a command handler, and
+translating an external fact into a local use case is precisely its job.
+
+### What this guarantees, and what it does not
+
+**A failing subscriber blocks the head, and that is the point.** The exception travels up through
+the delivery into the drain's own `try`, so the publisher's row is never marked processed and the
+next run replays it. The mark never precedes the effect.
+
+**The effect can precede the mark, though**, and there is no transaction spanning both: the
+consumer's command commits in its own, and the publisher's mark in another. A crash between them
+replays a fact the consumer has already acted on. This is the **at-least-once** promise §4 already
+made, arriving where it was always going to bite, and **the subscriber owes idempotence** — by
+`EventId`, or by a domain operation that is already idempotent. Declaring a copy lost is the second
+kind: `Copy.DeclareLost` answers success for a copy already lost, which the aggregate decided for
+its own reasons long before this mechanism existed.
+
+### Two mechanisms that were refused
+
+**An inbox per consumer** — a relay copying the contract into a table in the consumer's schema, in
+the consumer's transaction, each module draining its own. It buys exactly-once per consumer, and it
+costs a second table, a second drain per module and a relay whose own failure modes need the same
+treatment all over again. The price is only worth paying when a subscriber cannot be made
+idempotent, and none is: idempotence is already required of every handler here (§8), so the inbox
+would buy a guarantee the handlers are obliged to provide anyway. It earns its place the day a
+subscriber's effect is genuinely un-repeatable — money leaving the building, a message sent to a
+person — and the note in §6 about the retry ladder is the model for how to bring it back.
+
+**One transaction across both contexts** — enlisting the two `DbContext`s on a shared connection.
+Genuinely atomic, and it dissolves the boundary it spans: two modules that commit together are one
+module with two namespaces, and the day one of them moves out of the process the mechanism has to be
+rebuilt from nothing. The separation of the contexts is the boundary; a transaction across it is a
+hole in the boundary, whatever it buys.
+
+## 10. Deferred, deliberately
 
 Processed rows accumulate: a purge policy arrives with the real host, alongside the scheduler that
-owns it. Cross-module integration events — flattened contracts, not domain types — are a different
-concern for the day two modules exist; this outbox carries *domain* events within their module.
-The Hangfire dashboard is a host concern too.
+owns it. The Hangfire dashboard is a host concern too.

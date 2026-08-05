@@ -18,6 +18,10 @@
         <ProjectReference Include="..\LibraryManagement.Holdings.Application\LibraryManagement.Holdings.Application.csproj" />
         <!-- The module answers its own published language. -->
         <ProjectReference Include="..\LibraryManagement.Holdings.PublishedLanguage\LibraryManagement.Holdings.PublishedLanguage.csproj" />
+        <!-- And listens to one fact of Circulation's: a copy nobody returned. A published language
+             and nothing else — it references nothing itself, so this buys no dependency on
+             Circulation's model, which is the whole reason the contract is flat. -->
+        <ProjectReference Include="..\..\Circulation\LibraryManagement.Circulation.PublishedLanguage\LibraryManagement.Circulation.PublishedLanguage.csproj" />
     </ItemGroup>
 
 </Project>
