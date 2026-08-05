@@ -15,7 +15,8 @@ not just outcomes.
 **State.** Shared kernel, Catalog, Holdings and Members are implemented and tested. Circulation's
 desk moments — checkout, return, renewal, holds — are implemented, so is its daily scheduled
 process, and so is the passage that carries a fact from one module to another: declaring a loan
-lost reaches Holdings. Its reactions to Charges wait on Charges, which is design only. There is
+lost reaches Holdings. Its reactions to Charges wait on Charges, which is now decided on paper —
+`docs/tactical-design-charges.md` — and not yet built. There is
 no runnable host — the composition root lives in the composition tests — and no EF migrations,
 deliberately (`docs/migrations.md`).
 
@@ -30,7 +31,8 @@ is a bug: fix the pair in the same change.
 | `docs/tactical-design-circulation.md` | Circulation's aggregates, invariants and moments. Desk moments and the daily process implemented; §10 records what building them taught and what awaits the cross-module event mechanism. |
 | `docs/tactical-design-holdings.md` | Holdings' aggregate and moments. Implemented; §10 records what building it taught. |
 | `docs/tactical-design-members.md` | Members' aggregate and moments. Implemented; §10 records what building it taught. |
-| `docs/outbox.md` | Domain events: same-save storage, drain, failure semantics, and what renames break. |
+| `docs/tactical-design-charges.md` | Charges' aggregate, invariants and moments. **Design only — nothing is built.** §10 is open questions rather than lessons, and says so. |
+| `docs/outbox.md` | Domain events: same-save storage, drain, failure semantics, the cross-module passage (§9), and what renames break. |
 | `docs/migrations.md` | Why `EnsureCreated` for now, the shape migrations will take, and the trigger for the switch. |
 
 ## Build and test

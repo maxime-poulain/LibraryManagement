@@ -310,6 +310,9 @@ a context named after one of its two concepts bends every later one toward it, a
 charge is not a fine, as this paragraph exists to insist. The librarian's own umbrella word is
 *frais*, and Charges is its English.
 
+The aggregate, its invariants and the moments that change it are set out in
+[tactical-design-charges.md](tactical-design-charges.md).
+
 ### Staff access, Notifications — generic
 
 Out of the domain. Notifications reacts to integration events published by Circulation — a hold
