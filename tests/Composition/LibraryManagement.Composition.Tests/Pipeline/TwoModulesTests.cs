@@ -177,6 +177,7 @@ public sealed class TwoModulesTests(SqlServerFixture sqlServer) : IAsyncLifetime
             .OfAsync(acquisition.CopyId, Token)
             .AsTask());
 
-        answer.ShouldBe(Lendability.Lendable);
+        answer.Lendability.ShouldBe(Lendability.Lendable);
+        answer.EditionId.ShouldBe(editionId);
     }
 }

@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- References nothing, deliberately, for the reason every published language does: a surface
+         that carried the module's domain would export it to every consumer. This one is special in
+         one way — it holds the port Circulation DECLARES for another module to IMPLEMENT, and a
+         published-language project is the only place such a port may live, because it is the only
+         surface Charges will be allowed to reference. -->
+
+</Project>

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <RootNamespace>LibraryManagement.Circulation.Infrastructure</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Relational, not a provider. The module's mapping is tables and schemas; which database
+             serves them is the host's decision, made once at startup. -->
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+        <!-- Registering the module's validators is part of registering the module. -->
+        <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Shared\LibraryManagement.Shared.Infrastructure\LibraryManagement.Shared.Infrastructure.csproj" />
+        <ProjectReference Include="..\LibraryManagement.Circulation.Application\LibraryManagement.Circulation.Application.csproj" />
+        <!-- No adapter of the module's own published language here: the one port it declares runs
+             the other way — Charges implements it, and until Charges exists the host stands in. -->
+    </ItemGroup>
+
+</Project>

@@ -11,6 +11,12 @@
     <Project Path="src/Catalog/LibraryManagement.Catalog.Infrastructure/LibraryManagement.Catalog.Infrastructure.csproj" />
     <Project Path="src/Catalog/LibraryManagement.Catalog.PublishedLanguage/LibraryManagement.Catalog.PublishedLanguage.csproj" />
   </Folder>
+  <Folder Name="/src/Circulation/">
+    <Project Path="src/Circulation/LibraryManagement.Circulation.Application/LibraryManagement.Circulation.Application.csproj" />
+    <Project Path="src/Circulation/LibraryManagement.Circulation.Domain/LibraryManagement.Circulation.Domain.csproj" />
+    <Project Path="src/Circulation/LibraryManagement.Circulation.Infrastructure/LibraryManagement.Circulation.Infrastructure.csproj" />
+    <Project Path="src/Circulation/LibraryManagement.Circulation.PublishedLanguage/LibraryManagement.Circulation.PublishedLanguage.csproj" />
+  </Folder>
   <Folder Name="/src/Holdings/">
     <Project Path="src/Holdings/LibraryManagement.Holdings.Application/LibraryManagement.Holdings.Application.csproj" />
     <Project Path="src/Holdings/LibraryManagement.Holdings.Domain/LibraryManagement.Holdings.Domain.csproj" />
@@ -39,6 +45,11 @@
     <Project Path="tests/Catalog/LibraryManagement.Catalog.Application.Tests/LibraryManagement.Catalog.Application.Tests.csproj" />
     <Project Path="tests/Catalog/LibraryManagement.Catalog.Domain.Tests/LibraryManagement.Catalog.Domain.Tests.csproj" />
     <Project Path="tests/Catalog/LibraryManagement.Catalog.Infrastructure.Tests/LibraryManagement.Catalog.Infrastructure.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Circulation/">
+    <Project Path="tests/Circulation/LibraryManagement.Circulation.Application.Tests/LibraryManagement.Circulation.Application.Tests.csproj" />
+    <Project Path="tests/Circulation/LibraryManagement.Circulation.Domain.Tests/LibraryManagement.Circulation.Domain.Tests.csproj" />
+    <Project Path="tests/Circulation/LibraryManagement.Circulation.Infrastructure.Tests/LibraryManagement.Circulation.Infrastructure.Tests.csproj" />
   </Folder>
   <Folder Name="/Tests/Holdings/">
     <Project Path="tests/Holdings/LibraryManagement.Holdings.Application.Tests/LibraryManagement.Holdings.Application.Tests.csproj" />
