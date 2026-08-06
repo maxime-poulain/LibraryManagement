@@ -113,9 +113,10 @@ giving it back is a concept this context does not have.
 
 Holdings already raises `CopyFound` when it undoes a loss, so what is missing is not a fact but the
 passage carrying it — an edge from Holdings to this context that the strategic design's map does
-not draw. It is deliberately not drawn yet: no code depends on it, and an edge nothing exercises is
-a claim rather than a design. §10 records it as the first thing to settle the day this module is
-built.
+not draw. The module is now built and the edge is still not drawn, which makes it the one thing this
+document describes that the code does not do. It stays undrawn deliberately rather than by neglect:
+nothing yet cancels a replacement charge, so the edge would be a claim exercised by no test. §10
+carries it as the outstanding item it has become.
 
 One type with a `Kind` enum would put both tariffs in one method and both waiver policies in one
 rule, and the day the library exempts fines for a month it would have to say *which* kind it meant.
@@ -182,9 +183,16 @@ Nobody is at the desk when a fine is assessed, and a fine that failed to be crea
 rather than noticed.
 
 ```
-LoanReturned(…, daysLate)  →  an overdue fine, when daysLate is positive
-LoanDeclaredLost(…)        →  a replacement charge
+LoanReturnedLate(…, daysLate)  →  an overdue fine, when daysLate is positive
+LoanWrittenOff(…)              →  a replacement charge
 ```
+
+Both names are Circulation's **published language**, not its domain events. The events behind them
+are `LoanReturned` and `LoanDeclaredLost`, and this context cannot name either: it may not reference
+another module's `Domain`, and an architecture rule refuses a subscriber that names anything but a
+published language. One domain event is flattened into as many contracts as it has audiences —
+`LoanDeclaredLost` leaves Circulation twice, as `CopyReportedLost` for Holdings and as
+`LoanWrittenOff` for this context, each carrying only what its reader has a use for.
 
 And back the other way, whenever the amount moves:
 
@@ -215,8 +223,11 @@ including the return to zero, which it deliberately does nothing about.
 
 ### Assess an overdue fine
 
-Driven by `LoanReturned`, and only when `daysLate` is positive — a return on time is published all
-the same and priced at nothing, because Charges decides there is nothing to charge.
+Driven by `LoanReturnedLate`, and only when `daysLate` is positive — a return on time is announced
+all the same and priced at nothing, because Charges decides there is nothing to charge. The contract
+is named for the case that costs money and is published for every return, punctual ones included:
+filtering on the publishing side would put this context's grace period in the module that knows
+nothing about money.
 
 The amount is `(daysLate − GracePeriod) × FinePerDayOverdue`, floored at zero and capped at
 `MaxFinePerLoan`. A fine computed to zero raises no charge at all: zero is not a charge (§2), and an
@@ -224,7 +235,7 @@ account holding one would report a member as owing while the balance said nothin
 
 ### Raise a replacement charge
 
-Driven by `LoanDeclaredLost`. A flat figure, and the loan is named so the read model can say what it
+Driven by `LoanWrittenOff`. A flat figure, and the loan is named so the read model can say what it
 was for.
 
 Both of these arrive through the passage [outbox.md](outbox.md) §9 describes: a flat contract from
@@ -278,10 +289,14 @@ say *you owe two euros* sends the librarian to another screen.
 
 **Consumed.**
 
-| Event | From | Effect |
+| Contract | From | Effect |
 |---|---|---|
-| `LoanReturned(…, daysLate)` | Circulation | Assess an overdue fine, when there is one to assess |
-| `LoanDeclaredLost` | Circulation | Raise a replacement charge |
+| `LoanReturnedLate(…, daysLate)` | Circulation | Assess an overdue fine, when there is one to assess |
+| `LoanWrittenOff` | Circulation | Raise a replacement charge |
+
+The column heading says *contract* and not *event* for the reason §6 gives: what crosses is a record
+of primitives in the publisher's published language, and the domain events behind them are types
+this context may not name.
 
 ## 9. Deliberately left out
 
@@ -345,11 +360,15 @@ Open, each deferred for a stated reason rather than forgotten:
 * **A copy found after it was *paid* for.** §3 settles the ordinary case — a charge still owed is
   cancelled — and this is what is left: the member produced €25, the book came back, and giving
   money back is a concept §9 deliberately withholds. One case, not a question.
-* **The edge from Holdings, to draw when this module is built.** `CopyFound` exists there already;
-  the strategic design's map does not draw an arrow from Holdings to here, because nothing yet
-  travels it. Adding it is the first thing to settle the day this module is written, and it is a
-  wiring decision rather than a design one — the passage `docs/outbox.md` §9 describes carries it,
+* **The edge from Holdings, still undrawn now that the module exists.** `CopyFound` is raised there
+  already; the strategic design's map draws no arrow from Holdings to here, and the code has none.
+  This is the one item on this list that has stopped being a future question and become an
+  outstanding one — everything needed to build it is in place. It is a wiring decision rather than a
+  design one: the passage `docs/outbox.md` §9 describes carries it, Holdings would translate
+  `CopyFound` into a flat contract of its own, this module would turn that into a waiver command,
   and §2 records the copy on the charge precisely so the arriving fact can find what it concerns.
+  What holds it back is that nothing yet asks for it, and this repository's standing rule is that an
+  edge nothing exercises is a claim rather than a design.
 * **What a copy is worth.** `ReplacementCharge` is one flat figure for a paperback and for a folio,
   because no context records what a copy cost. An acquisition price belongs in Holdings — it is a
   fact about this library's object, not about the edition — and the day it exists this setting

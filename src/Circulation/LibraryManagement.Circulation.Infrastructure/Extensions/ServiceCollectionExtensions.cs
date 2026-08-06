@@ -31,9 +31,10 @@ public static class ServiceCollectionExtensions
     /// <para>
     /// <strong>A host that calls this must also register Holdings and Members</strong> — checking
     /// out asks both published languages — <strong>and supply an
-    /// <c>IMemberBalance</c></strong>: the port Circulation declared for Charges to implement.
-    /// Until Charges exists, the host stands in, and what it answers is the host's statement of
-    /// what "no Charges module yet" means. Circulation registers none of the three itself: a
+    /// <c>IMemberBalance</c></strong>: the port Circulation declared and Charges implements.
+    /// A host composing all five modules gets that implementation by registering Charges; one
+    /// composing a subset stands in for it, and what the stand-in answers is that host's statement
+    /// of what "no Charges module here" means. Circulation registers none of the three itself: a
     /// module that started another module would decide the composition, which is the host's
     /// business.
     /// </para>
