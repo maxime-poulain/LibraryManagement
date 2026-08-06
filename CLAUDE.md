@@ -148,6 +148,105 @@ Item), `Shelfmark` (never call number), `InService` (never OnShelf), `Balance` i
   never what the next line does. Commit subjects are plain sentences, not conventional-commit
   prefixes; the log reads as a narrative and should stay one.
 
+## Repository philosophy
+
+This repository is intentionally opinionated.
+
+Architectural decisions are deliberate, documented, and should not be changed lightly.
+
+If you disagree with an architectural decision, challenge it before changing it. Explain why another approach would be preferable, discuss the trade-offs, and only then implement the chosen solution.
+
+Every accepted architectural decision should have an explicit rationale, preferably documented in the README, the Strategic Design, or an ADR. Whenever practical, important architectural decisions should also be enforced by automated architecture tests so that the codebase cannot silently drift away from its documented design.
+
+## Development philosophy
+
+Before implementing a solution, always understand the existing design.
+
+Architecture consistency is more important than introducing new abstractions.
+
+Prefer explicit code over clever code.
+
+Preserve module boundaries, ubiquitous language and existing architectural decisions unless there is a compelling reason to change them.
+
+When a simpler, more idiomatic or more maintainable design exists, explain it before implementing it rather than following a proposal blindly.
+
+The objective of this repository is to demonstrate professional software architecture, not to maximize feature delivery.
+
+## Strategic Design first
+
+The Strategic Design documents describe the intended domain model.
+
+Implementation should translate the Strategic Design into code rather than invent new concepts.
+
+If the implementation reveals a weakness or inconsistency in the Strategic Design, explain it and propose an improvement before modifying the model.
+
+## Architecture documentation
+
+README, Strategic Design and ADRs are the source of truth.
+
+Whenever an architectural decision changes:
+
+- update the corresponding ADR or create a new one;
+- update the Strategic Design if the domain model evolves;
+- update the README when user-visible behaviour or architecture changes.
+
+Code and documentation must always evolve together.
+
+## Domain Services
+
+A Domain Service represents domain logic that does not naturally belong to a single Aggregate.
+
+Every Domain Service must be explicitly suffixed with `DomainService`.
+
+Avoid the generic `*Service` suffix for domain concepts.
+
+## Commit messages
+
+Commit messages follow the Linux kernel style.
+
+Do not use Conventional Commit prefixes such as:
+
+- `feat:`
+- `fix:`
+- `refactor:`
+- `chore:`
+
+A commit message must contain:
+
+- a concise imperative subject;
+- a blank line;
+- an explanatory body describing the important changes and, when useful, the motivation behind them.
+
+The commit history should read naturally without relying on prefixes.
+
+## Design discussions
+
+Do not assume the first proposed architecture is the best one.
+
+When multiple designs are possible:
+
+- compare them;
+- explain their trade-offs;
+- recommend the one that best fits this repository;
+- implement it only after the design has been made explicit.
+
+Architectural discussions are encouraged.
+
+Blind implementation is not.
+
+## Pull Requests
+
+Before considering a Pull Request complete, verify:
+
+- the implementation respects the Strategic Design;
+- the README remains accurate;
+- ADRs remain consistent;
+- architecture tests still enforce the documented rules;
+- no obsolete documentation remains;
+- no architectural rule has silently drifted.
+
+The repository values consistency over speed.
+
 ## Verification bar for any change
 
 Release build with zero new warnings; the full suite green with Docker up; the
