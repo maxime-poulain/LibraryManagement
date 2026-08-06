@@ -259,12 +259,22 @@ the old one, the same shape as a corrected preferred name in Catalog.
 
 **Consumed.**
 
-| Event | From | Effect |
+| Contract | From | Effect |
 |---|---|---|
-| `LoanDeclaredLost` | Circulation | The copy becomes `Lost` |
+| `CopyReportedLost` | Circulation | The copy becomes `Lost` |
+
+**What arrives is the contract, never the domain event.** Circulation raises `LoanDeclaredLost`
+internally; what crosses the boundary is `CopyReportedLost`, a record of primitives in Circulation's
+published language, carrying the copy and nothing else. This module could not name the domain event
+even if it wanted to — it may not reference another module's `Domain`, and an architecture rule
+refuses a subscriber that names anything but a published language. The column heading says
+*contract* for that reason: the two are different types with different audiences, and a table
+listing the event here would describe a coupling this module is forbidden to have.
 
 Handled the way every event is handled here: later, in a transaction of its own, idempotently, keyed
-by `EventId`. Marking a copy lost twice is marking it lost once, so idempotence costs nothing.
+by `EventId`. Marking a copy lost twice is marking it lost once, so idempotence costs nothing — and
+the subscriber does not write, it dispatches this module's own `DeclareCopyLostCommand`, so the
+change lands in this module's transaction rather than in the drain's ([outbox.md](outbox.md) §9).
 
 **A return changes nothing in Holdings.** When a returned copy is set aside for the first hold, it is
 the *hold* that records the trapped copy, in Circulation. Holdings would be recording a circulation

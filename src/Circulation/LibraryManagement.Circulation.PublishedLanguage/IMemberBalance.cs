@@ -7,11 +7,12 @@ namespace LibraryManagement.Circulation.PublishedLanguage;
 /// <para>
 /// <strong>The dependency-inverted edge of the context map, made concrete.</strong> Circulation is
 /// downstream of Charges for this question, and the anticorruption layer belongs to the
-/// downstream — so Circulation declares the port, for its own single use, and Charges will
-/// implement it the day it exists. Until then the host supplies the answer, which is also the
-/// host's way of saying what "no Charges module yet" means: nobody owes anything. Not an Open
-/// Host Service, though it looks like one: an OHS is a protocol published <em>by the upstream</em>
-/// for an open set of consumers, and here the consumer wrote the contract.
+/// downstream — so Circulation declares the port, for its own single use, and Charges implements
+/// it, in that module's own infrastructure and against its own store. The inversion is what keeps
+/// the cycle the context map draws out of the assembly graph: this project references nothing, and
+/// Charges references it rather than the other way round. Not an Open Host Service, though it looks
+/// like one: an OHS is a protocol published <em>by the upstream</em> for an open set of consumers,
+/// and here the consumer wrote the contract.
 /// </para>
 /// <para>
 /// <strong>It answers with an amount and never with a verdict.</strong> Charges states what is

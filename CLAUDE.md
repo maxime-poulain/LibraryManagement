@@ -28,12 +28,14 @@ is a bug: fix the pair in the same change.
 | Document | Decides |
 |---|---|
 | `docs/strategic-design.md` | Boundaries, subdomains, context map. §4 is the **glossary — the binding ubiquitous language**. §10 is the codebase rules. |
-| `docs/tactical-design-circulation.md` | Circulation's aggregates, invariants and moments. Desk moments and the daily process implemented; §10 records what building them taught and what awaits the cross-module event mechanism. |
+| `docs/tactical-design-circulation.md` | Circulation's aggregates, invariants and moments. Desk moments, the daily process and both directions of the Charges cycle implemented; §10 records what building each taught. |
 | `docs/tactical-design-holdings.md` | Holdings' aggregate and moments. Implemented; §10 records what building it taught. |
 | `docs/tactical-design-members.md` | Members' aggregate and moments. Implemented; §10 records what building it taught. |
 | `docs/tactical-design-charges.md` | Charges' aggregate, invariants and moments. Implemented; §10 records what building it taught, including the one place the mapping had to depart from the rest of the solution. |
 | `docs/outbox.md` | Domain events: same-save storage, drain, failure semantics, the cross-module passage (§9), and what renames break. |
 | `docs/migrations.md` | Why `EnsureCreated` for now, the shape migrations will take, and the trigger for the switch. |
+| `docs/adr/` | Thirteen decision records — what was decided, when, what it costs, what was rejected. Navigation, not argument: where a decision is argued at length above, the record points there rather than restating it. Start at `docs/adr/README.md`. |
+| `README.md` | The public face: state, context map, build and test, the rules, and the index to all of the above. It summarizes and never decides — when it disagrees with a document here, the document wins. |
 
 ## Build and test
 
@@ -78,8 +80,11 @@ src/Shared/       Technical kernel: Entity, ValueObject, Result, CQS, pipeline b
 src/<Module>/     One bounded context: Domain / Application / Infrastructure /
                   PublishedLanguage (what the module says to the ones downstream of it).
 tests/            Mirrors src/, plus Architecture.Tests (reflection rules over the built
-                  assemblies) and Composition.Tests (whole pipeline, two modules, Hangfire).
+                  assemblies) and Composition.Tests (whole pipeline, all five modules and
+                  their five outbox drains, Hangfire).
 docs/             The design. Authoritative.
+docs/adr/         Decision records — navigation over the above, never a second authority.
+README.md         The public face. Summarizes; decides nothing.
 ```
 
 ## Rules the code holds to
@@ -147,6 +152,12 @@ Item), `Shelfmark` (never call number), `InService` (never OnShelf), `Balance` i
 - **Prose**: XML docs and comments state the constraint and the alternative that was rejected —
   never what the next line does. Commit subjects are plain sentences, not conventional-commit
   prefixes; the log reads as a narrative and should stay one.
+- **Commit trailers**: exactly one, `Co-authored-by: Claude <noreply@anthropic.com>`, and **never a
+  session URL**. A `Claude-Session:` link points at a conversation nobody outside it can open, and
+  it dates the moment rather than the change — the log is read years later by someone reconstructing
+  why, and a dead link is worse than no link because it looks like it should work. What the commit
+  has to justify itself with is its own message. The attribution stays because authorship is a fact
+  about the change; the transcript is not.
 
 ## Verification bar for any change
 

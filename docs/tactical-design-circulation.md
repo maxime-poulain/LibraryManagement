@@ -70,7 +70,7 @@ context ever utters the other's.
 
 `Debt` is the third word, and it belongs **here**. It names the same figure as `Balance`, seen as
 something that forbids rather than something that is owed — which is why it appears in
-`BlockingDebt` and in `HoldsCancelledForDebt` and never in anything Charges publishes. Charges
+`BlockingDebt` and in `HoldCancelledForDebt` and never in anything Charges publishes. Charges
 announces `MemberBalanceChanged`, carrying the amount before and the amount after and no opinion
 about either; Circulation reads the pair, applies `BlockingDebt`, and forms its own `Debt` and its
 own `Standing`. That translation is the anticorruption layer doing its job, and it is what keeps the
@@ -290,7 +290,7 @@ punished for having reserved at all.
 2. A hold awaiting pickup is removed, and its trapped copy is released back to the queue, offered to
    the next borrower in good standing — exactly as an expiry releases it.
 3. `HoldCancelled` is published. In the terms of §8 it is informational — the confirmation of an act
-   the borrower chose — unlike `HoldsCancelledForDebt`, which announces a consequence they did not
+   the borrower chose — unlike `HoldCancelledForDebt`, which announces a consequence they did not
    choose and always goes out.
 
 No penalty attaches, for the same reasons §9 declines to punish the no-show.
@@ -303,7 +303,7 @@ Circulation reacts to `MemberBalanceChanged` from Charges, when the balance it c
 1. Every queued hold of that borrower is cancelled.
 2. Every hold of theirs awaiting pickup is cancelled, and its trapped copy is released back to the
    queue — where it is offered to the next borrower in good standing.
-3. `HoldsCancelledForDebt` is published, so the borrower learns why.
+3. `HoldCancelledForDebt` is published for each claim, so the borrower learns why.
 
 Step 2 matters: a trapped copy for a newly blocked borrower is precisely the waste the rule exists to
 prevent, and leaving it on the shelf until its deadline would reintroduce it.
@@ -373,12 +373,21 @@ moves.
 | `HoldExpiringSoon` | Notifications |
 | `HoldExpired` | Notifications |
 | `HoldCancelled` | read model, Notifications |
-| `HoldsCancelledForDebt` | Notifications |
+| `HoldCancelledForDebt` | Notifications |
 
 This table once listed `LoanRenewed` beside `RenewalGranted`. They were one fact under two names —
 a renewal succeeded and the due date moved — and a reader had no way to tell which to subscribe to.
 `RenewalGranted` is the one, because it names the outcome and carries the new date; nothing was ever
 published under the other name.
+
+`HoldCancelledForDebt` is **singular**, and this table said `HoldsCancelledForDebt` until the code
+settled it. The plural did not survive the aggregate boundary: a borrower's claims live in as many
+queues as there are editions, an event is raised by the aggregate whose state changed, and no queue
+spans the others. So one debt cancelling four holds raises four events, not one carrying four. What
+a borrower reads should still be a single message, and grouping them into one is Notifications'
+work — which is where a fact about messages belongs, and not a reason to invent an aggregate that
+would exist only to hold the plural. `docs/tactical-design-charges.md` §10 records the same finding
+from the side that asked for it.
 
 `LoanBecameOverdue` carries the days actually elapsed and not the stage that fired it. A borrower
 told they are nine days late can act; one told they have reached "stage two" cannot, and after a run
@@ -448,12 +457,15 @@ This is a rule to write when someone asks for it.
 
 **What building the desk moments added.** The five synchronous moments — checkout, return,
 renewal, placing and cancelling a hold — are implemented, and so is §6's scheduled process and the
-first fact this context announces beyond itself. Only the reactions to Charges' events remain, and
-they wait on Charges rather than on any mechanism. Building the desk taught four things this document
-now carries in place: the entitlement precondition the checkout list omitted, the cap moving
-after the trap resolution, the renewal rule reading *queued* rather than *empty*, and
-`HoldFulfilled` joining the events table — §4 promised every outcome an event, and the table had
-skipped the happiest one.
+first fact this context announces beyond itself. Charges has since been built, and with it the one
+reaction this context owed the other direction: `CancelHoldsWhenDebtBegins` subscribes to
+`MemberBalanceChanged`, applies `BlockingDebt` to the pair of amounts, and dispatches this module's
+own `CancelHoldsForDebtCommand` — so nothing on this list waits on another module any more.
+
+Building the desk taught four things this document now carries in place: the entitlement
+precondition the checkout list omitted, the cap moving after the trap resolution, the renewal rule
+reading *queued* rather than *empty*, and `HoldFulfilled` joining the events table — §4 promised
+every outcome an event, and the table had skipped the happiest one.
 
 Two things the design did not anticipate, settled by the code:
 
@@ -530,5 +542,3 @@ Open:
 
 * Does loan history stay in `Loan` forever, or is it archived? It is the only thing in the system
   that grows without bound.
-* The replacement charge a declared loss should raise still waits, and now waits only on Charges
-  existing — the passage that would carry it is built and proven.
