@@ -107,7 +107,7 @@ public sealed class MemberCommandHandlerTests
             .Handle(new ReplaceMemberCardCommand(member.Id.Value, "20260000999"), Token);
 
         outcome.HasErrors().ShouldBeFalse();
-        member.CardNumber.Value.ShouldBe("20260000999");
+        member.CardNumber!.Value.ShouldBe("20260000999");
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public sealed class MemberCommandHandlerTests
             .Handle(new ReplaceMemberCardCommand(member.Id.Value, "20260000999"), Token);
 
         CodesOf(outcome).ShouldContain(MembersErrorCodes.CardNumberAlreadyInUse);
-        member.CardNumber.Value.ShouldBe("20260000512");
+        member.CardNumber!.Value.ShouldBe("20260000512");
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public sealed class MemberCommandHandlerTests
             .Handle(new RenameMemberCommand(member.Id.Value, "Antoine", "Doinel-Montag"), Token);
 
         outcome.HasErrors().ShouldBeFalse();
-        member.Name.FamilyName.ShouldBe("Doinel-Montag");
+        member.Name!.FamilyName.ShouldBe("Doinel-Montag");
     }
 
     // --- And each says so plainly when there is nobody ---------------------------------------------

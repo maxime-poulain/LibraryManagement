@@ -4,6 +4,7 @@ using LibraryManagement.Circulation.Domain.Loans;
 using LibraryManagement.Circulation.Infrastructure.Extensions;
 using LibraryManagement.Circulation.Infrastructure.Persistence;
 using LibraryManagement.Circulation.PublishedLanguage;
+using LibraryManagement.Holdings.PublishedLanguage;
 using LibraryManagement.Shared.Infrastructure.Outbox;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -12,8 +13,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LibraryManagement.Composition.Tests.Scheduling;
 
 /// <summary>
-/// The daily process, run through the container the way a host would: five commands, five scopes,
-/// five saves, and the outbox as the record of what the day announced.
+/// The daily process, run through the container the way a host would: seven commands, seven scopes,
+/// seven saves, and the outbox as the record of what the day announced.
 /// </summary>
 /// <remarks>
 /// The test that matters here is the second one. <em>Running it twice must change nothing and
@@ -46,13 +47,14 @@ public sealed class CirculationDailyRunTests(SqlServerFixture sqlServer) : IAsyn
     public async ValueTask InitializeAsync()
     {
         // The frozen clock goes in before the module, because the shared store registration adds
-        // the system clock only if nobody else has: none of the five queries is testable against a
+        // the system clock only if nobody else has: none of the seven queries is testable against a
         // clock that keeps moving.
         _provider = CompositionRoot.Services()
             .AddSingleton<TimeProvider>(new FrozenClock(new DateTimeOffset(
                 Today, TimeOnly.MinValue, TimeSpan.Zero)))
             .AddCirculationModule(options => options.UseSqlServer(ConnectionString))
             .AddSingleton<IMemberBalance, NoChargesYet>()
+            .AddSingleton<ICopyLendability, EveryEditionStillServes>()
             .AddTransient<CirculationDailyRun>()
             .BuildServiceProvider();
 
@@ -139,7 +141,7 @@ public sealed class CirculationDailyRunTests(SqlServerFixture sqlServer) : IAsyn
 
         var outcome = await RunTheDayAsync();
 
-        outcome.Dispatched.ShouldBe(5);
+        outcome.Dispatched.ShouldBe(7);
         outcome.Refused.ShouldBe(0);
 
         var announced = TheDifferenceBetween(before, await AnnouncedAsync());
@@ -187,7 +189,7 @@ public sealed class CirculationDailyRunTests(SqlServerFixture sqlServer) : IAsyn
 
         var outcome = await RunTheDayAsync();
 
-        outcome.Dispatched.ShouldBe(5);
+        outcome.Dispatched.ShouldBe(7);
         outcome.Refused.ShouldBe(0);
         (await AnnouncedAsync()).Count.ShouldBe(settled.Count);
     }

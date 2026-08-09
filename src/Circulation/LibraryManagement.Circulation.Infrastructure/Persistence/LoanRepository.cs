@@ -133,4 +133,18 @@ public sealed class LoanRepository(CirculationDbContext context) : ILoanReposito
         // Tracked, not written. The module's unit of work writes once the command has succeeded.
         context.Loans.Add(loan);
     }
+
+    /// <inheritdoc/>
+    public async ValueTask<Loan?> MostRecentlyDeclaredLostForCopyAsync(
+        CopyId copyId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(copyId);
+
+        return await context.Loans
+            .Where(loan => loan.CopyId == copyId && loan.Status == LoanStatus.DeclaredLost)
+            .OrderByDescending(loan => loan.CheckedOutOn)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
 }

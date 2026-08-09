@@ -16,6 +16,7 @@ invariants and the moments where they meet.
 | `GracePeriod` | 0 days | A lever set to nothing, see below |
 | `MaxFinePerLoan` | €10.00 | A cap, see §3 |
 | `ReplacementCharge` | €25.00 | Flat, until a copy carries a value — §10 |
+| `DamageCharge` | €10.00 | Flat and lower than replacement: the copy is still on the shelf |
 
 Every number the business can change lives in one place, for Circulation's reason: a decision of the
 library must not be a deployment. And this context's numbers change more often than any other's —
@@ -44,6 +45,7 @@ one breath. Charges as independent aggregates would put that decision between tw
 MemberAccount
   MemberId          identity — the same Guid Members issued, redeclared locally
   Charges           the outstanding ones, and only those, see below
+  PricedLoans       the loans ever priced, per kind — the redelivery memory, see below
   Balance           the sum of what is outstanding, computed, see below
 ```
 
@@ -76,6 +78,16 @@ This is `HoldQueue`'s rule on a colder path — an aggregate holds only what its
 and it is what stops a member's account from becoming the second thing in the system that grows
 without bound. The alternative, keeping every settled charge forever, would load a decade of
 €0.40 fines to answer *may this person borrow*.
+
+**The redelivery memory outlives the charges, and it must.** Delivery across a module boundary is
+at-least-once, and the first design read idempotence off the outstanding charges — which the desk
+empties: a member who paid their fine inside the minute the drain takes left an account whose live
+charges remembered nothing, and the replay billed them again, precisely in the window the
+at-least-once promise exists to survive. So the account keeps `PricedLoans` — which loans it has
+priced, per kind — apart from the charges, written in the same transaction as each charge. A
+ledger of identifiers rather than of money: it grows with the loans a member was ever charged for,
+which is the one growth the outstanding-only rule above tolerates, because the alternative is
+charging people twice.
 
 **`Balance` is computed, never stored.** It is the sum of `Amount − Paid` over what the account
 holds, and there is no field to fall out of step with the charges beneath it. The same omission as
@@ -114,15 +126,30 @@ half is settled here and not deferred with the other.
 leaves out for reasons of its own. Nothing here pretends otherwise: the money is in the till, and
 giving it back is a concept this context does not have.
 
-Holdings already raises `CopyFound` when it undoes a loss, so what is missing is not a fact but the
-passage carrying it — an edge from Holdings to this context that the strategic design's map does
-not draw. The module is now built and the edge is still not drawn, which makes it the one thing this
-document describes that the code does not do. It stays undrawn deliberately rather than by neglect:
-nothing yet cancels a replacement charge, so the edge would be a claim exercised by no test. §10
-carries it as the outstanding item it has become.
+The edge carrying that fact is now drawn, and it cost exactly what §2 predicted: Holdings
+flattens `CopyFound` into `CopyRecovered`, a subscriber here turns it into this module's own
+cancellation command, and the copy recorded on every replacement charge is what lets the arriving
+fact find what it concerns. The same recovery reaches Circulation, which announces the lateness
+the written-off loan had frozen — so a found copy ends its €25 and begins its fine in one desk
+act, and returning a book late no longer gets cheaper after day thirty. What was long the one
+thing this document described that the code did not do is the composition suite's own scenario
+now.
 
-One type with a `Kind` enum would put both tariffs in one method and both waiver policies in one
-rule, and the day the library exempts fines for a month it would have to say *which* kind it meant.
+**The third kind arrived, and it is a type for the same reasons.** A `DamageCharge` prices an
+object returned spoiled — pages torn, water through the spine — which is neither time passing nor
+an object gone. Its **occasion** is a desk observation: the librarian closing the return, object
+in hand, says so, and because the observation rides *that* loan's closing, whose loan spoiled the
+copy is settled by construction rather than reconstructed later. Its **amount** is flat and lower
+than the replacement — the copy is still on the shelf, and most damage is a rebinding rather than
+a funeral. Its **ending** is the ordinary waiver alone: a find undoes nothing, because presence
+was never the complaint. It is cumulable with the same return's fine — two wrongs, two charges,
+one loan — and what the object itself becomes stays Holdings' record, entered by its own
+`Recondition` and never derived from the money: no edge from Holdings feeds this charge, and none
+is needed, because the observation was Circulation's all along.
+
+One type with a `Kind` enum would put all three tariffs in one method and all three waiver
+policies in one rule, and the day the library exempts fines for a month it would have to say
+*which* kind it meant.
 
 Stored table-per-hierarchy with the kind as its name rather than a number, the rule that a status a
 human reads in a table is stored as a string.
@@ -168,6 +195,13 @@ particular charge is an addition the day the desk asks for it, not a second conc
 **A waiver names one charge.** Cancelling a whole balance in one act is not a waiver but an amnesty,
 which is a different decision at a different level and is left out deliberately (§9).
 
+**What a waiver forgoes is the remainder, never the original figure.** A charge partly paid and
+then waived was two things in its life — money received, then money given up — and only the unpaid
+remainder belongs in the second column. Announcing the original figure would count the paid part
+twice in the treasurer's year, once as taken in and once as forgone, in the very report this
+section exists to keep honest; `ChargeWaived` therefore carries `amountForgone`, the name holding
+the definition the plainer `amount` failed to.
+
 ## 6. The two ways Circulation and Charges speak
 
 The context map draws this pair as the one cycle needing an inversion, and the boundary test is what
@@ -186,16 +220,22 @@ Nobody is at the desk when a fine is assessed, and a fine that failed to be crea
 rather than noticed.
 
 ```
-LoanReturnedLate(…, daysLate)  →  an overdue fine, when daysLate is positive
-LoanWrittenOff(…)              →  a replacement charge
+LoanReturned(…, daysLate)  →  an overdue fine, when daysLate is positive
+LoanEndedUnreturned(…)     →  a replacement charge
 ```
 
-Both names are Circulation's **published language**, not its domain events. The events behind them
-are `LoanReturned` and `LoanDeclaredLost`, and this context cannot name either: it may not reference
-another module's `Domain`, and an architecture rule refuses a subscriber that names anything but a
-published language. One domain event is flattened into as many contracts as it has audiences —
-`LoanDeclaredLost` leaves Circulation twice, as `CopyReportedLost` for Holdings and as
-`LoanWrittenOff` for this context, each carrying only what its reader has a use for.
+Both names are Circulation's **published language**, not its domain events — this context may not
+reference another module's `Domain`, and an architecture rule refuses a subscriber that names
+anything but a published language. The first contract deliberately bears its event's own name: one
+fact, one name, and the two types never share a scope in this module. It said `LoanReturnedLate`
+until the name was read squarely — the contract is published for every return, punctual ones
+included (§7), so the name asserted a judgement that was false for most deliveries and read as a
+filter to any future subscriber. One domain event is still flattened into as many contracts as it
+has audiences — `LoanDeclaredLost` leaves Circulation twice, as `CopyReportedLost` for Holdings and
+as `LoanEndedUnreturned` for this context, each carrying only what its reader has a use for. That
+second name replaced `LoanWrittenOff`, which was this context's ledger word in the publisher's
+mouth: a fact leaving a context must not name its consequence in the reader's vocabulary, which is
+the `CopyReportedLost` discipline applied a second time.
 
 And back the other way, whenever the amount moves:
 
@@ -226,11 +266,10 @@ including the return to zero, which it deliberately does nothing about.
 
 ### Assess an overdue fine
 
-Driven by `LoanReturnedLate`, and only when `daysLate` is positive — a return on time is announced
-all the same and priced at nothing, because Charges decides there is nothing to charge. The contract
-is named for the case that costs money and is published for every return, punctual ones included:
-filtering on the publishing side would put this context's grace period in the module that knows
-nothing about money.
+Driven by `LoanReturned`, and only when `daysLate` is positive — a return on time is announced
+all the same and priced at nothing, because Charges decides there is nothing to charge. The
+contract is published for every return, punctual ones included: filtering on the publishing side
+would put this context's grace period in the module that knows nothing about money.
 
 The amount is `(daysLate − GracePeriod) × FinePerDayOverdue`, floored at zero and capped at
 `MaxFinePerLoan`. A fine computed to zero raises no charge at all: zero is not a charge (§2), and an
@@ -244,14 +283,30 @@ module that knows nothing about money.
 
 ### Raise a replacement charge
 
-Driven by `LoanWrittenOff`. A flat figure, and the loan is named so the read model can say what it
-was for.
+Driven by `LoanEndedUnreturned`. A flat figure, and the loan is named so the read model can say
+what it was for.
 
 Both of these arrive through the passage [outbox.md](outbox.md) §9 describes: a flat contract from
 Circulation's published language, turned into a command of this module, saved in this module's own
 transaction. Both are therefore **idempotent by the loan they price** — a redelivery must not charge
 a member twice, and the account refusing a second charge for a loan it already priced is what makes
 that true without a deduplication table.
+
+### Cancel a replacement charge
+
+Driven by `CopyRecovered`, from Holdings. What is still outstanding for the copy is cancelled —
+the waiver of §5, reached by a fact rather than by a librarian's decision — and a charge already
+paid is not undone: giving money back is a concept §9 deliberately withholds, so the till keeps
+what it took and the outstanding remainder alone is forgone. A copy with nothing outstanding
+answers success, which is both that rule and what makes redelivery safe.
+
+### Raise a damage charge
+
+Driven by `CopyReturnedDamaged`. A flat figure, cumulable with the fine the same return may have
+earned, and idempotent by the loan and the kind exactly as the other two occasions are. The
+contract only exists when the desk observed damage — unlike the return, which is announced
+punctual and late alike, this fact simply does not occur for the ordinary case, so nothing is
+filtered and no judgement is smuggled into filtering.
 
 ### Take a payment
 
@@ -283,8 +338,9 @@ are the same answer to the desk, and the port returns zero for both.
 |---|---|
 | `OverdueFineAssessed(memberId, chargeId, loanId, amount, daysLate)` | read model, Notifications |
 | `ReplacementChargeRaised(memberId, chargeId, loanId, amount)` | read model, Notifications |
+| `DamageChargeRaised(memberId, chargeId, loanId, amount)` | read model, Notifications |
 | `PaymentTaken(memberId, amount, settled)` | read model |
-| `ChargeWaived(memberId, chargeId, amount)` | read model |
+| `ChargeWaived(memberId, chargeId, amountForgone)` | read model |
 | `MemberBalanceChanged(memberId, previousBalance, currentBalance)` | Circulation, Notifications |
 
 `MemberBalanceChanged` is published on every act that moves the amount — a fine, a replacement
@@ -300,8 +356,10 @@ say *you owe two euros* sends the librarian to another screen.
 
 | Contract | From | Effect |
 |---|---|---|
-| `LoanReturnedLate(…, daysLate)` | Circulation | Assess an overdue fine, when there is one to assess |
-| `LoanWrittenOff` | Circulation | Raise a replacement charge |
+| `LoanReturned(…, daysLate)` | Circulation | Assess an overdue fine, when there is one to assess — a recovered loan's frozen lateness arrives through the same contract, priced the same way |
+| `LoanEndedUnreturned` | Circulation | Raise a replacement charge |
+| `CopyReturnedDamaged` | Circulation | Raise a damage charge |
+| `CopyRecovered` | Holdings | Cancel the replacement still outstanding for the copy (§3) |
 
 The column heading says *contract* and not *event* for the reason §6 gives: what crosses is a record
 of primitives in the publisher's published language, and the domain events behind them are types
@@ -352,11 +410,15 @@ charge may become.
   per outstanding charge and no aggregate at all — which satisfies the requirement for the reason the
   aggregate was bounded in the first place, since a charge that ends leaves the account and what one
   person owes is a handful of rows by construction.
-* **Redelivery needed no table.** Delivery across a module boundary is at-least-once, and the
-  obvious answer was a record of event identifiers already seen. The account's own memory turned out
-  to be enough: a charge records the loan it prices, so an account that has already priced a loan
-  refuses to price it twice — per kind, because a fine and a replacement charge for one loan are two
-  legitimate charges.
+* **Redelivery needed no event table — and the first memory was still the wrong one.** The
+  obvious answer was a record of event identifiers seen; the account's own charges seemed enough
+  instead, since a charge records the loan it prices. But a charge that ends *leaves* the account
+  (§2), so that memory emptied at the desk — a replay arriving after the member paid, or after a
+  found copy cancelled the replacement, found nothing and billed the account again, precisely in
+  the window at-least-once delivery promises to hit. The account now keeps `PricedLoans`, a
+  memory of identifiers per kind that outlives the charges, written in the same transaction as
+  each one. The error is kept on record because it is the instructive kind: idempotence read off
+  state that legitimately empties is idempotence with an expiry date.
 
 One thing this document asked of Circulation, which Circulation could not give. §7 there named
 `HoldsCancelledForDebt` in the plural, and the plural did not survive the aggregate boundary: a
@@ -369,15 +431,6 @@ Open, each deferred for a stated reason rather than forgotten:
 * **A copy found after it was *paid* for.** §3 settles the ordinary case — a charge still owed is
   cancelled — and this is what is left: the member produced €25, the book came back, and giving
   money back is a concept §9 deliberately withholds. One case, not a question.
-* **The edge from Holdings, still undrawn now that the module exists.** `CopyFound` is raised there
-  already; the strategic design's map draws no arrow from Holdings to here, and the code has none.
-  This is the one item on this list that has stopped being a future question and become an
-  outstanding one — everything needed to build it is in place. It is a wiring decision rather than a
-  design one: the passage `docs/outbox.md` §9 describes carries it, Holdings would translate
-  `CopyFound` into a flat contract of its own, this module would turn that into a waiver command,
-  and §2 records the copy on the charge precisely so the arriving fact can find what it concerns.
-  What holds it back is that nothing yet asks for it, and this repository's standing rule is that an
-  edge nothing exercises is a claim rather than a design.
 * **What a copy is worth.** `ReplacementCharge` is one flat figure for a paperback and for a folio,
   because no context records what a copy cost. An acquisition price belongs in Holdings — it is a
   fact about this library's object, not about the edition — and the day it exists this setting

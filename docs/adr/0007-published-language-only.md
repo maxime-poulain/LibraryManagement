@@ -21,12 +21,12 @@ A published language **references nothing** — not the shared kernel, not the m
 in primitives: `Guid`, `decimal`, `int`, `string`. It carries two kinds of thing:
 
 - **Flat contracts**: `record`s of primitives announcing a fact. `CopyReportedLost`,
-  `LoanReturnedLate`, `LoanWrittenOff`, `MemberBalanceChanged`.
+  `LoanReturned`, `LoanEndedUnreturned`, `MemberBalanceChanged`.
 - **Ports**: interfaces for the synchronous desk-time questions. `IEditionCatalog`, `IMemberBalance`.
 
 One domain event is flattened into **as many contracts as it has audiences**. `LoanDeclaredLost`
 leaves Circulation twice — as `CopyReportedLost` carrying the copy and nothing else, and as
-`LoanWrittenOff` carrying the borrower too — because Holdings has no use for a borrower and a
+`LoanEndedUnreturned` carrying the borrower too — because Holdings has no use for a borrower and a
 contract that offered one would invite it to grow a use.
 
 **The publisher translates.** A handler in the publishing module's infrastructure receives its own
@@ -47,7 +47,7 @@ redeclares `MemberId` and `CopyId`, each carrying the same `Guid` as the issuer'
 translated; the identity never is. Nobody should go looking for a correspondence table.
 
 Consumer-side documentation names the **contract**, never the publisher's domain event — the tactical
-designs' "Consumed" tables say `CopyReportedLost` and `LoanReturnedLate`, because the event behind
+designs' "Consumed" tables say `CopyReportedLost` and `LoanEndedUnreturned`, because the event behind
 them is a type the consumer may not name.
 
 An architecture rule (`IntegrationContractRules`) refuses a subscriber that names anything but a

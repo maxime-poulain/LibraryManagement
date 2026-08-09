@@ -62,6 +62,12 @@ in a log.
 The cost is that Circulation is woken for movements it will ignore — a few dozen a day in a municipal
 library, and the price of never having to ask Charges what a threshold is.
 
+**The pair spares Circulation a memory, not a question.** The subscriber computes the crossing from
+the two amounts; the handler still reads the port before cancelling anything, because an event is a
+trigger and the balance at the moment of acting is the truth — the member who paid at the desk
+inside the delivery window keeps their holds. Asynchronous news, synchronous judgement: each half of
+the cycle doing exactly what the boundary test assigned it.
+
 This synchronous edge sits on the most frequent write path in the system, which is one of the two
 reasons [ADR-0001](0001-modular-monolith-over-services.md) records for the deployment staying
 monolithic.

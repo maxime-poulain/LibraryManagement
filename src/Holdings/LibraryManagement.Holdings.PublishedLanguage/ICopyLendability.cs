@@ -94,4 +94,23 @@ public interface ICopyLendability
     ValueTask<IReadOnlyList<Guid>> LendableCopiesOfAsync(
         Guid editionId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Answers whether any copy of an edition is in the lendable service or expected back into
+    /// it — in service, or away in repair.
+    /// </summary>
+    /// <param name="editionId">The edition in question.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns><see langword="false"/> when every copy is withdrawn, lost or shut away for
+    /// consultation, and nothing is expected back.</returns>
+    /// <remarks>
+    /// The question behind a promise: a hold is a claim on the <em>next</em> available copy, and
+    /// a queue whose edition can answer nothing but no has no next to promise. Repair counts as
+    /// yes — a copy in repair is expected back in the stock, and a queue that waits on it waits
+    /// on something real. Whether the asker keeps or ends its promises on the answer is the
+    /// asker's own rule; this only says what the shelves can still give.
+    /// </remarks>
+    ValueTask<bool> AnyCopyExpectedToServeAsync(
+        Guid editionId,
+        CancellationToken cancellationToken = default);
 }

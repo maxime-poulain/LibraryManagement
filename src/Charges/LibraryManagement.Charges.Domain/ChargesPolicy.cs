@@ -22,6 +22,11 @@ namespace LibraryManagement.Charges.Domain;
 /// because no context records what a copy was worth — an acquisition price is a Holdings fact, and
 /// the day it exists this becomes a default rather than the answer.
 /// </param>
+/// <param name="DamageCharge">
+/// What a copy returned spoiled costs. Flat for the replacement charge's reason, and lower than
+/// it: a damaged copy is still on the shelf, and most damage is a rebinding rather than a
+/// funeral. A figure the library will want to tune, which is exactly why it is a lever.
+/// </param>
 /// <remarks>
 /// <para>
 /// One place, for Circulation's reason: a decision of the library must not be a deployment. These
@@ -39,7 +44,8 @@ public sealed record ChargesPolicy(
     decimal FinePerDayOverdue,
     int GracePeriodInDays,
     decimal MaxFinePerLoan,
-    decimal ReplacementCharge)
+    decimal ReplacementCharge,
+    decimal DamageCharge)
 {
     /// <summary>
     /// What the library charges today.
@@ -48,7 +54,8 @@ public sealed record ChargesPolicy(
         FinePerDayOverdue: 0.20m,
         GracePeriodInDays: 0,
         MaxFinePerLoan: 10.00m,
-        ReplacementCharge: 25.00m);
+        ReplacementCharge: 25.00m,
+        DamageCharge: 10.00m);
 
     /// <summary>
     /// What a loan returned this many days late costs.
@@ -77,4 +84,7 @@ public sealed record ChargesPolicy(
 
     /// <summary>What a copy that will not come back costs.</summary>
     public Money ReplacementCost => Money.Of(ReplacementCharge);
+
+    /// <summary>What a copy returned spoiled costs.</summary>
+    public Money DamageCost => Money.Of(DamageCharge);
 }

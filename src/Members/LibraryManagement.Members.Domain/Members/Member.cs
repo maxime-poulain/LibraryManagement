@@ -42,11 +42,13 @@ public sealed class Member : AggregateRoot<MemberId>
     // parameters: the store binds only scalar-mapped properties to a constructor, and a complex
     // value arrives through its setter — so Enroll assigns them the same way, and there is one
     // construction path for the factory and the materializer alike.
+    // The birth date and the card are nullable here because the store binds this constructor and
+    // an erased row holds neither; Enroll always supplies both.
     private Member(
         MemberId id,
-        DateOnly dateOfBirth,
+        DateOnly? dateOfBirth,
         MemberCategory category,
-        CardNumber cardNumber,
+        CardNumber? cardNumber,
         DateOnly membershipStart,
         DateOnly membershipEnd) : base(id)
     {
@@ -62,20 +64,21 @@ public sealed class Member : AggregateRoot<MemberId>
     /// The null-forgiveness is the constructor note above, paid once: every path that builds a
     /// member — <see cref="Enroll"/> or the store — assigns a name before anyone can read one.
     /// </remarks>
-    public MemberName Name { get; private set; } = null!;
+    public MemberName? Name { get; private set; } = null!;
 
-    /// <summary>Gets the member's date of birth.</summary>
+    /// <summary>Gets the member's date of birth, until an erasure takes it.</summary>
     /// <remarks>
     /// Recorded because staff record it and because the category is argued from it — and no rule
     /// derives one from the other. Age is a fact; the category is a decision.
     /// </remarks>
-    public DateOnly DateOfBirth { get; }
+    public DateOnly? DateOfBirth { get; private set; }
 
     /// <summary>Gets what kind of member this person is enrolled as.</summary>
     public MemberCategory Category { get; private set; }
 
-    /// <summary>Gets the number on the card the member presents at the desk.</summary>
-    public CardNumber CardNumber { get; private set; }
+    /// <summary>Gets the number on the card the member presents at the desk, or
+    /// <see langword="null"/> once an erasure retired it.</summary>
+    public CardNumber? CardNumber { get; private set; }
 
     /// <summary>Gets the first day of the current membership period.</summary>
     public DateOnly MembershipStart { get; private set; }
@@ -93,9 +96,22 @@ public sealed class Member : AggregateRoot<MemberId>
 
     /// <summary>
     /// Gets who the member is reached through, or <see langword="null"/> when they are reached
-    /// directly. Never null while the member is a child.
+    /// directly. Never null while the member is a child — until an erasure, whose terminal state
+    /// is what relaxes that floor.
     /// </summary>
     public Guardian? Guardian { get; private set; }
+
+    /// <summary>
+    /// Gets the day this record stopped being a person, or <see langword="null"/> while it still
+    /// is one.
+    /// </summary>
+    /// <remarks>
+    /// Terminal, the way a withdrawal is for a copy: an erased member acts no more, and every
+    /// operation refuses. The identifier stands forever — downstream contexts hold it and nothing
+    /// else, so their loans and charges stay countable while the identifier stops resolving to a
+    /// person, which is what anonymization means.
+    /// </remarks>
+    public DateOnly? ErasedOn { get; private set; }
 
     /// <summary>
     /// Enrolls a member: identity recorded, category decided, card issued, and the first
@@ -195,8 +211,13 @@ public sealed class Member : AggregateRoot<MemberId>
     /// exactly the duplicate the tactical design worries about.
     /// </para>
     /// </remarks>
-    public void Renew(DateOnly today)
+    public Result Renew(DateOnly today)
     {
+        if (ErasedOn is not null)
+        {
+            return Erased();
+        }
+
         if (today <= MembershipEnd)
         {
             MembershipEnd = MembershipEnd.AddMonths(MembershipDurationInMonths);
@@ -208,6 +229,8 @@ public sealed class Member : AggregateRoot<MemberId>
         }
 
         AddDomainEvent(new MembershipRenewed(Id, MembershipEnd));
+
+        return Result.Success();
     }
 
     /// <summary>
@@ -223,6 +246,11 @@ public sealed class Member : AggregateRoot<MemberId>
     /// </remarks>
     public Result ChangeCategory(MemberCategory category)
     {
+        if (ErasedOn is not null)
+        {
+            return Erased();
+        }
+
         if (category == Category)
         {
             return Result.Success();
@@ -253,19 +281,27 @@ public sealed class Member : AggregateRoot<MemberId>
     /// The identity does not move with the card, which is the whole reason the number is not the
     /// identity. Replacing a card with itself records nothing — nothing happened.
     /// </remarks>
-    public void ReplaceCard(CardNumber cardNumber)
+    public Result ReplaceCard(CardNumber cardNumber)
     {
         ArgumentNullException.ThrowIfNull(cardNumber);
 
-        if (cardNumber == CardNumber)
+        if (ErasedOn is not null)
         {
-            return;
+            return Erased();
         }
 
-        var previous = CardNumber;
+        if (cardNumber == CardNumber)
+        {
+            return Result.Success();
+        }
+
+        // Never null past the guard: only an erasure retires a card, and it was just refused.
+        var previous = CardNumber!;
         CardNumber = cardNumber;
 
         AddDomainEvent(new CardReplaced(Id, previous, cardNumber));
+
+        return Result.Success();
     }
 
     /// <summary>
@@ -273,18 +309,25 @@ public sealed class Member : AggregateRoot<MemberId>
     /// </summary>
     /// <param name="contactDetails">The channels from now on, possibly none.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="contactDetails"/> is null.</exception>
-    public void UpdateContactDetails(ContactDetails contactDetails)
+    public Result UpdateContactDetails(ContactDetails contactDetails)
     {
         ArgumentNullException.ThrowIfNull(contactDetails);
 
+        if (ErasedOn is not null)
+        {
+            return Erased();
+        }
+
         if (contactDetails == ContactDetails)
         {
-            return;
+            return Result.Success();
         }
 
         ContactDetails = contactDetails;
 
         AddDomainEvent(new ContactDetailsChanged(Id, contactDetails));
+
+        return Result.Success();
     }
 
     /// <summary>
@@ -298,6 +341,11 @@ public sealed class Member : AggregateRoot<MemberId>
     /// </remarks>
     public Result ChangeGuardian(Guardian? guardian)
     {
+        if (ErasedOn is not null)
+        {
+            return Erased();
+        }
+
         if (guardian is null && Category == MemberCategory.Child)
         {
             return Result.Failure(
@@ -328,18 +376,78 @@ public sealed class Member : AggregateRoot<MemberId>
     /// access points, so the distinction buys nothing here, and one operation carries the marriage
     /// and the typo alike.
     /// </remarks>
-    public void Rename(MemberName name)
+    public Result Rename(MemberName name)
     {
         ArgumentNullException.ThrowIfNull(name);
 
-        if (name == Name)
+        if (ErasedOn is not null)
         {
-            return;
+            return Erased();
         }
 
-        var previous = Name;
+        if (name == Name)
+        {
+            return Result.Success();
+        }
+
+        // Never null past the guard: only an erasure empties a name, and it was just refused.
+        var previous = Name!;
         Name = name;
 
         AddDomainEvent(new MemberRenamed(Id, previous, name));
+
+        return Result.Success();
     }
+
+    /// <summary>
+    /// Empties the record and keeps the identifier: the member asked to be forgotten.
+    /// </summary>
+    /// <param name="on">The day of the erasure.</param>
+    /// <returns>Success — an erasure already done answers success, a redelivery's shape.</returns>
+    /// <remarks>
+    /// <para>
+    /// A terminal state, the pattern <c>Withdrawn</c> set for a copy — and the state is what
+    /// relaxes the invariants the living record holds. A name never blank, a child never without
+    /// a guardian: each protects an act an erased member can no longer perform, and an invariant
+    /// whose reason has ended ends with it. The dates of the membership stay — a subscription's
+    /// span identifies nobody and keeps the statistics honest — and so does the category, for the
+    /// same two reasons.
+    /// </para>
+    /// <para>
+    /// <strong>No downstream context changes at all.</strong> Every other module holds this
+    /// member as a bare identifier, which now resolves to no person — that is what anonymization
+    /// means, and it is what the strategic design bought the day it refused to let an address
+    /// cross a boundary. The one copy this cannot reach is the outbox's delivered payloads, and
+    /// the retention window recorded in the outbox design is what bounds those.
+    /// </para>
+    /// <para>
+    /// Whether a debt should stop an erasure is decided away from the model: the balance is on
+    /// the librarian's screen, and the law — not an aggregate — says whether a claim for money is
+    /// grounds to keep a person's record against their request.
+    /// </para>
+    /// </remarks>
+    public Result Erase(DateOnly on)
+    {
+        if (ErasedOn is not null)
+        {
+            return Result.Success();
+        }
+
+        Name = null;
+        DateOfBirth = null;
+        CardNumber = null;
+        ContactDetails = ContactDetails.None;
+        Guardian = null;
+        ErasedOn = on;
+
+        // The event carries the identifier and nothing else — an announcement of an erasure that
+        // itself carried the erased fields would be the leak it reports the end of.
+        AddDomainEvent(new MemberErased(Id));
+
+        return Result.Success();
+    }
+
+    private static Result Erased() => Result.Failure(
+        MembersErrorCodes.MemberErased,
+        "This record was erased at its member's request; it no longer acts.");
 }

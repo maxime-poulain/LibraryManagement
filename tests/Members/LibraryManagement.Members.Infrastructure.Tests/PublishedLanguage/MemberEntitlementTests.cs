@@ -121,6 +121,22 @@ public sealed class MemberEntitlementTests(SqlServerFixture sqlServer)
 
         answer.Category.ShouldBe(PublishedCategory.Child);
     }
+
+    [Fact]
+    public async Task AnErasedMember_IsNoSuchMember()
+    {
+        // The identifier no longer resolves to a person, and the port answers exactly as it does
+        // for an identifier that never did — which is what the erasure promised, and what keeps a
+        // found card or a stale screen from acting in a ghost's name.
+        var member = AMember();
+        member.Erase(EnrolledOn);
+        await StoredAsync(member);
+
+        var answer = await AskedOn(EnrolledOn, member.Id.Value);
+
+        answer.Entitlement.ShouldBe(Entitlement.NoSuchMember);
+        answer.Category.ShouldBeNull();
+    }
 }
 
 /// <summary>

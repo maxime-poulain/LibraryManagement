@@ -82,12 +82,20 @@ public static class ServiceCollectionExtensions
         // registered only when Circulation happens to be present would make "does Charges react?"
         // depend on the order two AddModule calls were written in.
         services.AddScoped<
-            IIntegrationEventSubscriber<LoanReturnedLate>,
-            IntegrationEvents.AssessFineOnLoanReturnedLate>();
+            IIntegrationEventSubscriber<LoanReturned>,
+            IntegrationEvents.AssessFineOnLoanReturned>();
 
         services.AddScoped<
-            IIntegrationEventSubscriber<LoanWrittenOff>,
-            IntegrationEvents.RaiseChargeOnLoanWrittenOff>();
+            IIntegrationEventSubscriber<LoanEndedUnreturned>,
+            IntegrationEvents.RaiseChargeOnLoanEndedUnreturned>();
+
+        services.AddScoped<
+            IIntegrationEventSubscriber<CopyReturnedDamaged>,
+            IntegrationEvents.RaiseChargeOnCopyReturnedDamaged>();
+
+        services.AddScoped<
+            IIntegrationEventSubscriber<Holdings.PublishedLanguage.CopyRecovered>,
+            IntegrationEvents.CancelChargeOnCopyRecovered>();
 
         // The JSON side of this module's value object, for the outbox.
         services.AddSingleton<JsonConverter, MoneyJsonConverter>();

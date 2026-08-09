@@ -32,9 +32,13 @@ That sentence is the whole pattern; everything else is consequence.
 `ProcessedOn` mark leave in one save. **Beyond it, at-least-once**, and handlers deduplicate by
 `IDomainEvent.EventId`.
 
-**Order is the contract.** Circulation's design leans on causal order — the debt settles before the
-copy is trapped — so a failing message blocks the head of its queue rather than being skipped. Five
-attempts, then dead-lettered and left in the table, because a problem that vanished is not solved.
+**Order is the contract**, because one contract carries a pair: `MemberBalanceChanged` announces
+the balance before and after, and two movements delivered out of order make the reader compute a
+crossing that never happened. A failing message therefore blocks the head of its queue rather than
+being skipped. Five attempts, then dead-lettered and left in the table, because a problem that
+vanished is not solved. (The reason first recorded here — the debt settling before a copy is
+trapped — was wrong: the trap is synchronous and no message order sequences it;
+[`outbox.md`](../outbox.md) §5 keeps the correction.)
 
 **Renaming a stored event type breaks every stored row that carries it**, and so does renaming any
 positional parameter of an event `record`, since each becomes a property name in the payload. Free

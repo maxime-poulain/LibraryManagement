@@ -143,7 +143,7 @@ public sealed class CopyReportedLostTests(SqlServerFixture sqlServer) : IAsyncLi
             Today.AddDays(-CirculationPolicy.Current.DeclaredLostAfterDays),
             CirculationPolicy.Current);
 
-        loan.DeclareLost();
+        loan.DeclareLost(Today);
 
         context.Add(loan);
         await context.SaveChangesAsync(Token);

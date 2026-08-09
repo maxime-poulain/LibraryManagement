@@ -10,10 +10,11 @@ namespace LibraryManagement.Charges.Domain.Accounts;
 /// behind the account's back would put that decision outside the only boundary that can hold it.
 /// </para>
 /// <para>
-/// <strong>The two kinds are two types</strong> — see <see cref="OverdueFine"/> and
-/// <see cref="ReplacementCharge"/>. This base holds what they genuinely share, which is the money
-/// and its settlement; everything that differs between charging for time and charging for an object
-/// lives in the subclass or in the moment that creates it.
+/// <strong>The kinds are types</strong> — see <see cref="OverdueFine"/>,
+/// <see cref="ReplacementCharge"/> and <see cref="DamageCharge"/>. This base holds what they
+/// genuinely share, which is the money and its settlement; everything that differs between
+/// charging for time, for an object gone, and for an object spoiled lives in the subclass or in
+/// the moment that creates it.
 /// </para>
 /// </remarks>
 public abstract class Charge
@@ -185,6 +186,51 @@ public sealed class ReplacementCharge : Charge
     /// <param name="incurredOn">The day the library stopped waiting.</param>
     /// <returns>The charge.</returns>
     public static ReplacementCharge For(
+        ChargeId id,
+        Money amount,
+        LoanId loanId,
+        CopyId copyId,
+        DateOnly incurredOn)
+        => new(id, amount, loanId, copyId, incurredOn);
+}
+
+/// <summary>
+/// Charged for the state of an object: a copy came back spoiled.
+/// </summary>
+/// <remarks>
+/// The third kind, and a third occasion: not time passing, not an object gone, but an object
+/// returned worse than it went out — pages torn, water through the spine. The observation is
+/// Circulation's, made at the return with the borrower identified, which is what settles the
+/// attribution question by construction: the damage travels with <em>this</em> loan's closing, so
+/// nobody later guesses whose it was. A find undoes nothing here — the copy is present, that was
+/// never the complaint — and the ordinary waiver is its only mercy.
+/// </remarks>
+public sealed class DamageCharge : Charge
+{
+    private DamageCharge(
+        ChargeId id,
+        Money amount,
+        LoanId loanId,
+        CopyId copyId,
+        DateOnly incurredOn)
+        : base(id, amount, loanId, copyId, incurredOn)
+    {
+    }
+
+    private DamageCharge()
+    {
+    }
+
+    /// <summary>
+    /// Records what a copy returned damaged costs.
+    /// </summary>
+    /// <param name="id">The charge's identity.</param>
+    /// <param name="amount">The damage cost, flat until a copy carries a value.</param>
+    /// <param name="loanId">The loan whose return carried the observation.</param>
+    /// <param name="copyId">The copy that came back spoiled.</param>
+    /// <param name="incurredOn">The day the return was recorded.</param>
+    /// <returns>The charge.</returns>
+    public static DamageCharge For(
         ChargeId id,
         Money amount,
         LoanId loanId,

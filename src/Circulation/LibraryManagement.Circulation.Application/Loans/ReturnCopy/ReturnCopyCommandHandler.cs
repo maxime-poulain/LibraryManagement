@@ -52,7 +52,7 @@ public sealed class ReturnCopyCommandHandler(
 
         var today = clock.Today();
 
-        var returned = loan.Return(today, policy);
+        var returned = loan.Return(today, policy, command.ReturnedDamaged);
 
         if (returned.HasErrors())
         {

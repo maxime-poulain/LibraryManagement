@@ -55,9 +55,7 @@ public sealed class ReplaceMemberCardCommandHandler(IMemberRepository members)
                         $"Card number '{number}' is already assigned to another member.");
                 }
 
-                member.ReplaceCard(number);
-
-                return Result.Success();
+                return member.ReplaceCard(number);
             },
             errors => ValueTask.FromResult(Result.Failure(errors))).ConfigureAwait(false);
     }

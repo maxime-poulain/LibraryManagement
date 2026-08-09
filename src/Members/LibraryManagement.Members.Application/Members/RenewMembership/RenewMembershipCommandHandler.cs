@@ -31,8 +31,6 @@ public sealed class RenewMembershipCommandHandler(IMemberRepository members, Tim
                 $"Nobody is enrolled under '{memberId}'.");
         }
 
-        member.Renew(clock.Today());
-
-        return Result.Success();
+        return member.Renew(clock.Today());
     }
 }

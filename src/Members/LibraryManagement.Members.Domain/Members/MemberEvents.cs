@@ -79,3 +79,14 @@ public sealed record MemberRenamed(
     MemberId MemberId,
     MemberName PreviousName,
     MemberName NewName) : DomainEvent;
+
+/// <summary>
+/// A member's record was emptied at their request; the identifier stands, resolving to nobody.
+/// </summary>
+/// <param name="MemberId">The identifier that remains.</param>
+/// <remarks>
+/// The identifier and nothing else, deliberately: an event announcing an erasure must not itself
+/// carry what was erased, and the read models that consume this owe the same emptying to their
+/// own copies.
+/// </remarks>
+public sealed record MemberErased(MemberId MemberId) : DomainEvent;

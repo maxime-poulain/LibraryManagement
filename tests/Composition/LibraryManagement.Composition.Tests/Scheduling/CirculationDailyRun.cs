@@ -1,4 +1,6 @@
 using Hangfire;
+using LibraryManagement.Circulation.Application.Holds.CancelHoldsOfOwingBorrowers;
+using LibraryManagement.Circulation.Application.Holds.CancelUnfulfillableHolds;
 using LibraryManagement.Circulation.Application.Holds.ExpireUncollectedHolds;
 using LibraryManagement.Circulation.Application.Holds.RemindOfHoldsExpiringSoon;
 using LibraryManagement.Circulation.Application.Loans.DeclareOverdueLoansLost;
@@ -29,19 +31,21 @@ public sealed record DailyRunOutcome(int Dispatched, int Refused);
 /// <para>
 /// <strong>The fan-out lives here and not in a handler.</strong> An architecture rule forbids a
 /// command handler from depending on <see cref="ICommandDispatcher"/> — a nested dispatch shares
-/// the scope and the store, and would turn five transactions into one. So the host dispatches the
-/// five, and the module keeps deciding what each of them means.
+/// the scope and the store, and would turn seven transactions into one. So the host dispatches the
+/// seven, and the module keeps deciding what each of them means.
 /// </para>
 /// <para>
 /// <strong>One scope and one save each</strong>, exactly as the outbox drain opens a scope per
-/// message. Five independent transactions: a failure in the reminders must not keep the hold shelf
+/// message. Seven independent transactions: a failure in the reminders must not keep the hold shelf
 /// from turning, which is why the run continues after a refusal and reports the count rather than
 /// stopping at the first.
 /// </para>
 /// <para>
 /// The order is the design's own table, and it is the order a borrower would want to hear things
-/// in: due soon, then late, then written off. The two hold moments follow, warning before expiry,
-/// though nothing depends on that — a claim past its deadline is expired, never hurried along.
+/// in: due soon, then late, then given up on. The hold moments follow, the debt reconciliation
+/// and unfulfillability sweeps first so a claim they would end is neither warned about nor
+/// expired as if it were honest, then warning before expiry — though nothing depends on that last pair: a claim
+/// past its deadline is expired, never hurried along.
 /// </para>
 /// <para>
 /// A real host registers this with <c>RecurringJob.AddOrUpdate</c> on <c>Cron.Daily()</c> under
@@ -59,12 +63,14 @@ public sealed class CirculationDailyRun(IServiceScopeFactory scopes)
         new RemindOfLoansDueSoonCommand(),
         new RemindOfOverdueLoansCommand(),
         new DeclareOverdueLoansLostCommand(),
+        new CancelHoldsOfOwingBorrowersCommand(),
+        new CancelUnfulfillableHoldsCommand(),
         new RemindOfHoldsExpiringSoonCommand(),
         new ExpireUncollectedHoldsCommand(),
     ];
 
     /// <summary>
-    /// Runs the day's five moments.
+    /// Runs the day's seven moments.
     /// </summary>
     /// <param name="cancellationToken">
     /// Replaced by Hangfire at execution time with the server's shutdown token.

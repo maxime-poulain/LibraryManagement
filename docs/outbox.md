@@ -82,8 +82,14 @@ the delivery — a bus, some day — is one registration.
 
 ## 5. Failure: order is the contract
 
-Circulation's design leans on causal order — the debt settles before the copy is trapped — so the
-drain refuses to trade order for throughput. A failing message blocks the head of its queue: the
+Order is the contract because one contract carries a pair: `MemberBalanceChanged` announces the
+amount before and the amount after, and two movements delivered out of order make the reader
+compute a crossing that never happened — or miss the one that did, silently, which is the failure
+mode that document exists to avoid. So the drain refuses to trade order for throughput. (This
+paragraph once gave a different reason — *the debt settles before the copy is trapped* — and it
+was wrong: the trap is synchronous, inside the return's own command, and no ordering of messages
+ever sequenced it. The scenario it worried about is real and is handled where it can be — every
+promotion re-asks the live balance, and the debt handler releases a copy trapped in the window.) A failing message blocks the head of its queue: the
 failure is recorded on the row (`Attempts`, `Error`), the run stops, and the next run takes the
 same head again. After five attempts the message is marked dead (`DeadOn`) and skipped, and the
 queue moves again. A dead letter stays in the table because it is an operator's problem now, and a

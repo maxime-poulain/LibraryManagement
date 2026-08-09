@@ -43,7 +43,7 @@ Copy
 * `EditionId` never changes except by an explicit correction, and never becomes null.
 * `Barcode` and `Shelfmark` are never blank.
 * `Withdrawn` is terminal.
-* A copy in repair remembers the status it returns to, and that status is never `InRepair`.
+* A copy in repair — or lost — remembers the status it returns to, and that status is never `InRepair`.
 
 **`Status` and `Condition` are two axes, not one.** A worn copy is perfectly lendable and most of a
 public library's stock is worn; a copy in pristine condition may be reference-only because it is the
@@ -121,6 +121,16 @@ A single boolean would not do. There are two states a repair can return to today
 — a future *on display* or *reserved for a reading room* would be a third — so the field records the
 status rather than a flag standing in for one.
 
+**The loss shares the memory, and it took an audit to notice it did not.** A loss is the same exit
+from service by another door, and the naive model broke identically there: `DeclareLost` erased
+`ReturnsTo`, `Find` defaulted to the lending stock, and the library's only copy of something —
+reference-only precisely because it is the only one — came back lendable unless whoever found it
+remembered to say otherwise. So the loss records the status it leaves (a copy lost from repair
+keeps the repair's own destination), and `Find` consumes the memory with no destination parameter
+at all: the finder who judges the copy belongs elsewhere corrects that after the find, with the
+ordinary restriction and release moments, never through a default whose quiet answer is the
+lending stock.
+
 ## 6. Lendability is the one question Circulation asks
 
 The context map makes Holdings the supplier and Circulation the customer, and the contract is one
@@ -147,6 +157,13 @@ question, and so will the staff interface.
 **A copy that does not exist is not a "no".** It is a different answer, and the port says so — a
 barcode that matches nothing means a mis-scan or a copy never accessioned, and a librarian handles
 those two differently from a copy that is simply in repair.
+
+The port grew a second question when Circulation's queues learned to die: **can this edition still
+serve anyone** — is any copy in service, or expected back from repair? Repair answers yes, because
+a queue waiting on a rebinding waits on something real; withdrawn, lost and reference-only answer
+no, because none of them is a *next available copy* a claim could be a claim on. What the asker
+does with a no — end its promises, out loud — is the asker's own rule, which is what keeps the
+answer a fact about shelves and not an opinion about queues.
 
 ## 7. The moments
 
@@ -210,11 +227,13 @@ Two ways in, and this is the one place the context reacts to another.
 **`Lost` is not terminal, and that is the difference from `Withdrawn`.** Copies turn up — reshelved
 two rows down, returned in a book drop months later, found behind a radiator during a récolement.
 Without `Find`, the only route out of `Lost` is someone editing the database, which is how a model
-teaches its users to distrust it.
+teaches its users to distrust it. A found copy returns to the status it was lost from — the memory
+§5 extends to the loss — so nobody at the finding end decides anything unless they mean to.
 
 Note the symmetry with Circulation, and the reason the words differ. A *loan* that is `DeclaredLost`
-is terminal: the library decided to stop waiting, and finding the copy afterwards does not reopen the
-loan — it starts a return. A *copy* that is `Lost` is a state of the world, and the world changes.
+is terminal: the library decided to stop waiting, and finding the copy afterwards does not reopen
+the loan — the object re-enters service through `Find`, and what its reappearance costs or refunds
+is settled by the contexts that price things, never by reviving a loan. A *copy* that is `Lost` is a state of the world, and the world changes.
 One is a decision, the other an observation, which is why they are two words.
 
 ## 8. Stocktake, deliberately deferred
@@ -244,12 +263,13 @@ Circulation needs from it is a question, not an announcement (§6).
 | `CopyReshelved(…, previousShelfmark, newShelfmark)` | read model |
 | `CopyConditionRecorded(…, previousCondition, newCondition)` | read model |
 | `CopyRelabelled(…, previousBarcode, newBarcode)` | read model |
-| `CopySentForRepair`, `CopyReturnedFromRepair` | read model |
-| `CopyRestrictedToReference`, `CopyReleasedForLending` | read model |
-| `CopyDeclaredLost`, `CopyFound` | read model |
-| `CopyWithdrawn` | read model |
+| `CopySentForRepair`, `CopyReturnedFromRepair` | read model; the first leaves as `CopyLeftService` |
+| `CopyRestrictedToReference`, `CopyReleasedForLending` | read model; the first leaves as `CopyLeftService` |
+| `CopyDeclaredLost`, `CopyFound` | read model; they leave as `CopyLeftService` and `CopyRecovered` |
+| `CopyWithdrawn` | read model; leaves as `CopyLeftService` |
 
-Every one of them feeds a projection and nothing else, today. That is not a reason to withhold them:
+Four departures flatten into one contract that names no status, and the find into its own. The
+rest feed a projection and nothing else, today. That is not a reason to withhold them:
 the stock ledger a librarian consults — how many copies of this edition, where, in what state — is a
 read model fed by exactly this stream, and an event not published when it happened cannot be
 recovered afterwards.
@@ -262,6 +282,7 @@ the old one, the same shape as a corrected preferred name in Catalog.
 | Contract | From | Effect |
 |---|---|---|
 | `CopyReportedLost` | Circulation | The copy becomes `Lost` |
+| `CopyReturned` | Circulation | A copy held as `Lost` is found — the record made to agree with the shelf. Every other status notes nothing |
 
 **What arrives is the contract, never the domain event.** Circulation raises `LoanDeclaredLost`
 internally; what crosses the boundary is `CopyReportedLost`, a record of primitives in Circulation's
@@ -276,9 +297,17 @@ by `EventId`. Marking a copy lost twice is marking it lost once, so idempotence 
 the subscriber does not write, it dispatches this module's own `DeclareCopyLostCommand`, so the
 change lands in this module's transaction rather than in the drain's ([outbox.md](outbox.md) §9).
 
-**A return changes nothing in Holdings.** When a returned copy is set aside for the first hold, it is
-the *hold* that records the trapped copy, in Circulation. Holdings would be recording a circulation
-fact about a physical object, which is the boundary error this context exists to avoid.
+**A return changes almost nothing in Holdings, and the almost took an audit to find.** When a
+returned copy is set aside for the first hold, it is the *hold* that records the trapped copy, in
+Circulation — recording who has a copy here would be the boundary error this context exists to
+avoid, and that half of the old sentence stands. What it missed is the copy this module holds as
+`Lost` while a member is handing it back: declared lost at a stocktake's word or a desk's, then
+returned as if nothing had happened, it stayed lost until a checkout attempt tripped over the
+contradiction — a record saying *unaccounted for* about an object in hand. So Circulation now
+announces every return as `CopyReturned`, carrying the copy and nothing else, and this module
+finds the lost ones. Almost every delivery notes nothing, which is the price of announcing rather
+than telling: the publisher cannot know which returns matter without knowing this module's
+statuses, the exact knowledge the boundary withholds.
 
 ## 10. Consequences and open questions
 

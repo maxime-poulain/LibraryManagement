@@ -69,4 +69,14 @@ public sealed class Hold
     }
 
     internal void NoteExpiryWarned() => ExpiryWarningSent = true;
+
+    internal void Release()
+    {
+        Status = HoldStatus.Queued;
+        TrappedCopyId = null;
+        PickupDeadline = null;
+
+        // The next copy set aside for this claim is a fresh appointment, warned about afresh.
+        ExpiryWarningSent = false;
+    }
 }

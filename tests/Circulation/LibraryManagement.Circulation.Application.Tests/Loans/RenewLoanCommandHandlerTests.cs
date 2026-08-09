@@ -15,10 +15,11 @@ public sealed class RenewLoanCommandHandlerTests
 
     private readonly InMemoryLoanRepository _loans = new();
     private readonly InMemoryHoldQueueRepository _queues = new();
+    private readonly StubRegistry _members = new();
     private readonly StubBalances _balances = new();
 
     private ValueTask<Result> Handle(Guid loanId)
-        => new RenewLoanCommandHandler(_loans, _queues, _balances, CirculationPolicy.Current)
+        => new RenewLoanCommandHandler(_loans, _queues, _members, _balances, CirculationPolicy.Current)
             .Handle(new RenewLoanCommand(loanId), Token);
 
     private Loan AnActiveLoan(out Guid edition)
@@ -35,11 +36,35 @@ public sealed class RenewLoanCommandHandlerTests
             CirculationPolicy.Current);
 
         _loans.With(loan);
+        _members.Entitled(loan.BorrowerId.Value);
         return loan;
     }
 
     private static List<ErrorCode> CodesOf(Result outcome)
         => outcome.Match(() => [], errors => errors.Select(error => error.ErrorCode).ToList());
+
+    [Fact]
+    public async Task Handle_ALapsedMembership_IsRefused()
+    {
+        // A renewal is a fresh loan period, not the tail of an old one: without this gate an
+        // expired membership could no longer borrow but could renew indefinitely.
+        var loan = AnActiveLoan(out _);
+        _members.Lapsed(loan.BorrowerId.Value);
+
+        CodesOf(await Handle(loan.Id.Value))
+            .ShouldContain(CirculationErrorCodes.MembershipLapsed);
+        loan.RenewalCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Handle_ABorrowerTheRegistryDoesNotKnow_IsRefused()
+    {
+        var loan = AnActiveLoan(out _);
+        _members.Forget(loan.BorrowerId.Value);
+
+        CodesOf(await Handle(loan.Id.Value))
+            .ShouldContain(CirculationErrorCodes.NoSuchMember);
+    }
 
     [Fact]
     public async Task Handle_MovesTheDueDateForward()

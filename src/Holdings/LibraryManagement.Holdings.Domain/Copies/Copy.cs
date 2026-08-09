@@ -56,14 +56,18 @@ public sealed class Copy : AggregateRoot<CopyId>
     public CopyStatus Status { get; private set; }
 
     /// <summary>
-    /// Gets the status a repair will end in, or <see langword="null"/> when the copy is not in
-    /// repair.
+    /// Gets the status a repair — or a loss — will end in, or <see langword="null"/> when the
+    /// copy is in neither.
     /// </summary>
     /// <remarks>
-    /// The one field that exists purely to prevent a specific accident. A reference-only copy sent
-    /// for rebinding must come back reference-only; returning everything to
-    /// <see cref="CopyStatus.InService"/> would quietly release the library's only copy of something
-    /// into the lending stock, and nobody would notice until it left the building.
+    /// The one field that exists purely to prevent a specific accident, twice. A reference-only
+    /// copy sent for rebinding must come back reference-only; returning everything to
+    /// <see cref="CopyStatus.InService"/> would quietly release the library's only copy of
+    /// something into the lending stock, and nobody would notice until it left the building. A
+    /// loss is the same exit by another door — the 1908 volume mislaid behind a shelf and found
+    /// six weeks later must not rejoin the lending stock because whoever found it forgot to say
+    /// otherwise — so the loss remembers exactly as the repair does, and <see cref="Find"/>
+    /// consumes the memory exactly as <see cref="ReturnFromRepair"/> does.
     /// </remarks>
     public CopyStatus? ReturnsTo { get; private set; }
 
@@ -304,8 +308,16 @@ public sealed class Copy : AggregateRoot<CopyId>
             return Result.Success();
         }
 
+        // A copy lost from repair keeps the destination the repair had already recorded; every
+        // other departure records the status it leaves. Erasing the memory here was the original
+        // defect: a reference-only copy that vanished and turned up came back lendable, the exact
+        // accident ReturnsTo exists to prevent, through the one other door out of service.
+        if (Status != CopyStatus.InRepair)
+        {
+            ReturnsTo = Status;
+        }
+
         Status = CopyStatus.Lost;
-        ReturnsTo = null;
 
         AddDomainEvent(new CopyDeclaredLost(Id));
 
@@ -313,17 +325,25 @@ public sealed class Copy : AggregateRoot<CopyId>
     }
 
     /// <summary>
-    /// Records that a copy nobody could account for has turned up.
+    /// Records that a copy nobody could account for has turned up. It returns to the status it
+    /// was lost from — a decision nobody at the finding end has to remember to make.
     /// </summary>
-    /// <param name="referenceOnly">Whether it rejoins the reference collection rather than the lending stock.</param>
     /// <returns>Success, or the reason the copy could not be found.</returns>
     /// <remarks>
+    /// <para>
     /// This is what makes <see cref="CopyStatus.Lost"/> differ from <see cref="CopyStatus.Withdrawn"/>
     /// in kind rather than in degree. Copies turn up — reshelved two rows down, returned in a book
     /// drop months later — and a model whose only route out of a loss is someone editing the database
     /// teaches its users to distrust it.
+    /// </para>
+    /// <para>
+    /// No destination parameter, on purpose: the memory decides, and a finder who judges the copy
+    /// belongs elsewhere says so with the ordinary moments — <see cref="RestrictToReference"/>,
+    /// <see cref="ReleaseForLending"/> — as an explicit correction after the find, never through a
+    /// default whose quiet answer is the lending stock.
+    /// </para>
     /// </remarks>
-    public Result Find(bool referenceOnly = false)
+    public Result Find()
     {
         if (Status != CopyStatus.Lost)
         {
@@ -332,7 +352,11 @@ public sealed class Copy : AggregateRoot<CopyId>
                 $"A copy that is {Describe(Status)} was not lost, so it cannot be found.");
         }
 
-        Status = referenceOnly ? CopyStatus.ReferenceOnly : CopyStatus.InService;
+        // Never null while the status is Lost — DeclareLost always records a destination — and
+        // the fallback is the safe reading rather than a shrug, exactly as the repair's: a copy
+        // whose destination were somehow forgotten is better held back than released.
+        Status = ReturnsTo ?? CopyStatus.ReferenceOnly;
+        ReturnsTo = null;
 
         AddDomainEvent(new CopyFound(Id, Status));
 

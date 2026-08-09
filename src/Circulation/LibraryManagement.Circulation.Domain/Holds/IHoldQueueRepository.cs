@@ -70,4 +70,41 @@ public interface IHoldQueueRepository
     ValueTask<IReadOnlyList<HoldQueue>> WithHoldsForBorrowerAsync(
         BorrowerId borrowerId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Names every borrower currently holding a live claim, each once.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The borrowers, in no promised order.</returns>
+    /// <remarks>
+    /// The scheduled reconciliation's opening question: whose places might a debt forbid? It
+    /// answers with identifiers alone — the queues themselves are loaded per borrower by
+    /// <see cref="WithHoldsForBorrowerAsync"/> only for the few the balance actually blocks,
+    /// which on an ordinary day is nobody.
+    /// </remarks>
+    ValueTask<IReadOnlyList<BorrowerId>> BorrowersWithLiveHoldsAsync(
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the queue in which a copy is set aside for a claim, or <see langword="null"/> when
+    /// none is — the ordinary answer, since most copies are promised to nobody.
+    /// </summary>
+    /// <param name="copyId">The copy that just left service.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The queue, live holds included, or <see langword="null"/>.</returns>
+    ValueTask<HoldQueue?> TrappingCopyAsync(
+        CopyId copyId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets every queue currently holding a live claim.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The queues, with their claims.</returns>
+    /// <remarks>
+    /// The unfulfillability sweep's opening question. Queues whose last claim has left are empty
+    /// rows with nothing to cancel, and are not returned.
+    /// </remarks>
+    ValueTask<IReadOnlyList<HoldQueue>> WithLiveHoldsAsync(
+        CancellationToken cancellationToken = default);
 }

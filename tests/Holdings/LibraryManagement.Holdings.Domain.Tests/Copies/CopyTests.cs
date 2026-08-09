@@ -239,12 +239,28 @@ public sealed class CopyTests
     }
 
     [Fact]
-    public void Find_CanReturnACopyToTheReferenceCollection()
+    public void Find_ReturnsAReferenceOnlyCopy_ToTheReferenceCollection()
     {
+        // The loss remembers exactly as the repair does: the 1908 volume mislaid behind a shelf
+        // must not rejoin the lending stock because whoever found it forgot to say otherwise.
         var copy = ACopy(referenceOnly: true);
         copy.DeclareLost();
 
-        copy.Find(referenceOnly: true).HasErrors().ShouldBeFalse();
+        copy.Find().HasErrors().ShouldBeFalse();
+
+        copy.Status.ShouldBe(CopyStatus.ReferenceOnly);
+    }
+
+    [Fact]
+    public void Find_ReturnsACopyLostFromRepair_ToTheRepairsOwnDestination()
+    {
+        // Lost while in repair, the copy keeps the destination the repair had recorded — a
+        // reference-only volume that vanished at the binder's comes back reference-only.
+        var copy = ACopy(referenceOnly: true);
+        copy.SendForRepair();
+        copy.DeclareLost();
+
+        copy.Find().HasErrors().ShouldBeFalse();
 
         copy.Status.ShouldBe(CopyStatus.ReferenceOnly);
     }
@@ -268,14 +284,16 @@ public sealed class CopyTests
     }
 
     [Fact]
-    public void DeclareLost_ForgetsWhereARepairWasHeaded()
+    public void DeclareLost_KeepsWhereARepairWasHeaded()
     {
+        // This test once asserted the opposite — the loss forgot the repair's destination — and
+        // that forgetting was the defect: the memory exists to survive exactly this detour.
         var copy = ACopy(referenceOnly: true);
         copy.SendForRepair();
 
         copy.DeclareLost();
 
-        copy.ReturnsTo.ShouldBeNull();
+        copy.ReturnsTo.ShouldBe(CopyStatus.ReferenceOnly);
     }
 
     // --- Withdrawing, which is terminal -----------------------------------------------------------

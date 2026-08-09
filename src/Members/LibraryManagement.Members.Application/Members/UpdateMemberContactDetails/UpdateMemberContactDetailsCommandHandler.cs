@@ -30,11 +30,6 @@ public sealed class UpdateMemberContactDetailsCommandHandler(IMemberRepository m
         }
 
         return ContactDetails.Create(command.Email, command.Phone, command.PostalAddress)
-            .Bind(contact =>
-            {
-                member.UpdateContactDetails(contact);
-
-                return Result.Success();
-            });
+            .Bind(member.UpdateContactDetails);
     }
 }

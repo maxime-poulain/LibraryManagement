@@ -201,7 +201,7 @@ public sealed class MemberTests
     {
         var member = AMember().Settled();
 
-        member.ReplaceCard(member.CardNumber);
+        member.ReplaceCard(member.CardNumber!);
 
         member.DomainEvents.ShouldBeEmpty();
     }
@@ -284,4 +284,78 @@ public sealed class MemberTests
 
         member.DomainEvents.ShouldBeEmpty();
     }
+
+    // --- Erasure -----------------------------------------------------------------------------------
+
+    [Fact]
+    public void Erase_EmptiesTheRecord_AndKeepsWhatIdentifiesNobody()
+    {
+        var member = AMember(MemberCategory.Child, AGuardian()).Settled();
+        var membershipEnd = member.MembershipEnd;
+
+        member.Erase(Today).HasErrors().ShouldBeFalse();
+
+        member.Name.ShouldBeNull();
+        member.DateOfBirth.ShouldBeNull();
+        member.CardNumber.ShouldBeNull();
+        member.ContactDetails.ShouldBe(ContactDetails.None);
+        member.Guardian.ShouldBeNull();
+        member.ErasedOn.ShouldBe(Today);
+
+        // What identifies nobody stays: the identifier downstream contexts hold, the category and
+        // the membership span the statistics are argued from.
+        member.MembershipEnd.ShouldBe(membershipEnd);
+        member.Category.ShouldBe(MemberCategory.Child);
+        member.Event<MemberErased>().MemberId.ShouldBe(member.Id);
+    }
+
+    [Fact]
+    public void Erase_AChild_TakesTheGuardianWithIt()
+    {
+        // The invariant 'a child always has a guardian' protects reaching a minor who can still
+        // act; an erased member acts no more, and an invariant whose reason has ended ends with
+        // it — the Withdrawn pattern, on a person.
+        var member = AMember(MemberCategory.Child, AGuardian()).Settled();
+
+        member.Erase(Today).HasErrors().ShouldBeFalse();
+
+        member.Guardian.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Erase_Twice_IsErasingOnce()
+    {
+        var member = AMember().Settled();
+        member.Erase(Today);
+        member.ClearDomainEvents();
+
+        member.Erase(Today.AddDays(1)).HasErrors().ShouldBeFalse();
+
+        member.DomainEvents.ShouldBeEmpty();
+        member.ErasedOn.ShouldBe(Today);
+    }
+
+    [Fact]
+    public void AnErasedMember_ActsNoMore()
+    {
+        var member = AMember().Settled();
+        member.Erase(Today);
+
+        List<Result> refused =
+        [
+            member.Renew(Today),
+            member.ChangeCategory(MemberCategory.Student),
+            member.ReplaceCard(ACardNumber("20260000999")),
+            member.UpdateContactDetails(AContact()),
+            member.ChangeGuardian(AGuardian()),
+            member.Rename(AName()),
+        ];
+
+        foreach (var outcome in refused)
+        {
+            outcome.Match(() => [], errors => errors.Select(error => error.ErrorCode).ToList())
+                .ShouldContain(MembersErrorCodes.MemberErased);
+        }
+    }
+
 }

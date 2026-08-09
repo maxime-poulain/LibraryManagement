@@ -25,6 +25,11 @@ public sealed class MemberConfiguration : AggregateRootConfiguration<Member, Mem
 
         builder.ComplexProperty(member => member.Name, name =>
         {
+            // Optional as a whole since erasure arrived — the same presence bit the guardian
+            // carries, and for the same reason: the name's parts are values, and only a direct
+            // column can tell "no name any more" from a name it never heard about.
+            name.HasDiscriminator<bool>("Present").HasValue(true);
+
             name.Property(part => part.GivenName)
                 .HasColumnName("GivenName")
                 .HasMaxLength(MemberName.MaxLength)
@@ -36,7 +41,9 @@ public sealed class MemberConfiguration : AggregateRootConfiguration<Member, Mem
                 .IsRequired();
         });
 
-        builder.Property(member => member.DateOfBirth).IsRequired();
+        // Required at enrollment by the aggregate, nullable in the store because an erasure
+        // takes it: the column must be able to say the fact is gone.
+        builder.Property(member => member.DateOfBirth);
 
         // Stored as its name rather than its number: a category is read by a human when something
         // looks wrong, and 'Child' answers where '1' asks.
@@ -46,18 +53,21 @@ public sealed class MemberConfiguration : AggregateRootConfiguration<Member, Mem
             .IsRequired();
 
         builder.Property(member => member.CardNumber)
-            .HasConversion(cardNumber => cardNumber.Value, value => CardNumberOf(value))
-            .HasMaxLength(CardNumber.MaxLength)
-            .IsRequired();
+            .HasConversion(cardNumber => cardNumber!.Value, value => CardNumberOf(value))
+            .HasMaxLength(CardNumber.MaxLength);
 
         // Unique, and this index is what actually holds the rule. The handler asks first so the
         // refusal can name the number; a constraint violation cannot say which member already has
         // it, and this is what makes sure the answer stays true between the asking and the
-        // writing.
-        builder.HasIndex(member => member.CardNumber).IsUnique();
+        // writing. Filtered, because erasure retires a card to null and erased members are
+        // legion-in-waiting: an unfiltered unique index would allow exactly one of them.
+        builder.HasIndex(member => member.CardNumber)
+            .IsUnique()
+            .HasFilter("[CardNumber] IS NOT NULL");
 
         builder.Property(member => member.MembershipStart).IsRequired();
         builder.Property(member => member.MembershipEnd).IsRequired();
+        builder.Property(member => member.ErasedOn);
 
         builder.ComplexProperty(member => member.ContactDetails, contact =>
         {

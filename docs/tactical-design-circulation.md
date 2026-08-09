@@ -134,21 +134,30 @@ learns there is one.
 When a borrower incurs a debt, their queued holds are cancelled. Not suspended — removed. A borrower
 who pays an hour later does not get their place back.
 
-This produces an invariant stronger than the rule that creates it:
+The rule the queues live by follows, and it is stated as what it is:
 
-> **Nobody in a hold queue owes money.**
+> **A claim of a borrower who owes money is cancelled as soon as this context learns of it, and
+> never served in the meantime.**
 
-It is checkable at any instant, and it is what keeps a queue honest continuously rather than only at
-the moment someone reaches the front.
+A convergence, deliberately. This document once promoted it to an invariant — *nobody in a hold
+queue owes money, checkable at any instant* — and the strategic design's own §2 says why that could
+never be one: it ties a fact of this context to a fact of Charges, and an invariant spanning two
+contexts is not enforced, only hoped for. The cancellation is driven by an event, and between the
+fine and the drain's delivery the two facts genuinely disagree — which the boundary test blesses,
+since nobody is at the desk when a fine is assessed. What makes the convergence honest rather than
+hopeful is three nets, each covering a different failure:
 
-The cancellation is driven by an event from Charges, not by a synchronous call. Apply the boundary
-test: *can "this borrower owes money" and "their holds are gone" disagree for a few seconds without a
-librarian noticing?* Yes — nobody is at the desk when a fine is assessed. Eventual consistency is
-correct here.
-
-The check at trapping time is kept anyway, as a net over the window between the debt being incurred
-and Circulation reacting. It is one query, and it closes a gap that would otherwise put a copy on the
-hold shelf for someone who cannot collect it.
+* **At every promotion**, the queue skips borrowers the live balance blocks — skipped, never
+  removed, because the debt event may simply not have arrived yet. The one moment a stale queue
+  could do damage is the moment a copy is set aside, and that moment always re-asks.
+* **On the event's arrival**, the borrower's claims are cancelled — after the handler has confirmed
+  against the live balance that the debt still stands (§5): the event is the trigger, never the
+  truth.
+* **Daily**, the scheduled process sweeps the queues for owing borrowers whose cancellation never
+  arrived (§6). A message can die on the drain's floor after its five attempts, the crossing it
+  carried is announced only once, and a convergence with no reconciliation is a convergence that
+  can silently stop converging: the zombie claim would sit at the head of its queue, skipped at
+  every return, never told, occupying one of the borrower's five places forever.
 
 **Consequence worth recording:** with no threshold and irreversible cancellation, twenty cents of
 lateness costs a queue position waited for over months. That is the rule as decided. If staff are one
@@ -171,6 +180,7 @@ Loan
   DueDate
   RenewalCount
   ReturnedOn?
+  DeclaredLostOn? the day the library stopped waiting — by the clock, or by the borrower's report
   Status          Active | Returned | DeclaredLost
   RemindersSent   which of the scheduled reminders have gone out
 ```
@@ -234,6 +244,17 @@ can do that.
 The cost is one lock per edition. Two holds placed on the same popular title serialize. At library
 scale that is invisible: holds arrive a few per minute, not a few per millisecond.
 
+**A promise can be taken back, and a queue can outlive its edition — both are said out loud.**
+When a set-aside copy leaves service before its borrower comes — weeded, water-damaged into
+repair, declared lost off the hold shelf — Holdings announces the departure and the claim returns
+to the queue at the place its age gives it: the borrower did nothing and loses nothing but the
+trip, which the announcement spares them. And when an edition has no copy left in service or
+expected back from repair, the daily process ends every claim in its queue: a claim is a promise
+of the next available copy, and an edition with nothing left has no next to promise — left alone,
+such a queue survives its edition for years, each claim silently holding one of its borrower's
+five places. A queued claim has no other expiry: no lifetime attenuates it (§9), and only the
+debt, the borrower's own cancellation, or the edition's end can take it.
+
 **A hold that ends leaves the aggregate.** Fulfilled, expired or cancelled, its outcome is published
 as an event and kept by a history projection; the queue itself holds only what its invariants govern,
 and every invariant above concerns live holds. This is not only purity: the queue is loaded on every
@@ -248,7 +269,11 @@ history belongs, in a read model fed by the events.
 * Not on an edition the borrower already has on loan.
 * Not twice in the same queue.
 * Not while a copy is available on the shelf — that is a checkout, and allowing it would make the
-  queue meaningless.
+  queue meaningless. *Available* is defined, because it decides whether a member can be stranded
+  between the two refusals: a copy is on the shelf when Holdings would lend it **and** no active
+  loan carries it **and** no claim has it set aside. The last clause is what keeps the
+  single-copy edition honest — the moment its copy is trapped for the first claim, the next
+  member may queue behind them rather than being told to fetch a copy that is spoken for.
 * Not while the borrower owes money.
 * Not while at the cap of five.
 
@@ -280,11 +305,15 @@ Step 5 is what stops a walk-in from being handed a copy someone is waiting for.
 ### Renewal
 
 1. The loan is still active.
-2. `RenewalCount` is below `MaxRenewals`.
-3. The borrower is in good standing.
-4. **Nobody is queued on the edition.**
+2. The borrower is entitled to borrow (query to Members: enrolled, and the membership current).
+   A renewal is a fresh loan period, not the tail of an old one, so it opens with the question
+   every granting act opens with — added when an audit found the asymmetry nothing had decided:
+   an expired membership could no longer borrow, and could renew indefinitely.
+3. `RenewalCount` is below `MaxRenewals`.
+4. The borrower is in good standing.
+5. **Nobody is queued on the edition.**
 
-The fourth is what makes a queue move. Without it a borrower renews indefinitely and the five people
+The fifth is what makes a queue move. Without it a borrower renews indefinitely and the five people
 behind them never get anything: the queue exists but does not turn, and a hold stops being a promise.
 It reads *queued* deliberately, where this document first said *empty*: a claim already awaiting
 pickup has its copy on the hold shelf, and refusing a renewal for its sake would serve nobody the
@@ -310,7 +339,11 @@ the second, a single idle hold on a well-stocked edition would block every renew
 The moment that justifies holds and loans living in one context. In a single transaction:
 
 1. The `Loan` closes. Lateness is computed and recorded — in open days, against the calendar as
-   it stands (§1).
+   it stands (§1) — and, when the librarian holding the object says so, the return also records
+   that the copy came back spoiled. An input, never a derivation: attributing damage to a loan is
+   a desk judgement, and making it at the return is what settles whose loan it was by
+   construction. The observation leaves as its own fact for whoever prices damage; what the
+   object becomes — worn, rebound, weeded — stays Holdings' record, entered by its own moments.
 2. The edition's `HoldQueue` is asked whether the copy is wanted.
 3. If it is, the oldest queued hold whose borrower is **in good standing** is trapped: the hold
    becomes `AwaitingPickup`, `TrappedCopyId` is set, `PickupDeadline` starts — the pickup period
@@ -346,10 +379,36 @@ punished for having reserved at all.
 
 No penalty attaches, for the same reasons §9 declines to punish the no-show.
 
+### Declaring a loss
+
+The member says it at the desk — the book is gone, and often in the same breath, that they will
+pay for it. This moment is the confession's door, and without one the fact has no entry but the
+clock: the loan would run to its thirtieth day of lateness while reminders chase a copy everyone
+at the counter already knows is lost, and the money offered there could not be taken.
+
+1. The loan is declared lost — the same terminal end §6's process reaches, by a decision at the
+   desk rather than by the calendar, and `DeclaredLostOn` records the day, which is the day the
+   lateness stops accruing anything.
+2. Everything downstream follows from the one fact, unchanged: Holdings learns the copy is
+   unaccounted for, Charges prices the replacement.
+
+Always accepted, like the return: no standing, no cap, no queue — every gate this context keeps
+guards what a borrower may *take*, and a loss reported is something given back, if only as a
+fact. Refusing a confession would teach members to stop making them. A loan the process already
+declared answers success and keeps its first date — whichever of the desk and the clock arrives
+second is a redelivery, not a second decision. A returned loan is refused: there is nothing left
+to stop waiting for.
+
 ### A debt is incurred
 
 Circulation reacts to `MemberBalanceChanged` from Charges, when the balance it carries crosses
-`BlockingDebt` from below — a movement that stays on one side of the line does nothing:
+`BlockingDebt` from below — a movement that stays on one side of the line does nothing. The pair
+the event carries decides whether to wake; the live balance, read from the port before anything
+goes, decides whether to act: between the fine and the delivery lies the drain — a minute
+ordinarily, longer behind a blocked head — and the most ordinary act at a desk is paying. A
+borrower who cleared their debt inside that window keeps their places, because the cancellation is
+irreversible by design and a message about a balance that no longer exists is not grounds for it.
+When the debt still stands:
 
 1. Every queued hold of that borrower is cancelled.
 2. Every hold of theirs awaiting pickup is cancelled, and its trapped copy is released back to the
@@ -359,10 +418,14 @@ Circulation reacts to `MemberBalanceChanged` from Charges, when the balance it c
 Step 2 matters: a trapped copy for a newly blocked borrower is precisely the waste the rule exists to
 prevent, and leaving it on the shelf until its deadline would reintroduce it.
 
-**Ordering.** A late return creates a debt *and* may trap a copy for the same borrower in another
-queue. The debt must be settled first, or the system traps a copy and immediately releases it. In
-practice this falls out of the event order — the return closes, the fine is assessed, the debt event
-arrives — but it is worth stating, because reversing it produces a defect that looks random.
+**Ordering, corrected.** This section once claimed the event order kept a copy from being trapped
+for a borrower whose fine was in flight — and no ordering of messages could: the trap is
+synchronous, inside the return's own command, while the fine crosses two drains. The window is
+real and is closed where it can be — every promotion asks the live balance, and the debt handler's
+second step releases a copy trapped inside it, at the cost of a trap-and-release nobody sees. What
+the drain's strict order genuinely protects is `MemberBalanceChanged` itself: the event carries
+the amount before and after, and two movements delivered out of order would make this context
+compute a crossing that never happened.
 
 ## 6. The scheduled process
 
@@ -379,7 +442,18 @@ job but five queries, each idempotent — running it twice must change nothing a
 | Loans overdue by at least 1, 7 or 14 days, that reminder not sent | `LoanBecameOverdue` |
 | Loans overdue by 30 days | Declare lost: loan terminal, copy `Lost` in Holdings, `ReplacementCharge` in Charges |
 | Trapped holds expiring today or tomorrow, not yet warned | `HoldExpiringSoon` |
-| Trapped holds past their deadline | Expire, release the copy, promote the next in queue |
+| Trapped holds past their deadline | Expire, release the copy, promote the next **in good standing** — the same net every promotion casts |
+| Borrowers owing money who still hold live claims | Cancel them — the reconciliation behind the debt event (§3) |
+| Queues whose edition has nothing in service or expected back | Cancel every claim, each out loud — the promise can no longer be kept (§4) |
+
+The debt row is a reconciliation and never the first line of defence: the debt event does that
+work the day it arrives, and on any day every event arrived — which is every ordinary day — the
+sweep finds nothing. It runs before the two hold rows, so a claim a lost message left standing is
+neither warned about nor expired as if it were honest.
+
+The third row is the second road to its fact, not the only one: a borrower who reports the loss
+at the desk does not wait thirty days for the system to agree (§5), and the run declares only
+what nobody confessed.
 
 **Every stage reads as *at least*, not exactly.** A run that did not happen for three days finds a
 loan nine days late with neither the first nor the seventh stage announced. It marks both spent and
@@ -433,6 +507,10 @@ moves.
 | `HoldExpired` | Notifications |
 | `HoldCancelled` | read model, Notifications |
 | `HoldCancelledForDebt` | Notifications |
+| `HoldPickupWithdrawn` | Notifications, read model |
+| `HoldCancelledUnfulfillable` | Notifications, read model |
+| `LoanRecovered(…, daysLate)` | Charges, read model |
+| `CopyReturnedDamaged` | Charges, read model |
 
 This table once listed `LoanRenewed` beside `RenewalGranted`. They were one fact under two names —
 a renewal succeeded and the due date moved — and a reader had no way to tell which to subscribe to.
@@ -480,9 +558,30 @@ does the work a refusal notice would only ever have done too late.
 
 **Consumed.**
 
-| Event | From | Effect |
+| Contract | From | Effect |
 |---|---|---|
-| `MemberBalanceChanged(…, previousBalance, currentBalance)` | Charges | Cancel the borrower's holds, when the pair crosses `BlockingDebt` upwards. A movement that crosses nothing, and a return to good standing, both change nothing in the model — the borrower is simply able to act again |
+| `MemberBalanceChanged(…, previousBalance, currentBalance)` | Charges | Cancel the borrower's holds, when the pair crosses `BlockingDebt` upwards and the live balance confirms it. A movement that crosses nothing, and a return to good standing, both change nothing in the model — the borrower is simply able to act again |
+| `CopyLeftService` | Holdings | Release the promise, if a claim had the copy set aside: the claim returns to the head of its queue and the withdrawal of the pickup is announced (§4) |
+| `CopyRecovered` | Holdings | Settle the written-off loan the copy concerns: the lateness frozen at `DeclaredLostOn` is announced at last, through the same contract an ordinary return uses |
+
+The column says *contract* for the reason Charges' own table gives: what crosses is a record of
+primitives in the publisher's published language, and the domain events behind them are types this
+context may not name.
+
+`LoanRecovered` is what closes the arithmetic the write-off left open. Without it, a copy brought
+back on day forty-five cost less than one brought back on day twenty-nine — the replacement charge
+cancelled by the find, the fine never assessed because the loan ended without a return. The
+lateness it announces froze the day the library stopped waiting: a recovered loan owes exactly
+what a return on the write-off day would have owed, and the years behind a radiator are nobody's
+fine. The loan itself stays `DeclaredLost` — the statistics that count completed loans gain
+nothing from a resurfacing.
+
+A third flattening leaves this context on every return: `CopyReturned`, carrying the copy and
+nothing else, for whoever keeps the stock — an object over the desk cannot be unaccounted for,
+and Holdings must be able to agree with the shelf without a human remembering to tell it. Almost
+every delivery is a no-op on the reader's side, the price `MemberBalanceChanged` already pays in
+the other cycle, for the same reason: deciding here which returns matter would mean knowing
+another module's statuses.
 
 ## 8. Notifications
 
@@ -518,6 +617,15 @@ expiry is published and the history projection keeps it, so the day a librarian 
 the count is already there, measured rather than guessed.
 
 This is a rule to write when someone asks for it.
+
+**A queued claim has no lifetime.** Some systems expire a hold not served within six months or a
+year, to keep the cap's places moving. Decided against, by the product owner: the patient reader
+of a much-demanded title is exactly who a queue exists to serve, and their patience is not a fault
+to correct. What actually strands a claim forever is an edition that can no longer serve it, and
+that is handled where the cause is — the unfulfillability sweep (§6) ends the whole queue, out
+loud, the day nothing is left to promise. The trigger to revisit: queues on *living* editions
+turning so slowly that places sit occupied for a year — measurable from the history projection,
+like the no-show, before any rule is written.
 
 ## 10. Consequences and open questions
 
@@ -623,6 +731,16 @@ the fines — and building it settled four things the decision alone had not:
 * **The pickup window slides and is not recounted** in open days, where the fine is. The asymmetry
   is argued in §1, and it fell out of asking what each number is *for*: the fine bills per day, the
   window only promises a last day the member can actually use.
+
+**What the recovered copy and the dying queue added.** The map's second cycle — Holdings
+announcing, this context deciding — arrived with three lessons worth keeping. The recovery's
+arithmetic needed a date nobody had thought to store: `DeclaredLostOn`, recorded by both roads to
+the write-off, because the fine a resurfacing settles froze the day the library stopped waiting.
+The released promise needed no new position rule: a claim keeps `PlacedOn`, so releasing it puts
+it back at the head by construction — the ordering invariant did the work. And the unfulfillable
+queue needed the port to answer about the future, not the present: *lendable now* counts a copy
+in repair as no, and a queue waiting on a rebinding waits on something real, so the port grew
+*expected to serve* rather than this context growing an opinion about repair.
 
 Open:
 

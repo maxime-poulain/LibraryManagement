@@ -74,6 +74,14 @@ internal sealed class InMemoryLoanRepository : ILoanRepository
             .Where(loan => loan.Status == LoanStatus.Active && loan.DueDate < today)
             .ToList());
 
+    public ValueTask<Loan?> MostRecentlyDeclaredLostForCopyAsync(
+        CopyId copyId,
+        CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(_loans.Values
+            .Where(loan => loan.CopyId == copyId && loan.Status == LoanStatus.DeclaredLost)
+            .OrderByDescending(loan => loan.CheckedOutOn)
+            .FirstOrDefault());
+
     public void Add(Loan loan) => _loans[loan.Id] = loan;
 }
 
@@ -120,6 +128,26 @@ internal sealed class InMemoryHoldQueueRepository : IHoldQueueRepository
             .Where(queue => queue.Holds.Any(hold => hold.BorrowerId == borrowerId))
             .ToList());
 
+    public ValueTask<IReadOnlyList<BorrowerId>> BorrowersWithLiveHoldsAsync(
+        CancellationToken cancellationToken = default)
+        => ValueTask.FromResult<IReadOnlyList<BorrowerId>>(_queues.Values
+            .SelectMany(queue => queue.Holds)
+            .Select(hold => hold.BorrowerId)
+            .Distinct()
+            .ToList());
+
+    public ValueTask<HoldQueue?> TrappingCopyAsync(
+        CopyId copyId,
+        CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(_queues.Values
+            .FirstOrDefault(queue => queue.Holds.Any(hold => copyId.Equals(hold.TrappedCopyId))));
+
+    public ValueTask<IReadOnlyList<HoldQueue>> WithLiveHoldsAsync(
+        CancellationToken cancellationToken = default)
+        => ValueTask.FromResult<IReadOnlyList<HoldQueue>>(_queues.Values
+            .Where(queue => queue.Holds.Any())
+            .ToList());
+
     public void Add(HoldQueue queue) => _queues[queue.Id] = queue;
 }
 
@@ -129,6 +157,7 @@ internal sealed class StubShelf : ICopyLendability
 {
     private readonly Dictionary<Guid, LendabilityAnswer> _copies = [];
     private readonly Dictionary<Guid, List<Guid>> _lendableByEdition = [];
+    private readonly HashSet<Guid> _unfulfillable = [];
 
     public StubShelf Lendable(Guid copyId, Guid editionId)
     {
@@ -144,12 +173,23 @@ internal sealed class StubShelf : ICopyLendability
         return this;
     }
 
+    public StubShelf NothingLeftToServe(Guid editionId)
+    {
+        _unfulfillable.Add(editionId);
+        return this;
+    }
+
     public ValueTask<LendabilityAnswer> OfAsync(
         Guid copyId,
         CancellationToken cancellationToken = default)
         => ValueTask.FromResult(_copies.GetValueOrDefault(
             copyId,
             new LendabilityAnswer(Lendability.NoSuchCopy, null)));
+
+    public ValueTask<bool> AnyCopyExpectedToServeAsync(
+        Guid editionId,
+        CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(!_unfulfillable.Contains(editionId));
 
     public ValueTask<IReadOnlyList<Guid>> LendableCopiesOfAsync(
         Guid editionId,
@@ -177,7 +217,15 @@ internal sealed class StubRegistry : IMemberEntitlement
 
     public StubRegistry Lapsed(Guid memberId)
     {
+        _entitled.Remove(memberId);
         _lapsed.Add(memberId);
+        return this;
+    }
+
+    public StubRegistry Forget(Guid memberId)
+    {
+        _entitled.Remove(memberId);
+        _lapsed.Remove(memberId);
         return this;
     }
 

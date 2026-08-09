@@ -38,5 +38,32 @@ public sealed class MemberAccountConfiguration : AggregateRootConfiguration<Memb
         // the field rather than the property it could never add to.
         builder.Navigation(account => account.Charges)
             .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+        // The redelivery memory: identifiers, not money, kept apart from the live charges the desk
+        // empties. A table of its own so the composite key can say the whole rule — one memory per
+        // account, loan and kind.
+        builder.OwnsMany(account => account.PricedLoans, priced =>
+        {
+            priced.ToTable("PricedLoan");
+            priced.WithOwner().HasForeignKey(AccountForeignKey);
+
+            priced.Property(entry => entry.LoanId)
+                .HasConversion(id => id.Value, value => LoanId.Create(value))
+                // The value comes from the domain, never from the engine — the owned-key rule the
+                // reminder table established: a convention-generated key marks a later addition
+                // Modified, and a row that is nothing but its key then writes no statement at all.
+                .ValueGeneratedNever()
+                .IsRequired();
+
+            priced.Property(entry => entry.Kind)
+                .HasMaxLength(32)
+                .ValueGeneratedNever()
+                .IsRequired();
+
+            priced.HasKey(AccountForeignKey, nameof(PricedLoan.LoanId), nameof(PricedLoan.Kind));
+        });
+
+        builder.Navigation(account => account.PricedLoans)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }

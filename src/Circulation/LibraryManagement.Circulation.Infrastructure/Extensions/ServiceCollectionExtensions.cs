@@ -76,6 +76,14 @@ public static class ServiceCollectionExtensions
             IIntegrationEventSubscriber<Charges.PublishedLanguage.MemberBalanceChanged>,
             IntegrationEvents.CancelHoldsWhenDebtBegins>();
 
+        services.AddScoped<
+            IIntegrationEventSubscriber<Holdings.PublishedLanguage.CopyLeftService>,
+            IntegrationEvents.ReleasePromiseOnCopyLeftService>();
+
+        services.AddScoped<
+            IIntegrationEventSubscriber<Holdings.PublishedLanguage.CopyRecovered>,
+            IntegrationEvents.RecordRecoveryOnCopyRecovered>();
+
         // No JSON converters: this module's events carry identifiers, dates and enums, all of
         // which the shared serializer already speaks. No published-language adapter either — the
         // one port this module declares is implemented on the other side of its edge.

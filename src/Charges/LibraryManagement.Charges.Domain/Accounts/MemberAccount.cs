@@ -35,6 +35,7 @@ namespace LibraryManagement.Charges.Domain.Accounts;
 public sealed class MemberAccount : AggregateRoot<MemberId>
 {
     private readonly List<Charge> _charges = [];
+    private readonly List<PricedLoan> _pricedLoans = [];
 
     private MemberAccount(MemberId id) : base(id)
     {
@@ -47,6 +48,16 @@ public sealed class MemberAccount : AggregateRoot<MemberId>
 
     /// <summary>The charges still outstanding, oldest first is not guaranteed — see the allocation.</summary>
     public IReadOnlyList<Charge> Charges => _charges.AsReadOnly();
+
+    /// <summary>The loans this account has priced, per kind — the redelivery memory.</summary>
+    /// <remarks>
+    /// Kept apart from the live charges on purpose: a charge that ends leaves the account, and a
+    /// memory read off the outstanding charges expires exactly when a redelivery would bill a
+    /// settled member again. It grows with the loans a member was ever charged for — identifiers,
+    /// not money — which is the one growth the outstanding-only rule tolerates, because the
+    /// alternative is charging people twice.
+    /// </remarks>
+    public IReadOnlyList<PricedLoan> PricedLoans => _pricedLoans.AsReadOnly();
 
     /// <summary>What the member owes, every outstanding charge netted.</summary>
     public Money Balance => _charges.Aggregate(Money.Zero, (running, charge) => Money.Add(running, charge.Outstanding));
@@ -101,10 +112,12 @@ public sealed class MemberAccount : AggregateRoot<MemberId>
         ArgumentNullException.ThrowIfNull(policy);
         ArgumentOutOfRangeException.ThrowIfNegative(daysLate);
 
-        if (AlreadyPriced(loanId, isReplacement: false))
+        if (AlreadyPriced(loanId, PricedLoan.FineKind))
         {
             // Delivery across a module boundary is at-least-once, so this is the redelivery guard —
-            // and it is the aggregate's own memory rather than a table of seen event identifiers.
+            // the aggregate's own memory rather than a table of seen event identifiers, and a
+            // memory that outlives the charge: the live charges empty at the desk, precisely when
+            // a replay would bill a settled member again.
             return Result.Success();
         }
 
@@ -112,11 +125,13 @@ public sealed class MemberAccount : AggregateRoot<MemberId>
 
         if (!amount.IsPositive)
         {
+            // No memory either: a replayed zero recomputes to zero, and nothing needs guarding.
             return Result.Success();
         }
 
         var was = Balance;
         _charges.Add(OverdueFine.For(chargeId, amount, loanId, copyId, on, daysLate));
+        _pricedLoans.Add(new PricedLoan(loanId, PricedLoan.FineKind));
 
         AddDomainEvent(new OverdueFineAssessed(Id, chargeId, loanId, amount, daysLate));
         AnnounceBalance(was);
@@ -146,7 +161,7 @@ public sealed class MemberAccount : AggregateRoot<MemberId>
         ArgumentNullException.ThrowIfNull(copyId);
         ArgumentNullException.ThrowIfNull(policy);
 
-        if (AlreadyPriced(loanId, isReplacement: true))
+        if (AlreadyPriced(loanId, PricedLoan.ReplacementKind))
         {
             return Result.Success();
         }
@@ -154,8 +169,52 @@ public sealed class MemberAccount : AggregateRoot<MemberId>
         var was = Balance;
         var amount = policy.ReplacementCost;
         _charges.Add(ReplacementCharge.For(chargeId, amount, loanId, copyId, on));
+        _pricedLoans.Add(new PricedLoan(loanId, PricedLoan.ReplacementKind));
 
         AddDomainEvent(new ReplacementChargeRaised(Id, chargeId, loanId, amount));
+        AnnounceBalance(was);
+
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Records what a copy returned damaged costs.
+    /// </summary>
+    /// <param name="chargeId">The charge's identity.</param>
+    /// <param name="loanId">The loan whose return carried the observation.</param>
+    /// <param name="copyId">The copy that came back spoiled.</param>
+    /// <param name="on">The day the return was recorded.</param>
+    /// <param name="policy">The tariff.</param>
+    /// <returns>Success.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when any reference argument is null.</exception>
+    /// <remarks>
+    /// Cumulable with the fine the same return may have earned: two kinds, two charges, one loan —
+    /// the lateness and the spoiling are different wrongs, and merging them would make the waiver
+    /// of one the waiver of both.
+    /// </remarks>
+    public Result RaiseDamageCharge(
+        ChargeId chargeId,
+        LoanId loanId,
+        CopyId copyId,
+        DateOnly on,
+        ChargesPolicy policy)
+    {
+        ArgumentNullException.ThrowIfNull(chargeId);
+        ArgumentNullException.ThrowIfNull(loanId);
+        ArgumentNullException.ThrowIfNull(copyId);
+        ArgumentNullException.ThrowIfNull(policy);
+
+        if (AlreadyPriced(loanId, PricedLoan.DamageKind))
+        {
+            return Result.Success();
+        }
+
+        var was = Balance;
+        var amount = policy.DamageCost;
+        _charges.Add(DamageCharge.For(chargeId, amount, loanId, copyId, on));
+        _pricedLoans.Add(new PricedLoan(loanId, PricedLoan.DamageKind));
+
+        AddDomainEvent(new DamageChargeRaised(Id, chargeId, loanId, amount));
         AnnounceBalance(was);
 
         return Result.Success();
@@ -319,6 +378,6 @@ public sealed class MemberAccount : AggregateRoot<MemberId>
         }
     }
 
-    private bool AlreadyPriced(LoanId loanId, bool isReplacement) => _charges.Exists(
-        charge => charge.LoanId == loanId && charge is ReplacementCharge == isReplacement);
+    private bool AlreadyPriced(LoanId loanId, string kind)
+        => _pricedLoans.Exists(priced => priced.LoanId == loanId && priced.Kind == kind);
 }

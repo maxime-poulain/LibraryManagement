@@ -181,6 +181,31 @@ public sealed class LoanTests
     }
 
     [Fact]
+    public void Return_ObservedDamaged_SaysSoBesideTheReturn()
+    {
+        // A fact beside the return, never a flag on it: the two have different audiences, and
+        // the attribution is settled by construction — the observation rides this loan's closing.
+        var loan = ALoan().Settled();
+
+        loan.Return(loan.DueDate, Policy, returnedDamaged: true).HasErrors().ShouldBeFalse();
+
+        loan.Event<LoanReturned>().DaysLate.ShouldBe(0);
+        var damaged = loan.Event<CopyReturnedDamaged>();
+        damaged.CopyId.ShouldBe(loan.CopyId);
+        damaged.BorrowerId.ShouldBe(loan.BorrowerId);
+    }
+
+    [Fact]
+    public void Return_Ordinary_SaysNothingAboutDamage()
+    {
+        var loan = ALoan().Settled();
+
+        loan.Return(loan.DueDate, Policy);
+
+        loan.DomainEvents.OfType<CopyReturnedDamaged>().ShouldBeEmpty();
+    }
+
+    [Fact]
     public void Return_Twice_IsRefused()
     {
         var loan = ALoan().Settled();
@@ -196,24 +221,67 @@ public sealed class LoanTests
     {
         var loan = ALoan().Settled();
 
-        loan.DeclareLost().HasErrors().ShouldBeFalse();
+        loan.DeclareLost(Today).HasErrors().ShouldBeFalse();
 
         loan.Status.ShouldBe(LoanStatus.DeclaredLost);
+        loan.DeclaredLostOn.ShouldBe(Today);
         var declared = loan.Event<LoanDeclaredLost>();
         declared.CopyId.ShouldBe(loan.CopyId);
         declared.BorrowerId.ShouldBe(loan.BorrowerId);
     }
 
     [Fact]
-    public void DeclareLost_Twice_IsDeclaringItOnce()
+    public void DeclareLost_Twice_IsDeclaringItOnce_AndKeepsTheFirstDate()
     {
+        // The run may beat the desk to it, or the desk the run: the second arrival is a
+        // redelivery, not a second decision, and the date that bounds the fine stays the first.
         var loan = ALoan().Settled();
-        loan.DeclareLost();
+        loan.DeclareLost(Today);
         loan.ClearDomainEvents();
 
-        loan.DeclareLost().HasErrors().ShouldBeFalse();
+        loan.DeclareLost(Today.AddDays(3)).HasErrors().ShouldBeFalse();
 
         loan.DomainEvents.ShouldBeEmpty();
+        loan.DeclaredLostOn.ShouldBe(Today);
+    }
+
+    [Fact]
+    public void RecordRecovery_AnnouncesTheLatenessFrozenAtTheWriteOff()
+    {
+        // Declared lost thirty days past due: the count froze there, and the years a book spends
+        // behind a radiator are nobody's fine. Without this, a copy back on day forty-five owed
+        // less than one back on day twenty-nine.
+        var loan = ALoan().Settled();
+        loan.DeclareLost(loan.DueDate.AddDays(30));
+        loan.ClearDomainEvents();
+
+        loan.RecordRecovery(Today.AddDays(200), Policy).HasErrors().ShouldBeFalse();
+
+        loan.Status.ShouldBe(LoanStatus.DeclaredLost);
+        loan.RecoveredOn.ShouldBe(Today.AddDays(200));
+        loan.Event<LoanRecovered>().DaysLate.ShouldBe(30);
+    }
+
+    [Fact]
+    public void RecordRecovery_Twice_AnnouncesOnce()
+    {
+        var loan = ALoan().Settled();
+        loan.DeclareLost(loan.DueDate.AddDays(30));
+        loan.RecordRecovery(Today.AddDays(60), Policy);
+        loan.ClearDomainEvents();
+
+        loan.RecordRecovery(Today.AddDays(90), Policy).HasErrors().ShouldBeFalse();
+
+        loan.DomainEvents.ShouldBeEmpty();
+        loan.RecoveredOn.ShouldBe(Today.AddDays(60));
+    }
+
+    [Fact]
+    public void RecordRecovery_ALoanNeverGivenUpOn_IsRefused()
+    {
+        var loan = ALoan().Settled();
+
+        loan.RecordRecovery(Today, Policy).HasErrors().ShouldBeTrue();
     }
 
     [Fact]
@@ -223,7 +291,7 @@ public sealed class LoanTests
         var loan = ALoan().Settled();
         loan.Return(Today, Policy);
 
-        loan.DeclareLost().HasErrors().ShouldBeTrue();
+        loan.DeclareLost(Today).HasErrors().ShouldBeTrue();
     }
 
     [Fact]
@@ -232,7 +300,7 @@ public sealed class LoanTests
         // Terminal: the copy turning up afterwards starts a return in Holdings' world — finding
         // the copy — never a reopening of the loan the library wrote off.
         var loan = ALoan().Settled();
-        loan.DeclareLost();
+        loan.DeclareLost(Today);
 
         CodesOf(loan.Return(Today, Policy)).ShouldContain(CirculationErrorCodes.LoanNotActive);
     }

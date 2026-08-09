@@ -1,6 +1,7 @@
 using LibraryManagement.Circulation.Domain;
 using LibraryManagement.Circulation.Domain.Loans;
 using LibraryManagement.Circulation.PublishedLanguage;
+using LibraryManagement.Members.PublishedLanguage;
 using LibraryManagement.Shared.Application.CQS;
 using LibraryManagement.Shared.Domain.Results;
 using IHoldQueueRepository = LibraryManagement.Circulation.Domain.Holds.IHoldQueueRepository;
@@ -13,6 +14,10 @@ namespace LibraryManagement.Circulation.Application.Loans.RenewLoan;
 /// <param name="loans">The loan to renew.</param>
 /// <param name="queues">The queue whose emptiness is what makes a queue move: without this check
 /// a borrower renews indefinitely and the people behind them never get anything.</param>
+/// <param name="members">Members' published language: is this person still entitled to borrow.
+/// A renewal is a fresh loan period, not the tail of an old one, so it opens with the question
+/// every granting act opens with — without it, an expired membership could no longer borrow but
+/// could renew indefinitely, an asymmetry nothing had decided.</param>
 /// <param name="balances">The port Circulation declared for Charges.</param>
 /// <param name="policy">The circulation policy — the limit, the extension, what a debt forbids.</param>
 /// <remarks>
@@ -24,6 +29,7 @@ namespace LibraryManagement.Circulation.Application.Loans.RenewLoan;
 public sealed class RenewLoanCommandHandler(
     ILoanRepository loans,
     IHoldQueueRepository queues,
+    IMemberEntitlement members,
     IMemberBalance balances,
     CirculationPolicy policy) : ICommandHandler<RenewLoanCommand, Result>
 {
@@ -48,6 +54,24 @@ public sealed class RenewLoanCommandHandler(
         // first would report a debt to someone whose loan is simply over.
         if (loan.Status == LoanStatus.Active)
         {
+            var entitlement = await members.OfAsync(loan.BorrowerId.Value, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (entitlement.Entitlement == Entitlement.NoSuchMember)
+            {
+                return Result.Failure(
+                    CirculationErrorCodes.NoSuchMember,
+                    $"Nobody is enrolled under '{loan.BorrowerId}' — the registry no longer "
+                    + "answers for this borrower.");
+            }
+
+            if (entitlement.Entitlement == Entitlement.Lapsed)
+            {
+                return Result.Failure(
+                    CirculationErrorCodes.MembershipLapsed,
+                    "The membership has lapsed; renewing it comes before renewing the loan.");
+            }
+
             if (await Standing.IsBlockedAsync(loan.BorrowerId, balances, policy, cancellationToken)
                     .ConfigureAwait(false))
             {

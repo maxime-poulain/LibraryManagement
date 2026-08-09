@@ -41,14 +41,29 @@ Member
   MembershipEnd
   ContactDetails    email, phone, postal address — each optional, see §5
   Guardian?         a name and a way to reach them, see §5
+  ErasedOn?         the day this record stopped being a person, see below
 ```
 
 **Invariants.**
 
 * `MembershipEnd` is after `MembershipStart`.
-* A `Child` member has a guardian, always.
-* `Name` and `CardNumber` are never blank.
+* A `Child` member has a guardian, always — while the record is a person.
+* `Name` and `CardNumber` are never blank — while the record is a person.
 * `DateOfBirth` is in the past.
+* An erased member acts no more: every operation refuses, and only the erasure itself answers a
+  second request with success.
+
+**Erasure is a terminal state, and the state is what relaxes the invariants.** The two qualified
+rules above once read absolutely, and an absolute reading made the legal obligation
+unimplementable: emptying a name violates *never blank*, removing a minor's guardian violates
+*always*, and the aggregate refused the very operation the law requires. The resolution is
+`Withdrawn`'s pattern on a person — a terminal state that changes what is true of the record.
+Each identity invariant protects an act — being greeted, being reached, presenting a card — and
+an erased member performs none of them: an invariant whose reason has ended ends with it. What
+stays is what identifies nobody: the identifier every downstream context holds, the category, and
+the membership span the statistics are argued from. The retired card's number must also stop
+answering, which makes the uniqueness index a filtered one — erased members are legion in
+waiting, and an unfiltered unique index would allow exactly one.
 
 **Entitlement is computed, never stored.** There is no `Active | Expired` status field, and the
 omission is the design. The passage of time is not an event — Circulation's daily run exists
@@ -63,9 +78,9 @@ renewal is published, and a read model keeps the trail. The aggregate holds only
 invariants govern — `HoldQueue` settled that rule on a hotter path than this one — and no invariant
 here reads last year's dates.
 
-**Entitlement constrains the act, not the state.** It is checked when a loan starts, and a
-membership lapsing mid-loan invalidates nothing: the borrower was entitled when it started, the
-due date stands, and a return is always accepted. The same shape as the cap of five — a rule about
+**Entitlement constrains the act, not the state.** It is checked at every act that grants loan
+time — a checkout, a renewal — and a membership lapsing mid-loan invalidates nothing: the borrower
+was entitled when the period was granted, the due date stands, and a return is always accepted. The same shape as the cap of five — a rule about
 what may be added, never a statement about what exists — and it spares the model a reconciliation
 nobody asked for.
 
@@ -205,6 +220,18 @@ Ordinary corrections, facts about how a person is reached. One guard: removing t
 `Child` is refused — the invariant again, and the operation that legitimately ends a guardianship
 is the category change, not a deletion that would leave a minor unreachable.
 
+### Erase
+
+*Effacement.* The member asks to be forgotten, and the record empties while the identifier
+stands. The moment §10 designed on paper, now a moment of the model: every personal field goes —
+name, birth date, card, channels, guardian — the membership dates and category stay, and
+`MemberErased` announces the identifier and nothing else, because an event reporting an erasure
+must not itself carry what was erased. Whether an outstanding balance should stop the act stays a
+decision at the desk (§10); a second request finds the work done and answers success. Afterwards
+the entitlement port answers `NoSuchMember`: the identifier resolves to nobody, exactly as one
+that never resolved at all — which keeps a found card or a stale screen from acting in a ghost's
+name.
+
 ### Rename
 
 One operation, not two. Catalog needs `Rename` and `CorrectPreferredName` because a variant name
@@ -229,6 +256,7 @@ is a read model fed by exactly this history.
 | `ContactDetailsChanged(…)` | read model |
 | `GuardianChanged(…)` | read model |
 | `MemberRenamed(…, previousName, newName)` | read model |
+| `MemberErased(memberId)` | read model — which owes its own copies the same emptying |
 
 **Consumed: nothing.** No context in the map is upstream of Members, so there is no table of
 consumed events to write — a first. Notifications reaches a member's address by query, the dashed
@@ -278,9 +306,13 @@ would eventually parse back. Their property names are contract exactly as an eve
 positional parameters are — renaming a part is the same decision as renaming a parameter, and
 [outbox.md](outbox.md) §3's rule now reaches one level further down.
 
-**Erasing a member empties the record and keeps the identifier.** Data-protection law will one day
-give a member the right to be forgotten, and the shape of the answer needed no lawyer — only an
-inventory of where a person actually appears.
+**Erasing a member empties the record and keeps the identifier — built, and §2 and §7 now carry
+it.** Data-protection law gives a member the right to be forgotten, and the shape of the answer
+needed no lawyer — only an inventory of where a person actually appears. Building it settled what
+the paper design had missed: the identity invariants read absolutely and refused the emptying, so
+erasure became a terminal state that relaxes them (§2), and the card index became filtered so two
+erased members can coexist — an accident that would otherwise have surfaced at the second erasure
+ever run in production.
 
 They appear in two places. The `Member` aggregate holds the whole of it: the name, the date of
 birth, the channels, the guardian, the card. And every downstream context holds a `Guid` and nothing
