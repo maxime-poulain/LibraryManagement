@@ -21,10 +21,57 @@ an aggregate — a decision of the library must not be a deployment.
 | `OverdueReminders` | 1, 7, 14 days after due | |
 | `DeclaredLostAfter` | 30 days after due | Ends the reminder chain |
 | `BlockingDebt` | any amount owed | No threshold, by decision |
+| `OpeningCalendar` | no closure configured | Weekly closed days and dated closures, see below |
 
 One flat set of values. There is no table per member category: a child and an adult may borrow the
 same five copies. The policy is still a value object rather than five constants, so indexing it by
 category later is an addition rather than a rewrite.
+
+### The calendar
+
+The one policy datum that is not a number: the days the library is open, as the administrator
+declares them — weekly closed days, and dated closures. A public holiday and an exceptional
+closing arrive identically, as a date, because *why* the door was shut is not a circulation fact.
+The holidays are entered, never computed: Easter moves by an arithmetic no library system should
+own, two départements keep holidays the rest of France does not, and the set itself changes by
+decree — a rule would be wrong somewhere every year, where a list is retyped once a year and wrong
+nowhere. The sets name the *closed* days, not the open ones, because that is what the sign on the
+door says — and because the empty calendar then means open every day, which is what an
+unconfigured host must get: stated the other way round, a host that forgot the setting would run a
+library that is never open, and every deadline would slide forever. One weekday must stay open,
+held at construction, and it is what guarantees the walk to the first open day terminates.
+
+Two rules consume the calendar, and they are the point of having it.
+
+**A deadline a member must meet never falls on a day they cannot meet it.** The due date — at
+checkout and at renewal alike — and a trapped copy's pickup deadline slide to the first open day
+on or after where the plain arithmetic lands. Derived once, at the act, from the calendar as it
+stands, and the stored date never moves afterwards: the member holds a receipt, and a system that
+moves a printed date is the shelfmark mistake transposed from space to time.
+
+**A closed day is never billed.** A fine is charged for days the borrower let pass, and a day
+nobody could return is not one of them: `daysLate` counts the *open* days past the due date. The
+judgement runs through the calendar as it stands — the stored due date is slid again before
+anything is counted, which ordinarily moves nothing and exists for the closure declared after the
+act, a strike landing on a due date already printed: the receipt does not move, and the judgement
+forgives what the receipt could not know. Due the 24th of December with the library closed through
+the 2nd of January, a return on reopening day is billed one open day — the 24th was open, and was
+missed — where a calendar-day count would have charged ten and, with `BlockingDebt` at any amount,
+cancelled the borrower's holds for the privilege of returning to a locked door.
+
+**What deliberately does not move.** The reminder stages and `DeclaredLostAfter` stay in elapsed
+days: a message says how long the copy has been kept, a fine says what the kept days cost, and the
+borrower's own calendar agrees with the first — §7 records the two measures where the events carry
+them. And the pickup window is slid but not recounted in open days: nothing is billed per day
+there, so the only injustice a closure can do is a deadline nobody could meet, which the slide
+removes by making the last day one the member can walk in on. A window of open days would
+immobilize the copy longer for everyone behind the claim, to protect against a harm that no longer
+exists.
+
+One library, one calendar, one owner. Charges multiplies the days it is told and never learns
+which days the door was shut — its own §7 records the same line from the other side — and Members
+judges a membership against dates no calendar moves. The day a second context needs opening days
+is a boundary conversation to have then, not a shared kernel to grow now.
 
 ## 2. The cap of five
 
@@ -224,8 +271,9 @@ Preconditions, in order — cheapest and most likely to fail first:
    entirely when the checkout collects the borrower's own trapped hold: the transition from hold
    to loan leaves the count unchanged (§2), so a pickup is never refused for the cap.
 
-Then: `Loan` is created, and if this checkout fulfills a hold, that hold is fulfilled and leaves the
-queue — the outcome travels in the event, not in a status the queue keeps.
+Then: `Loan` is created — due the loan period later, slid off a closed day (§1) — and if this
+checkout fulfills a hold, that hold is fulfilled and leaves the queue: the outcome travels in the
+event, not in a status the queue keeps.
 
 Step 5 is what stops a walk-in from being handed a copy someone is waiting for.
 
@@ -240,8 +288,9 @@ The fourth is what makes a queue move. Without it a borrower renews indefinitely
 behind them never get anything: the queue exists but does not turn, and a hold stops being a promise.
 It reads *queued* deliberately, where this document first said *empty*: a claim already awaiting
 pickup has its copy on the hold shelf, and refusing a renewal for its sake would serve nobody the
-rule exists to serve. The renewal grants another loan period from the current due date — the
-arithmetic the membership renewal decided, for the same reason: renewing early costs nothing.
+rule exists to serve. The renewal grants another loan period from the current due date, slid off a
+closed day exactly as the checkout's was (§1) — the arithmetic the membership renewal decided, for
+the same reason: renewing early costs nothing.
 
 It is checked against the queue as it stands at that moment. A hold placed a minute after a renewal
 does not undo it — the borrower acted in good faith on the state of the world, and revoking a granted
@@ -260,10 +309,12 @@ the second, a single idle hold on a well-stocked edition would block every renew
 
 The moment that justifies holds and loans living in one context. In a single transaction:
 
-1. The `Loan` closes. Lateness is computed and recorded.
+1. The `Loan` closes. Lateness is computed and recorded — in open days, against the calendar as
+   it stands (§1).
 2. The edition's `HoldQueue` is asked whether the copy is wanted.
 3. If it is, the oldest queued hold whose borrower is **in good standing** is trapped: the hold
-   becomes `AwaitingPickup`, `TrappedCopyId` is set, `PickupDeadline` starts.
+   becomes `AwaitingPickup`, `TrappedCopyId` is set, `PickupDeadline` starts — the pickup period
+   out, slid off a closed day (§1).
 4. If it is not, the copy goes back to the shelf.
 
 **Two aggregates change together, and that is deliberate.** The usual guidance — one aggregate per
@@ -338,6 +389,14 @@ one morning, which is the noise the schedule exists to avoid. The same reading g
 reminder its window rather than its day, and the imminent-expiry warning the two days above:
 a deadline is a date the run must not step over, and a run only ever fires once a day.
 
+The run keeps no desk hours: it fires on closed days too, and the stages it measures stay in
+elapsed days on purpose — §1 records the split, a message says how long where a fine says what it
+costs. The one calendar-aware judgement here is the pickup deadline: a claim expires only once the
+first open day on or after its deadline has passed, so a closure declared after a copy was set
+aside does not cost a borrower their claim for not walking through a locked door. The imminent-
+expiry warning keeps reading the stored date — warning a day early in that rare case is noise,
+expiring a day early would be a broken promise.
+
 Idempotence rests entirely on what the aggregates remember. `RemindersSent` carries it for loans;
 a hold keeps its own `ExpiryWarningSent`, because a hold's schedule is not the loan's and a shared
 memory would tie two unrelated cadences together. Without it the run either notifies daily — which
@@ -396,6 +455,13 @@ that missed a day or two the stage is no longer even true.
 `LoanReturned` carries `daysLate` and not a price. Whether a return was late is a circulation fact;
 what lateness costs is a money question, and Charges answers it. A `daysLate` of zero is published
 all the same — Charges decides there is nothing to charge.
+
+The two events therefore carry two measures of one lateness, and the difference is deliberate
+rather than drift: `daysOverdue` is elapsed days, because a message says how long the copy has
+been kept and the borrower's own calendar must agree with it; `daysLate` is open days (§1),
+because a fine bills what the borrower could have done and a closed day is not that. Folding them
+into one number would make either the message lie or the fine unfair, and which one would depend
+on which was folded into which.
 
 **A refusal must say which of the three it is** — the limit is reached, the borrower owes money,
 someone is waiting — because they call for three different things from the borrower. "We could not
@@ -537,6 +603,26 @@ So Charges announces `MemberBalanceChanged`, carrying the amount before and afte
 is computed here. The threshold is named on this side only, which is what makes it movable without
 touching what another context publishes. `MemberBalanceSettled` is not replaced by anything, because
 §7 had already recorded that it changed nothing in this model.
+
+**What the calendar added.** §1's opening calendar arrived after the desk moments were built —
+the product owner's decision that a closed day and a public holiday must reach the due dates and
+the fines — and building it settled four things the decision alone had not:
+
+* **The receipt does not move; the judgement re-slides.** The stored due date and pickup deadline
+  are derived once, at the act, and a calendar changed afterwards leaves them standing — but every
+  judgement over them (the billable count, the expiry) first slides the stored date through the
+  calendar *as it now stands*. Ordinarily that moves nothing; on the day a strike lands on a date
+  already printed, it is the difference between forgiving the closure and fining people for it.
+* **The sets name the closed days**, so the empty calendar means open every day — which is the
+  behavior every existing test already asserted, and is what let the calendar arrive without
+  moving a single green test. The opposite polarity would have made an unconfigured host a library
+  that is never open, failing by sliding every deadline forever.
+* **At least one weekday stays open**, held at construction rather than trusted: the walk to the
+  first open day must terminate, and the guard is on the weekly pattern alone because the dated
+  closures are finitely many — past the last of them, only the pattern closes anything.
+* **The pickup window slides and is not recounted** in open days, where the fine is. The asymmetry
+  is argued in §1, and it fell out of asking what each number is *for*: the fine bills per day, the
+  window only promises a last day the member can actually use.
 
 Open:
 

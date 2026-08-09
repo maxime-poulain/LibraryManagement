@@ -112,7 +112,7 @@ public sealed class RenewLoanCommandHandlerTests
     {
         // Reporting a debt to someone whose loan is simply over would be the wrong refusal.
         var loan = AnActiveLoan(out _);
-        loan.Return(Today);
+        loan.Return(Today, CirculationPolicy.Current);
         _balances.Owing(loan.BorrowerId.Value, 5m);
 
         CodesOf(await Handle(loan.Id.Value)).ShouldContain(CirculationErrorCodes.LoanNotActive);

@@ -25,6 +25,9 @@ worth more here than the one lever Members has.
 **The grace period is a lever set to zero, not an absent concept.** Naming it now means introducing
 one is a change of data; leaving it out would make it a change of model. The library's chosen
 kindness today is the courtesy reminder three days before the due date — Circulation's, and enough.
+Its unit is the publisher's: `daysLate` arrives in open days, net of Circulation's calendar
+(its §1), so a grace of two would be two days the member could actually have returned — the
+closed days were already nobody's to forgive.
 
 **No table per member category.** A child and an adult are fined the same, exactly as they may borrow
 the same five copies. The policy is a value object all the same, so indexing it later is an addition
@@ -232,6 +235,12 @@ nothing about money.
 The amount is `(daysLate − GracePeriod) × FinePerDayOverdue`, floored at zero and capped at
 `MaxFinePerLoan`. A fine computed to zero raises no charge at all: zero is not a charge (§2), and an
 account holding one would report a member as owing while the balance said nothing.
+
+`daysLate` arrives already net of the library's closed days — open days, as Circulation counts
+them against its opening calendar. This context multiplies the number it is told and never learns
+which days the door was shut: subtracting closures here would put the desk's calendar in the money
+context, the exact mistake the grace period avoids in the other direction by not living in the
+module that knows nothing about money.
 
 ### Raise a replacement charge
 

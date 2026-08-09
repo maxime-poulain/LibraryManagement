@@ -63,7 +63,7 @@ public sealed class CancelHoldsForDebtCommandHandler(
 
             queue.TrapOldestQueued(
                 cancellation.ReleasedCopyId,
-                today.AddDays(policy.PickupPeriodInDays),
+                policy.PickupDeadlineFor(today),
                 blocked);
         }
 

@@ -8,7 +8,9 @@ namespace LibraryManagement.Charges.Domain;
 /// <param name="FinePerDayOverdue">What one day past the due date costs.</param>
 /// <param name="GracePeriodInDays">
 /// Days late that cost nothing. Zero today — a lever set to nothing rather than an absent concept,
-/// so introducing one is a change of data and not of model.
+/// so introducing one is a change of data and not of model. Counted in the unit the days arrive
+/// in, which is the publisher's: Circulation announces open days, net of its calendar's closures,
+/// so a grace of two is two days the member could actually have returned.
 /// </param>
 /// <param name="MaxFinePerLoan">
 /// The ceiling on an overdue fine. A fine is charged for time and time is unbounded: without this, a
@@ -51,7 +53,10 @@ public sealed record ChargesPolicy(
     /// <summary>
     /// What a loan returned this many days late costs.
     /// </summary>
-    /// <param name="daysLate">Days past the due date, as Circulation counted them.</param>
+    /// <param name="daysLate">Days past the due date, as Circulation counted them — open days of
+    /// its calendar, closed ones already left out. This context never learns which days the
+    /// library shuts: it prices the number it is told, or the desk's calendar would live in the
+    /// money context.</param>
     /// <returns>The fine, which is <see cref="Money.Zero"/> when nothing is owed.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="daysLate"/> is negative.</exception>
     /// <remarks>

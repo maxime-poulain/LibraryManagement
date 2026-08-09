@@ -57,7 +57,7 @@ public sealed class LoanPersistenceTests(SqlServerFixture sqlServer)
         await using (var updating = sqlServer.NewContext())
         {
             var loaded = await updating.Set<Loan>().SingleAsync(stored => stored.Id == loan.Id, Token);
-            loaded.Return(Today.AddDays(25));
+            loaded.Return(Today.AddDays(25), CirculationPolicy.Current);
             await updating.SaveChangesAsync(Token);
         }
 
@@ -93,7 +93,7 @@ public sealed class LoanPersistenceTests(SqlServerFixture sqlServer)
         await using (var updating = sqlServer.NewContext())
         {
             var loaded = await updating.Set<Loan>().SingleAsync(stored => stored.Id == first.Id, Token);
-            loaded.Return(Today.AddDays(3));
+            loaded.Return(Today.AddDays(3), CirculationPolicy.Current);
             await updating.SaveChangesAsync(Token);
         }
 
@@ -182,7 +182,7 @@ public sealed class LoanPersistenceTests(SqlServerFixture sqlServer)
     public async Task ActiveOverdue_LeavesTheLoansThatEnded()
     {
         var loan = ALoan();
-        loan.Return(Today);
+        loan.Return(Today, CirculationPolicy.Current);
         await StoredAsync(loan);
 
         await using var reading = sqlServer.NewContext();

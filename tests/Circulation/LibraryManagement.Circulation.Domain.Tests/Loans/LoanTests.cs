@@ -37,6 +37,24 @@ public sealed class LoanTests
         checkedOut.DueDate.ShouldBe(loan.DueDate);
     }
 
+    [Fact]
+    public void CheckOut_WhoseDueDateLandsOnAClosedDay_SlidesItToTheFirstOpenDay()
+    {
+        // Today plus the loan period is Saturday the 4th of April — the Easter closing, shut
+        // through Easter Monday. A due date printed on a receipt must be a day the member can
+        // actually meet, so it slides to the reopening Tuesday.
+        var easterClosing = Policy with
+        {
+            Calendar = new OpeningCalendar(
+                [],
+                [new DateOnly(2026, 4, 4), new DateOnly(2026, 4, 5), new DateOnly(2026, 4, 6)]),
+        };
+
+        var loan = ALoan(policy: easterClosing);
+
+        loan.DueDate.ShouldBe(new DateOnly(2026, 4, 7));
+    }
+
     // --- Renewal -----------------------------------------------------------------------------------
 
     [Fact]
@@ -52,6 +70,21 @@ public sealed class LoanTests
         loan.DueDate.ShouldBe(oldDue.AddDays(Policy.LoanDurationInDays));
         loan.RenewalCount.ShouldBe(1);
         loan.Event<RenewalGranted>().NewDueDate.ShouldBe(loan.DueDate);
+    }
+
+    [Fact]
+    public void Renew_SlidesTheNewDueDateOffAClosedDay()
+    {
+        var loan = ALoan().Settled();
+        var oldDue = loan.DueDate;
+        var closedOnTheLanding = Policy with
+        {
+            Calendar = new OpeningCalendar([], [oldDue.AddDays(Policy.LoanDurationInDays)]),
+        };
+
+        loan.Renew(closedOnTheLanding).HasErrors().ShouldBeFalse();
+
+        loan.DueDate.ShouldBe(oldDue.AddDays(Policy.LoanDurationInDays + 1));
     }
 
     [Fact]
@@ -74,7 +107,7 @@ public sealed class LoanTests
     public void Renew_AReturnedLoan_IsRefused()
     {
         var loan = ALoan().Settled();
-        loan.Return(Today);
+        loan.Return(Today, Policy);
 
         CodesOf(loan.Renew(Policy)).ShouldContain(CirculationErrorCodes.LoanNotActive);
     }
@@ -88,7 +121,7 @@ public sealed class LoanTests
         // Charges decides there is nothing to charge — not this context.
         var loan = ALoan().Settled();
 
-        loan.Return(loan.DueDate).HasErrors().ShouldBeFalse();
+        loan.Return(loan.DueDate, Policy).HasErrors().ShouldBeFalse();
 
         loan.Status.ShouldBe(LoanStatus.Returned);
         loan.ReturnedOn.ShouldBe(loan.DueDate);
@@ -100,7 +133,7 @@ public sealed class LoanTests
     {
         var loan = ALoan().Settled();
 
-        loan.Return(loan.DueDate.AddDays(6));
+        loan.Return(loan.DueDate.AddDays(6), Policy);
 
         loan.Event<LoanReturned>().DaysLate.ShouldBe(6);
     }
@@ -110,7 +143,39 @@ public sealed class LoanTests
     {
         var loan = ALoan().Settled();
 
-        loan.Return(Today.AddDays(1));
+        loan.Return(Today.AddDays(1), Policy);
+
+        loan.Event<LoanReturned>().DaysLate.ShouldBe(0);
+    }
+
+    [Fact]
+    public void Return_BillsOnlyTheOpenDaysAmongTheLateOnes()
+    {
+        // Six elapsed days across a closed Sunday and Monday: four billed. A fine is charged for
+        // days the borrower let pass, and a day nobody could return is not one of them.
+        var loan = ALoan().Settled();
+        var closedSundayAndMonday = Policy with
+        {
+            Calendar = new OpeningCalendar([DayOfWeek.Sunday, DayOfWeek.Monday], []),
+        };
+
+        loan.Return(loan.DueDate.AddDays(6), closedSundayAndMonday);
+
+        loan.Event<LoanReturned>().DaysLate.ShouldBe(4);
+    }
+
+    [Fact]
+    public void Return_OnTheFirstOpenDayAfterAClosureTookTheDueDate_IsNotLate()
+    {
+        // The strike that lands on a due date already printed: the receipt does not move, and
+        // the judgement forgives what the receipt could not know.
+        var loan = ALoan().Settled();
+        var strikeOnTheDueDate = Policy with
+        {
+            Calendar = new OpeningCalendar([], [loan.DueDate]),
+        };
+
+        loan.Return(loan.DueDate.AddDays(1), strikeOnTheDueDate);
 
         loan.Event<LoanReturned>().DaysLate.ShouldBe(0);
     }
@@ -119,9 +184,9 @@ public sealed class LoanTests
     public void Return_Twice_IsRefused()
     {
         var loan = ALoan().Settled();
-        loan.Return(Today);
+        loan.Return(Today, Policy);
 
-        CodesOf(loan.Return(Today)).ShouldContain(CirculationErrorCodes.LoanNotActive);
+        CodesOf(loan.Return(Today, Policy)).ShouldContain(CirculationErrorCodes.LoanNotActive);
     }
 
     // --- Declared lost -----------------------------------------------------------------------------
@@ -156,7 +221,7 @@ public sealed class LoanTests
     {
         // The copy came back; there is nothing to stop waiting for.
         var loan = ALoan().Settled();
-        loan.Return(Today);
+        loan.Return(Today, Policy);
 
         loan.DeclareLost().HasErrors().ShouldBeTrue();
     }
@@ -169,6 +234,6 @@ public sealed class LoanTests
         var loan = ALoan().Settled();
         loan.DeclareLost();
 
-        CodesOf(loan.Return(Today)).ShouldContain(CirculationErrorCodes.LoanNotActive);
+        CodesOf(loan.Return(Today, Policy)).ShouldContain(CirculationErrorCodes.LoanNotActive);
     }
 }

@@ -1,9 +1,10 @@
 namespace LibraryManagement.Circulation.Domain;
 
 /// <summary>
-/// Every number the business can change, in one place. How many, how long, how often — and what a
-/// debt forbids. It governs holds and pickup deadlines as much as loans, which is why it is not
-/// called a loan policy.
+/// Every number the business can change, in one place. How many, how long, how often, what a
+/// debt forbids — and when the library is open, which is the datum the durations are counted
+/// across. It governs holds and pickup deadlines as much as loans, which is why it is not called
+/// a loan policy.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -55,6 +56,18 @@ public sealed record CirculationPolicy
     public int DeclaredLostAfterDays { get; init; } = 30;
 
     /// <summary>
+    /// Gets the days the library is open — the administrator's declared closures, weekly and
+    /// dated. No closure is configured yet: the arithmetic ships, the schedule is the host's
+    /// datum, exactly as every number above is.
+    /// </summary>
+    /// <remarks>
+    /// The calendar is a circulation fact and stays one. Charges multiplies the days it is told
+    /// and never learns which days the door was shut; Members judges a membership against dates a
+    /// calendar does not move. One library, one calendar, one owner.
+    /// </remarks>
+    public OpeningCalendar Calendar { get; init; } = OpeningCalendar.OpenEveryDay;
+
+    /// <summary>
     /// Gets the debt above which borrowing, renewing and placing holds are forbidden. Zero — any
     /// amount owed blocks, from the first cent, by decision.
     /// </summary>
@@ -90,4 +103,64 @@ public sealed record CirculationPolicy
     /// perfect order, they borrowed under the previous rule.
     /// </remarks>
     public bool IsAtTheCap(int loansAndHolds) => loansAndHolds >= MaxLoansAndHolds;
+
+    /// <summary>
+    /// Decides the due date of a loan period starting or extending from a day: the duration,
+    /// slid off a closed day.
+    /// </summary>
+    /// <param name="startOfPeriod">The day the period runs from — the checkout day for a new
+    /// loan, the current due date for a renewal.</param>
+    /// <returns>The first open day on or after the period's end.</returns>
+    /// <remarks>
+    /// A deadline a member must meet never falls on a day they cannot meet it: a due date on a
+    /// closed day makes the borrower late for a return the library itself made impossible, and
+    /// with any debt blocking, that lateness costs them every hold they have. The date is derived
+    /// once, at the act, from the calendar as it stands — the shelfmark's rule: a date printed on
+    /// a receipt does not move because the calendar later did.
+    /// </remarks>
+    public DateOnly DueDateFollowing(DateOnly startOfPeriod)
+        => Calendar.FirstOpenDayOnOrAfter(startOfPeriod.AddDays(LoanDurationInDays));
+
+    /// <summary>
+    /// Decides the last day a copy set aside today waits on the hold shelf: the pickup period,
+    /// slid off a closed day.
+    /// </summary>
+    /// <param name="trappedOn">The day the copy was set aside.</param>
+    /// <returns>The first open day on or after the period's end.</returns>
+    /// <remarks>
+    /// Slid, but not counted in open days, and the asymmetry with the fine is deliberate: nothing
+    /// is billed per day here, so the only injustice a closure can do is a deadline nobody could
+    /// meet — which the slide removes by making the last day one the member can walk in on. A
+    /// window of open days would immobilize the copy longer for everyone behind the claim, to
+    /// protect against a harm that no longer exists.
+    /// </remarks>
+    public DateOnly PickupDeadlineFor(DateOnly trappedOn)
+        => Calendar.FirstOpenDayOnOrAfter(trappedOn.AddDays(PickupPeriodInDays));
+
+    /// <summary>
+    /// Counts the late days a return will be charged for: the open days past the due date,
+    /// judged against the calendar as it stands.
+    /// </summary>
+    /// <param name="dueDate">The due date the loan carries.</param>
+    /// <param name="returnedOn">The day the copy came back.</param>
+    /// <returns>Zero for a return in time, and never a negative number for an early one.</returns>
+    /// <remarks>
+    /// <para>
+    /// <strong>A closed day is never billed.</strong> A fine is charged for days the borrower let
+    /// pass, and a day nobody could return is not one of them — ten calendar days late across the
+    /// year-end closing is billed as the open days among them, which is what the member's own
+    /// sense of fairness counts at the desk.
+    /// </para>
+    /// <para>
+    /// The stored due date is first slid through the <em>current</em> calendar before anything is
+    /// counted. The checkout already slid it once, so ordinarily this moves nothing; it exists
+    /// for the closure declared after the act — a strike, a flood — landing on a due date already
+    /// printed. The date on the receipt does not move, and the judgement forgives what the
+    /// receipt could not know.
+    /// </para>
+    /// </remarks>
+    public int BillableDaysLate(DateOnly dueDate, DateOnly returnedOn)
+        => Calendar.CountOpenDays(
+            after: Calendar.FirstOpenDayOnOrAfter(dueDate),
+            through: returnedOn);
 }

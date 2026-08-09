@@ -17,9 +17,9 @@ public sealed class ReturnCopyCommandHandlerTests
     private readonly InMemoryHoldQueueRepository _queues = new();
     private readonly StubBalances _balances = new();
 
-    private ValueTask<Result> Handle(Guid copyId, DateOnly today)
+    private ValueTask<Result> Handle(Guid copyId, DateOnly today, CirculationPolicy? policy = null)
         => new ReturnCopyCommandHandler(
-                _loans, _queues, _balances, CirculationPolicy.Current, FrozenClock.At(today))
+                _loans, _queues, _balances, policy ?? CirculationPolicy.Current, FrozenClock.At(today))
             .Handle(new ReturnCopyCommand(copyId), Token);
 
     private Loan AnActiveLoan(Guid copy, Guid edition)
@@ -87,6 +87,32 @@ public sealed class ReturnCopyCommandHandlerTests
         ready.CopyId.Value.ShouldBe(copy);
         ready.PickupDeadline.ShouldBe(
             returnedOn.AddDays(CirculationPolicy.Current.PickupPeriodInDays));
+    }
+
+    [Fact]
+    public async Task Handle_SlidesThePickupDeadlineOffAClosedDay()
+    {
+        // The calendar's wiring into the trap: the deadline the queue announces is the policy's,
+        // slid off an exceptional closing — not the plain seven days.
+        var copy = Guid.CreateVersion7();
+        var edition = Guid.CreateVersion7();
+        AnActiveLoan(copy, edition);
+
+        var queue = HoldQueue.For(EditionId.Create(edition));
+        queue.PlaceHold(HoldId.Generate(), BorrowerId.Generate(), DateTimeOffset.UnixEpoch);
+        _queues.With(queue);
+
+        var returnedOn = CheckedOutOn.AddDays(2);
+        var closedOnTheLanding = CirculationPolicy.Current with
+        {
+            Calendar = new OpeningCalendar([], [returnedOn.AddDays(7)]),
+        };
+
+        var outcome = await Handle(copy, returnedOn, closedOnTheLanding);
+
+        outcome.HasErrors().ShouldBeFalse();
+        queue.DomainEvents.OfType<HoldReadyForPickup>().Single()
+            .PickupDeadline.ShouldBe(returnedOn.AddDays(8));
     }
 
     [Fact]

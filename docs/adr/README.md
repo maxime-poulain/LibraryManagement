@@ -10,7 +10,7 @@ each `tactical-design-*.md` decides one context's aggregates, `outbox.md` and `m
 two technical mechanisms. They are long because the argument is the point.
 
 An ADR is not a summary of one of those. It is the **decision record**: what was decided, when, what
-it costs, and what was rejected — in a form that a reader scanning thirteen titles can navigate. Where
+it costs, and what was rejected — in a form that a reader scanning fourteen titles can navigate. Where
 a decision is argued at length elsewhere, the record says so and points there rather than restating
 it. When a record and its authority disagree, the authority wins and the record is the bug.
 
@@ -44,3 +44,4 @@ written when the decision is taken.
 | [0011](0011-architecture-rules-are-tests.md) | Architectural rules are executable tests | Accepted |
 | [0012](0012-american-english-binding-glossary.md) | American English, and the glossary is binding | Accepted |
 | [0013](0013-composition-root-in-the-tests.md) | No runnable host; the composition root lives in the tests | Accepted |
+| [0014](0014-opening-calendar-in-circulation.md) | The opening calendar is Circulation's; a closed day is never billed | Accepted |
