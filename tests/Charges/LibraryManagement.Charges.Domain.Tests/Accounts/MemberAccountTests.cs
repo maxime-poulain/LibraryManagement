@@ -23,6 +23,14 @@ public sealed class MemberAccountTests
             on ?? Today,
             Policy);
 
+    private Result Damage(LoanId? loanId = null, CopyId? copyId = null)
+        => _account.RaiseDamageCharge(
+            ChargeId.Generate(),
+            loanId ?? LoanId.Generate(),
+            copyId ?? CopyId.Generate(),
+            Today,
+            Policy);
+
     private Result Replacement(LoanId? loanId = null, CopyId? copyId = null)
         => _account.RaiseReplacementCharge(
             ChargeId.Generate(),
@@ -81,6 +89,40 @@ public sealed class MemberAccountTests
         Event<ReplacementChargeRaised>().Amount.ShouldBe(Money.Of(Policy.ReplacementCharge));
     }
 
+    [Fact]
+    public void ASpoiledReturn_IsPricedByTheTariff()
+    {
+        Damage().HasErrors().ShouldBeFalse();
+
+        _account.Balance.ShouldBe(Money.Of(Policy.DamageCharge));
+        Event<DamageChargeRaised>().Amount.ShouldBe(Money.Of(Policy.DamageCharge));
+    }
+
+    [Fact]
+    public void AFineAndADamage_ForOneLoan_AreBothCharged()
+    {
+        // The lateness and the spoiling are different wrongs: two kinds, two charges, one loan —
+        // and the waiver of one is never the waiver of both.
+        var loanId = LoanId.Generate();
+
+        Fine(daysLate: 5, loanId).HasErrors().ShouldBeFalse();
+        Damage(loanId).HasErrors().ShouldBeFalse();
+
+        _account.Charges.Count.ShouldBe(2);
+        _account.Balance.ShouldBe(Money.Of(1.00m + Policy.DamageCharge));
+    }
+
+    [Fact]
+    public void TheSameDamage_RaisedTwice_ChargesOnce()
+    {
+        var loanId = LoanId.Generate();
+
+        Damage(loanId);
+        Damage(loanId);
+
+        _account.Charges.ShouldHaveSingleItem();
+    }
+
     // --- Redelivery --------------------------------------------------------------------------------
 
     [Fact]
@@ -106,6 +148,52 @@ public sealed class MemberAccountTests
         Replacement(loanId);
 
         _account.Charges.ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public void ALateReturn_ReplayedAfterTheFineWasPaid_ChargesNothingAgain()
+    {
+        // The window at-least-once delivery promises to hit: the member pays at the desk inside
+        // the minute the drain takes, the settled charge leaves the account, and the replay
+        // arrives to an account whose live charges remember nothing. The memory of priced loans
+        // outlives the charge, which is the whole reason it is not read off the charges.
+        var loanId = LoanId.Generate();
+        Fine(daysLate: 3, loanId);
+        _account.TakePayment(Money.Of(0.60m)).HasErrors().ShouldBeFalse();
+
+        Fine(daysLate: 3, loanId).HasErrors().ShouldBeFalse();
+
+        _account.Charges.ShouldBeEmpty();
+        _account.Balance.ShouldBe(Money.Zero);
+    }
+
+    [Fact]
+    public void ALoss_ReplayedAfterTheFoundCopyCancelledIt_ChargesNothingAgain()
+    {
+        // The recovered copy cancelled the replacement; a redelivery of the write-off must not
+        // resurrect it.
+        var loanId = LoanId.Generate();
+        var copyId = CopyId.Generate();
+        Replacement(loanId, copyId);
+        _account.CancelReplacementChargeFor(copyId).HasErrors().ShouldBeFalse();
+
+        Replacement(loanId, copyId).HasErrors().ShouldBeFalse();
+
+        _account.Charges.ShouldBeEmpty();
+        _account.Balance.ShouldBe(Money.Zero);
+    }
+
+    [Fact]
+    public void AFine_ReplayedAfterAWaiver_ChargesNothingAgain()
+    {
+        var loanId = LoanId.Generate();
+        Fine(daysLate: 3, loanId);
+        var chargeId = _account.Charges.Single().Id;
+        _account.Waive(chargeId).HasErrors().ShouldBeFalse();
+
+        Fine(daysLate: 3, loanId).HasErrors().ShouldBeFalse();
+
+        _account.Charges.ShouldBeEmpty();
     }
 
     [Fact]
@@ -180,7 +268,7 @@ public sealed class MemberAccountTests
         _account.Waive(chargeId).HasErrors().ShouldBeFalse();
 
         _account.Charges.ShouldBeEmpty();
-        Event<ChargeWaived>().Amount.ShouldBe(Money.Of(0.60m));
+        Event<ChargeWaived>().AmountForgone.ShouldBe(Money.Of(0.60m));
     }
 
     [Fact]
@@ -202,7 +290,7 @@ public sealed class MemberAccountTests
         _account.CancelReplacementChargeFor(copyId).HasErrors().ShouldBeFalse();
 
         _account.Balance.ShouldBe(Money.Zero);
-        Event<ChargeWaived>().Amount.ShouldBe(Money.Of(Policy.ReplacementCharge));
+        Event<ChargeWaived>().AmountForgone.ShouldBe(Money.Of(Policy.ReplacementCharge));
     }
 
     [Fact]

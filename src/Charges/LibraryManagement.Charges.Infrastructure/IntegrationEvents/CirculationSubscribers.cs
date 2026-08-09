@@ -1,4 +1,5 @@
 using LibraryManagement.Charges.Application.Accounts.AssessOverdueFine;
+using LibraryManagement.Charges.Application.Accounts.RaiseDamageCharge;
 using LibraryManagement.Charges.Application.Accounts.RaiseReplacementCharge;
 using LibraryManagement.Circulation.PublishedLanguage;
 using LibraryManagement.Shared.Application.CQS;
@@ -15,15 +16,15 @@ namespace LibraryManagement.Charges.Infrastructure.IntegrationEvents;
 // Dispatching puts the change in this module's own transaction, decided by this module's handler.
 
 /// <summary>
-/// A copy came back late, so the delay is priced.
+/// A copy came back, so any delay can be priced.
 /// </summary>
 /// <param name="commands">Where the reaction is decided — this module's own use case.</param>
-public sealed class AssessFineOnLoanReturnedLate(ICommandDispatcher commands)
-    : IIntegrationEventSubscriber<LoanReturnedLate>
+public sealed class AssessFineOnLoanReturned(ICommandDispatcher commands)
+    : IIntegrationEventSubscriber<LoanReturned>
 {
     /// <inheritdoc/>
     public async ValueTask HandleAsync(
-        LoanReturnedLate contract,
+        LoanReturned contract,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(contract);
@@ -35,7 +36,31 @@ public sealed class AssessFineOnLoanReturnedLate(ICommandDispatcher commands)
                 cancellationToken)
             .ConfigureAwait(false);
 
-        Refusal.Throw(result, $"price loan {contract.LoanId} returned late", contract.EventId);
+        Refusal.Throw(result, $"price the return of loan {contract.LoanId}", contract.EventId);
+    }
+}
+
+/// <summary>
+/// A copy came back spoiled, so the damage is priced.
+/// </summary>
+/// <param name="commands">Where the reaction is decided — this module's own use case.</param>
+public sealed class RaiseChargeOnCopyReturnedDamaged(ICommandDispatcher commands)
+    : IIntegrationEventSubscriber<CopyReturnedDamaged>
+{
+    /// <inheritdoc/>
+    public async ValueTask HandleAsync(
+        CopyReturnedDamaged contract,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(contract);
+
+        var result = await commands
+            .DispatchAsync(
+                new RaiseDamageChargeCommand(contract.BorrowerId, contract.LoanId, contract.CopyId),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        Refusal.Throw(result, $"price the damage loan {contract.LoanId} brought back", contract.EventId);
     }
 }
 
@@ -43,12 +68,12 @@ public sealed class AssessFineOnLoanReturnedLate(ICommandDispatcher commands)
 /// A copy will not come back, so its replacement is priced.
 /// </summary>
 /// <param name="commands">Where the reaction is decided — this module's own use case.</param>
-public sealed class RaiseChargeOnLoanWrittenOff(ICommandDispatcher commands)
-    : IIntegrationEventSubscriber<LoanWrittenOff>
+public sealed class RaiseChargeOnLoanEndedUnreturned(ICommandDispatcher commands)
+    : IIntegrationEventSubscriber<LoanEndedUnreturned>
 {
     /// <inheritdoc/>
     public async ValueTask HandleAsync(
-        LoanWrittenOff contract,
+        LoanEndedUnreturned contract,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(contract);
@@ -60,7 +85,7 @@ public sealed class RaiseChargeOnLoanWrittenOff(ICommandDispatcher commands)
                 cancellationToken)
             .ConfigureAwait(false);
 
-        Refusal.Throw(result, $"charge for loan {contract.LoanId} written off", contract.EventId);
+        Refusal.Throw(result, $"price the replacement of loan {contract.LoanId}", contract.EventId);
     }
 }
 

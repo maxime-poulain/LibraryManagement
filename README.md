@@ -76,8 +76,10 @@ flowchart TD
     CAT -->|"Published Language<br/>EditionId"| HLD
     HLD -->|"Customer / Supplier<br/>may this copy be lent?"| CIR
     MEM -->|"Customer / Supplier + ACL<br/>Member → Borrower"| CIR
-    CIR -->|"events<br/>returned late, written off"| CHG
-    CIR -->|"event<br/>this copy is lost"| HLD
+    CIR -->|"events<br/>returned, given up on"| CHG
+    CIR -->|"events<br/>copy lost, copy came back"| HLD
+    HLD -->|"events<br/>copy left service, copy turned up"| CIR
+    HLD -->|"event<br/>copy turned up"| CHG
     CHG -->|"event<br/>this member's balance moved"| CIR
     CHG -.->|"how much does this<br/>member owe?"| CIR
 
@@ -147,7 +149,7 @@ One domain event is flattened into **as many contracts as it has audiences**:
 
 ```
 LoanDeclaredLost  ──translator──▶  CopyReportedLost (copy)              ──▶  Holdings
-                  └─translator──▶  LoanWrittenOff (copy + borrower)     ──▶  Charges
+                  └─translator──▶  LoanEndedUnreturned (copy + borrower) ──▶  Charges
 ```
 
 **And a subscriber does not write — it dispatches a command of its own module**
@@ -172,7 +174,7 @@ dotnet test LibraryManagement.slnx --configuration Release --no-build \
             --filter "Category!=Integration"
 ```
 
-The unit filter runs **1015 tests across 19 projects**.
+The unit filter runs **1063 tests across 19 projects**.
 
 Integration tests start SQL Server 2022 through Testcontainers, or target the server named by the
 `LIBRARYMANAGEMENT_TEST_SQLSERVER` environment variable.
@@ -256,6 +258,7 @@ The design documents are the source of truth. Read the relevant one before model
 | Document | Decides |
 |---|---|
 | [`strategic-design.md`](docs/strategic-design.md) | Boundaries, subdomains, context map. §4 is the **binding glossary**; §10 is the codebase rules. |
+| [`tactical-design-catalog.md`](docs/tactical-design-catalog.md) | Catalog's aggregates, the two ways a name changes, and the merge question every client has named. |
 | [`tactical-design-circulation.md`](docs/tactical-design-circulation.md) | Circulation's aggregates, invariants, desk moments and daily process. |
 | [`tactical-design-holdings.md`](docs/tactical-design-holdings.md) | Holdings' aggregate and moments. |
 | [`tactical-design-members.md`](docs/tactical-design-members.md) | Members' aggregate and moments. |

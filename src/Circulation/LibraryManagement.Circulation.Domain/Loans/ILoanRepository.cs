@@ -114,6 +114,23 @@ public interface ILoanRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the loan a recovered copy concerns: the most recently declared-lost loan carrying
+    /// it, or <see langword="null"/> when no declared loss ever involved the copy.
+    /// </summary>
+    /// <param name="copyId">The copy that turned up.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The loan, or <see langword="null"/>.</returns>
+    /// <remarks>
+    /// Most recent, because a copy found, re-lent and lost again has several ended loans in its
+    /// history and only the latest loss is the one a recovery settles — the earlier ones settled
+    /// themselves the same way in their own time, and the aggregate's once-only recovery guard
+    /// holds regardless.
+    /// </remarks>
+    ValueTask<Loan?> MostRecentlyDeclaredLostForCopyAsync(
+        CopyId copyId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Adds a loan that just started.
     /// </summary>
     /// <param name="loan">The loan to add.</param>

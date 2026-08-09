@@ -39,12 +39,15 @@ public sealed class MemberEntitlement(MembersDbContext context, TimeProvider clo
                 member.Category,
                 member.MembershipStart,
                 member.MembershipEnd,
+                member.ErasedOn,
             })
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        if (membership is null)
+        if (membership is null || membership.ErasedOn is not null)
         {
+            // An erased record answers exactly as an absent one: the identifier no longer
+            // resolves to a person, and that is what the erasure promised.
             return new EntitlementAnswer(Entitlement.NoSuchMember, Category: null);
         }
 

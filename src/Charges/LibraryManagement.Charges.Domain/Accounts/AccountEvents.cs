@@ -48,15 +48,34 @@ public sealed record ReplacementChargeRaised(
 public sealed record PaymentTaken(MemberId MemberId, Money Amount) : DomainEvent;
 
 /// <summary>
+/// A copy came back spoiled, and the damage was priced.
+/// </summary>
+/// <param name="MemberId">Who owes.</param>
+/// <param name="ChargeId">The charge.</param>
+/// <param name="LoanId">The loan whose return carried the observation — kept so a member
+/// disputing the charge can be answered from this table.</param>
+/// <param name="Amount">What the tariff makes of a spoiled copy.</param>
+public sealed record DamageChargeRaised(
+    MemberId MemberId,
+    ChargeId ChargeId,
+    LoanId LoanId,
+    Money Amount) : DomainEvent;
+
+/// <summary>
 /// A charge was cancelled by a decision rather than by payment.
 /// </summary>
 /// <param name="MemberId">Whose charge.</param>
 /// <param name="ChargeId">The charge.</param>
-/// <param name="Amount">What was forgone — what remained outstanding when it was cancelled.</param>
+/// <param name="AmountForgone">What remained outstanding when the charge was cancelled — never
+/// the charge's original figure. On a charge partly paid, only the remainder is money forgone:
+/// carrying the original would count the paid part twice in the treasurer's year, once as taken
+/// in and once as given up, and that ledger question is the reason payment and waiver are two
+/// acts at all. The name carries the definition because the plain <c>Amount</c> did not, and a
+/// reader filled it with the wrong one.</param>
 public sealed record ChargeWaived(
     MemberId MemberId,
     ChargeId ChargeId,
-    Money Amount) : DomainEvent;
+    Money AmountForgone) : DomainEvent;
 
 /// <summary>
 /// A member's balance moved.

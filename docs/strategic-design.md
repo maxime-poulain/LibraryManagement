@@ -156,6 +156,7 @@ three times is an enumeration that has not been decided.
 |---|---|---|
 | `OverdueFine` | Amende de retard | Charged for time. Small, frequent, often waived. |
 | `ReplacementCharge` | Frais de remplacement | Charged for an item that will not come back. Large, rare, a different decision entirely. |
+| `DamageCharge` | Frais de dégradation | Charged for an item returned spoiled. The observation is Circulation's, made at the return with the borrower identified; the price is Charges'. A third kind beside the fine and the replacement, because an object spoiled is neither time passing nor an object gone. |
 | `Waiver` | Remise gracieuse | A charge cancelled by a decision rather than by payment. |
 | `Payment` | Règlement | Money received against what a member owes. Distinct from a `Waiver`: one settles the charge, the other cancels it, and a library counts the two separately. |
 | `Balance` | Solde | What a member currently owes, every charge and payment netted. A statement of money, never of rights: what a balance forbids is Circulation's judgement, recorded there as `Standing`. This context's only word for the amount — it never says `Debt`, which is the Circulation word for the same figure seen as a consequence. |
@@ -285,7 +286,8 @@ The aggregate, its invariants and the moments that change it are set out in
 
 ### Charges
 
-**Owns.** Overdue fines, replacement charges, waivers, payments, and a member's balance.
+**Owns.** Overdue fines, replacement charges, damage charges, waivers, payments, and a member's
+balance.
 
 **Refuses.** Deciding whether a return was late — that is a circulation fact. And deciding what a
 debt forbids: "a member owing more than ten euros may not borrow" is a circulation rule that consults
@@ -301,8 +303,8 @@ lifetime outlives the loan — one can owe for a book returned three years ago; 
 a desk librarian handling documents against a till handling cash; and the tariff changes on its own
 schedule, by amnesty or exemption, without the loan rules moving.
 
-**Who decides the amount matters.** Circulation publishes `LoanReturnedLate(loanId, memberId,
-daysLate)` and Charges decides what it costs. If Circulation computed the amount, the tariff would
+**Who decides the amount matters.** Circulation publishes `LoanReturned(loanId, memberId,
+daysLate)` — punctual returns included — and Charges decides what it costs, when anything does. If Circulation computed the amount, the tariff would
 have moved into lending.
 
 **`OverdueFine` and `ReplacementCharge` are not the same type.** One is charged for time and is small,
@@ -311,7 +313,9 @@ different decision at a different order of magnitude. A single `Fine` with an en
 policies that have nothing in common — and it is why the context is called Charges rather than Fines:
 a context named after one of its two concepts bends every later one toward it, and a replacement
 charge is not a fine, as this paragraph exists to insist. The librarian's own umbrella word is
-*frais*, and Charges is its English.
+*frais*, and Charges is its English. The name proved its worth when the third kind arrived: a
+`DamageCharge` — an item returned spoiled — is not a fine either, and the context that could
+receive it without bending is the one that was not named after fines.
 
 The aggregate, its invariants and the moments that change it are set out in
 [tactical-design-charges.md](tactical-design-charges.md).
@@ -364,8 +368,10 @@ flowchart TD
     CAT -->|"Published Language<br/>EditionId + summary"| HLD
     HLD -->|"Customer / Supplier<br/>may this copy be lent?"| CIR
     MEM -->|"Customer / Supplier + ACL<br/>Member → Borrower"| CIR
-    CIR -->|"events<br/>returned late, declared lost"| CHG
-    CIR -->|"event<br/>this copy is lost"| HLD
+    CIR -->|"events<br/>returned, given up on"| CHG
+    CIR -->|"events<br/>this copy is lost,<br/>this copy came back"| HLD
+    HLD -->|"events<br/>this copy left service,<br/>this copy turned up"| CIR
+    HLD -->|"event<br/>this copy turned up"| CHG
     CHG -->|"event<br/>this member's balance moved"| CIR
     CHG -.->|"how much does this<br/>member owe?"| CIR
     CIR -->|"integration events"| NOT
@@ -389,7 +395,9 @@ are queries and projections: they carry no authority and change nothing.
 | Holdings | Circulation | Customer / Supplier | A loan cannot start on a copy that does not exist or may not be lent. |
 | Members | Circulation | Customer / Supplier + ACL | Same, plus a translation: `Member` becomes `Borrower`, and most of the member is dropped on the way. |
 | Circulation | Charges | Published Language, via events | Circulation announces facts. Charges prices them. |
-| Circulation | Holdings | Published Language, via events | A loan nobody returns ends as a copy nobody has. Circulation announces it; Holdings decides what its own status becomes. |
+| Circulation | Holdings | Published Language, via events | A loan nobody returns ends as a copy nobody has; a copy over the desk cannot be unaccounted for. Circulation announces both; Holdings decides what its own status becomes. |
+| Holdings | Circulation | Published Language, via events | A copy that leaves service takes any promise it carried with it, and a copy that turns up settles what its written-off loan was worth. Holdings announces; Circulation decides what its claims and loans do. |
+| Holdings | Charges | Published Language, via events | A copy that turns up cancels the replacement still owed for it. |
 | Charges | Circulation | Published Language, via events | A new debt cancels the borrower's holds. |
 | Charges | Circulation | Customer / Supplier + ACL, dependency-inverted | One question, one answer: how much does this member owe? The threshold that turns the amount into a refusal stays in Circulation. Not an Open Host Service, though it looks like one: an OHS is a protocol published *by the upstream* for an open set of consumers, and here the downstream declares the port for its own single use — see the inversion described below. |
 | Circulation | Notifications | Published Language, via events | Circulation does not know anyone is listening. |
@@ -409,7 +417,10 @@ the desk, synchronously, because a checkout waits on it. Circulation announces *
 afterwards, asynchronously, because nobody is standing there when a thirty-day-old loan is given up
 on — and Holdings decides for itself what that means for the copy's status, which is why the arrow
 carries a fact and not an instruction. The same fact reaches Holdings from a stocktake that failed
-to find the copy, and neither route is privileged.
+to find the copy, and neither route is privileged. The cycle turns the other way on the same terms:
+Holdings announces that a copy left service or turned up, and Circulation decides alone what that
+does to the promise on its hold shelf or to the loan it once gave up on — facts crossing in both
+directions, instructions in neither.
 
 **Circulation ↔ Charges** is the one that needed the inversion. Circulation is upstream for the facts
 — returned late, declared lost — and downstream for what those facts cost it. Two flows run the
@@ -546,17 +557,11 @@ composition point is the backend-for-frontend, already standing where it belongs
 
 ## 11. Open questions
 
-* Where a translation's contributors live. `Edition` itself is settled — a root of its own holding
-  a `WorkId`, because hold queues key on an edition and it must therefore be independently
-  addressable; registering one requires the work already cataloged, the same cross-aggregate rule
-  crediting an author follows — but it is deliberately thin: an identity, its work, the ISBN it
-  bears when it bears one. A translator or an illustrator is an edition-level fact in a three-level
-  model — FRBR would put them on the Expression this model deliberately lacks. The vocabulary is
-  already laid out for it: the work carries a `PreferredTitle` and the edition will carry a
-  `TitleProper`, the title on its own title page, so the two never contend for one word. To settle
-  when the edition grows those facts, alongside the publisher and the format. A body among the
-  authors raises a question of the same kind: `LifeYears` is a person's fact, and a corporate
-  author simply carries `Unknown` — the `Agent` reservation in §4 records where that leads.
+* Where a translation's contributors live, and the rest of the edition's eventual thickness.
+  Decided ground and open remainder both now live where tactical questions belong, in
+  [tactical-design-catalog.md](tactical-design-catalog.md) — alongside the question that document
+  adds to this list: the merge of two records, which Holdings and Members have each already named
+  as the event their identifiers wait on.
 * Whether a hold may be placed on a *work* — any edition will do — as well as on an edition. Members
   ask for both, and the queue rules differ.
 * Whether a copy's loan history stays in Circulation forever or is archived. It is the only thing in

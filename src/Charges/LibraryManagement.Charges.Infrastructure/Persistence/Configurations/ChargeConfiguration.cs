@@ -48,7 +48,8 @@ public sealed class ChargeConfiguration : IEntityTypeConfiguration<Charge>
 
         builder.HasDiscriminator<string>("Kind")
             .HasValue<OverdueFine>(nameof(OverdueFine))
-            .HasValue<ReplacementCharge>(nameof(ReplacementCharge));
+            .HasValue<ReplacementCharge>(nameof(ReplacementCharge))
+            .HasValue<DamageCharge>(nameof(DamageCharge));
 
         builder.Property("Kind").HasMaxLength(32);
 

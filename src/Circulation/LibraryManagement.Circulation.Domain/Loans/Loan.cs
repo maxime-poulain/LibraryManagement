@@ -60,6 +60,23 @@ public sealed class Loan : AggregateRoot<LoanId>
     /// <summary>Gets the day the copy came back, or <see langword="null"/> while it is out.</summary>
     public DateOnly? ReturnedOn { get; private set; }
 
+    /// <summary>
+    /// Gets the day the library stopped waiting — by the clock or by the borrower's own report —
+    /// or <see langword="null"/> for a loan that did not end that way.
+    /// </summary>
+    /// <remarks>
+    /// Recorded because it bounds what the lateness of this loan can ever cost: a fine is charged
+    /// for days the borrower let pass while the library still waited, and the day it stopped
+    /// waiting is where that count ends, whenever the copy turns up.
+    /// </remarks>
+    public DateOnly? DeclaredLostOn { get; private set; }
+
+    /// <summary>
+    /// Gets the day a written-off copy turned up again, or <see langword="null"/> while it has
+    /// not — which for most declared losses is forever.
+    /// </summary>
+    public DateOnly? RecoveredOn { get; private set; }
+
     /// <summary>Gets where the loan stands.</summary>
     public LoanStatus Status { get; private set; }
 
@@ -286,6 +303,8 @@ public sealed class Loan : AggregateRoot<LoanId>
     /// </summary>
     /// <param name="returnedOn">The day of the return.</param>
     /// <param name="policy">The circulation policy, which decides what a late day is.</param>
+    /// <param name="returnedDamaged">Whether the desk observed the copy came back spoiled — a
+    /// judgement of the librarian holding the object, carried as an input and never derived.</param>
     /// <returns>Success, or the reason the return was refused.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="policy"/> is null.</exception>
     /// <remarks>
@@ -301,7 +320,7 @@ public sealed class Loan : AggregateRoot<LoanId>
     /// against what it costs.
     /// </para>
     /// </remarks>
-    public Result Return(DateOnly returnedOn, CirculationPolicy policy)
+    public Result Return(DateOnly returnedOn, CirculationPolicy policy, bool returnedDamaged = false)
     {
         ArgumentNullException.ThrowIfNull(policy);
 
@@ -319,20 +338,35 @@ public sealed class Loan : AggregateRoot<LoanId>
 
         AddDomainEvent(new LoanReturned(Id, CopyId, BorrowerId, daysLate));
 
+        if (returnedDamaged)
+        {
+            AddDomainEvent(new CopyReturnedDamaged(Id, CopyId, BorrowerId));
+        }
+
         return Result.Success();
     }
 
     /// <summary>
     /// Ends the loan by decision rather than by a return: the library stops waiting.
     /// </summary>
+    /// <param name="on">The day of the decision — the scheduled run's, or the desk's.</param>
     /// <returns>Success, or the reason the loan could not be declared lost.</returns>
     /// <remarks>
-    /// Terminal, and deliberately not undone by the copy turning up: finding it afterwards starts
-    /// a return of a copy Holdings had marked lost, never a reopening. Raised by the scheduled
-    /// process after the policy's waiting period; the method exists here so that process finds
-    /// its route already built.
+    /// <para>
+    /// Two roads reach this one act: the scheduled process, after the policy's waiting period,
+    /// and the desk, the day a borrower reports the loss themselves. The desk road exists because
+    /// a confession must have a door — without one, the loan runs to its thirtieth day of
+    /// lateness while reminders chase a copy everyone already knows is gone, and the money
+    /// offered at the counter cannot be taken.
+    /// </para>
+    /// <para>
+    /// Terminal, and deliberately not undone by the copy turning up: a found copy re-enters
+    /// service in Holdings, never by reopening the loan. A loan already declared answers success
+    /// and keeps its first date — the run may have beaten the desk to it, or the desk the run,
+    /// and the second arrival is a redelivery, not a second decision.
+    /// </para>
     /// </remarks>
-    public Result DeclareLost()
+    public Result DeclareLost(DateOnly on)
     {
         if (Status == LoanStatus.Returned)
         {
@@ -347,8 +381,61 @@ public sealed class Loan : AggregateRoot<LoanId>
         }
 
         Status = LoanStatus.DeclaredLost;
+        DeclaredLostOn = on;
 
         AddDomainEvent(new LoanDeclaredLost(Id, CopyId, BorrowerId));
+
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Records that the copy of this written-off loan has turned up, and announces what its
+    /// lateness was worth.
+    /// </summary>
+    /// <param name="on">The day the copy turned up.</param>
+    /// <param name="policy">The circulation policy, which decides what a late day is.</param>
+    /// <returns>Success, or the reason there was nothing to record.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="policy"/> is null.</exception>
+    /// <remarks>
+    /// <para>
+    /// The loan stays <see cref="LoanStatus.DeclaredLost"/> — terminal is terminal, and the
+    /// statistics that count completed loans must not gain one because a book resurfaced years
+    /// later. What changes is the money: the lateness this loan accrued is announced at last,
+    /// counted in open days from the due date to <see cref="DeclaredLostOn"/> — the day the
+    /// library stopped waiting is the day the borrower stopped owing for time. Without this, the
+    /// model charged less for a copy returned on day forty-five than on day twenty-nine: the
+    /// replacement charge was cancelled by the find, the fine had never been assessed, and the
+    /// worst lateness cost nothing at all.
+    /// </para>
+    /// <para>
+    /// Recorded once: a second recovery of the same loan is a redelivery and announces nothing.
+    /// </para>
+    /// </remarks>
+    public Result RecordRecovery(DateOnly on, CirculationPolicy policy)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+
+        if (Status != LoanStatus.DeclaredLost)
+        {
+            return Result.Failure(
+                CirculationErrorCodes.LoanNotActive,
+                $"A loan that is {Describe(Status)} was never given up on, so no recovery "
+                + "concerns it.");
+        }
+
+        if (RecoveredOn is not null)
+        {
+            return Result.Success();
+        }
+
+        RecoveredOn = on;
+
+        // Never null for a declared-lost loan: DeclareLost is the only way in and it always
+        // records its day. The lateness stops there, not at the recovery — the years a book
+        // spends behind a radiator are nobody's fine.
+        var daysLate = policy.BillableDaysLate(DueDate, DeclaredLostOn!.Value);
+
+        AddDomainEvent(new LoanRecovered(Id, CopyId, BorrowerId, daysLate));
 
         return Result.Success();
     }

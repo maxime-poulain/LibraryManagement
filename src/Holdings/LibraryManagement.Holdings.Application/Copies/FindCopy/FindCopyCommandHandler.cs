@@ -29,6 +29,6 @@ public sealed class FindCopyCommandHandler(ICopyRepository copies)
                 $"No copy is held under '{copyId}'.");
         }
 
-        return copy.Find(command.ReferenceOnly);
+        return copy.Find();
     }
 }

@@ -26,6 +26,9 @@ public static class MembersErrorCodes
     /// <summary>No member is enrolled under that identifier.</summary>
     public static readonly ErrorCode MemberNotFound = new("Members.MemberNotFound");
 
+    /// <summary>The record was erased at its member's request and no longer acts.</summary>
+    public static readonly ErrorCode MemberErased = new("Members.MemberErased");
+
     /// <summary>
     /// A child member must have a guardian, always — the invariant holds at enrollment, at a
     /// category change into <c>Child</c>, and against a removal that would leave a minor

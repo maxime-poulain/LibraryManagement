@@ -125,4 +125,45 @@ public sealed class MemberPersistenceTests(SqlServerFixture sqlServer)
         found.MembershipEnd.ShouldBe(
             Today.AddYears(2).AddMonths(Member.MembershipDurationInMonths));
     }
+
+    [Fact]
+    public async Task AnErasedMember_ComesBackEmpty_AndStillARow()
+    {
+        // The presence bit on the name, the nullable card and birth date: an erased record must
+        // survive a round trip as exactly what it is — an identifier that resolves to nobody.
+        var member = AMember(cardNumber: Unique());
+        member.Erase(Today);
+
+        var stored = await StoredAsync(member);
+
+        await using var reading = sqlServer.NewContext();
+        var found = await reading.Set<Member>().SingleAsync(held => held.Id == stored.Id, Token);
+
+        found.ErasedOn.ShouldBe(Today);
+        found.Name.ShouldBeNull();
+        found.DateOfBirth.ShouldBeNull();
+        found.CardNumber.ShouldBeNull();
+        found.Guardian.ShouldBeNull();
+        found.MembershipEnd.ShouldBe(member.MembershipEnd);
+    }
+
+    [Fact]
+    public async Task TwoErasedMembers_Coexist_BecauseTheCardIndexIsFiltered()
+    {
+        // Erasure retires a card to null. An unfiltered unique index would allow exactly one
+        // erased member in the whole registry, and the second erasure would fail at the save —
+        // an accident discovered only in production, which is what this pins.
+        var first = AMember(cardNumber: Unique());
+        var second = AMember(cardNumber: Unique());
+        first.Erase(Today);
+        second.Erase(Today);
+
+        await StoredAsync(first);
+        await StoredAsync(second);
+
+        await using var reading = sqlServer.NewContext();
+        (await reading.Set<Member>().CountAsync(held => held.ErasedOn != null, Token))
+            .ShouldBeGreaterThanOrEqualTo(2);
+    }
+
 }

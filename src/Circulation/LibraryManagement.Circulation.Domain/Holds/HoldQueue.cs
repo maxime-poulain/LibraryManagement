@@ -283,6 +283,61 @@ public sealed class HoldQueue : AggregateRoot<EditionId>
     }
 
     /// <summary>
+    /// Takes back the promise a copy carried: the claim it was set aside for returns to the
+    /// queue, at the place its own age gives it.
+    /// </summary>
+    /// <param name="copyId">The copy that is no longer there to be collected.</param>
+    /// <returns>The claim released, or <see langword="null"/> when no claim had the copy set
+    /// aside — the ordinary case by far, since most departures from service concern copies nobody
+    /// was promised.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="copyId"/> is null.</exception>
+    /// <remarks>
+    /// The claim keeps its <c>PlacedOn</c>, so it stands first among the queued by construction —
+    /// the borrower did nothing and loses nothing but the trip. What they lose all the same is
+    /// told: the withdrawal of a pickup already announced is a consequence they did not choose,
+    /// and silence would send them to the desk for a copy that is not there.
+    /// </remarks>
+    public Hold? ReleaseTrappedCopy(CopyId copyId)
+    {
+        ArgumentNullException.ThrowIfNull(copyId);
+
+        var promised = _holds.FirstOrDefault(hold => copyId.Equals(hold.TrappedCopyId));
+
+        if (promised is null)
+        {
+            return null;
+        }
+
+        promised.Release();
+
+        AddDomainEvent(new HoldPickupWithdrawn(Id, promised.Id, promised.BorrowerId, copyId));
+
+        return promised;
+    }
+
+    /// <summary>
+    /// Ends every claim in the queue because no copy is left to serve any of them.
+    /// </summary>
+    /// <remarks>
+    /// The queue's own end of the promise: a claim is a claim on the next available copy, and an
+    /// edition whose last copy left the collection has no <em>next</em> to promise. Cancelled
+    /// rather than kept waiting for an acquisition nobody has decided on — a claim that cannot be
+    /// served occupies one of the borrower's five places for as long as it lives, and living on
+    /// hope is the queue quietly degrading the cap. Each ending is announced per claim, exactly
+    /// as the debt cancellation is, and for the same reason: the borrower's first question is
+    /// about their own claim, not about the queue.
+    /// </remarks>
+    public void CancelAllUnfulfillable()
+    {
+        foreach (var hold in _holds.ToList())
+        {
+            _holds.Remove(hold);
+
+            AddDomainEvent(new HoldCancelledUnfulfillable(Id, hold.Id, hold.BorrowerId));
+        }
+    }
+
+    /// <summary>
     /// What ending a claim leaves in the caller's hands.
     /// </summary>
     /// <param name="ReleasedCopyId">The copy the claim had set aside, or <see langword="null"/>

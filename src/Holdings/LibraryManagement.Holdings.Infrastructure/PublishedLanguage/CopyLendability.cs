@@ -58,4 +58,22 @@ public sealed class CopyLendability(HoldingsDbContext context) : ICopyLendabilit
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }
+
+    /// <inheritdoc/>
+    public async ValueTask<bool> AnyCopyExpectedToServeAsync(
+        Guid editionId,
+        CancellationToken cancellationToken = default)
+    {
+        var id = EditionId.Create(editionId);
+
+        // In service, or away in repair and expected back in it. Withdrawn and lost copies serve
+        // nobody, and a reference-only copy is held rather than lent — none of the three is a
+        // 'next available copy' a claim could wait for.
+        return await context.Copies
+            .AnyAsync(
+                copy => copy.EditionId == id
+                    && (copy.Status == CopyStatus.InService || copy.Status == CopyStatus.InRepair),
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
 }

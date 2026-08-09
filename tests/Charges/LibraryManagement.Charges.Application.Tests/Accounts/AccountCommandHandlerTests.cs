@@ -1,4 +1,5 @@
 using LibraryManagement.Charges.Application.Accounts.AssessOverdueFine;
+using LibraryManagement.Charges.Application.Accounts.RaiseDamageCharge;
 using LibraryManagement.Charges.Application.Accounts.RaiseReplacementCharge;
 using LibraryManagement.Charges.Application.Accounts.TakePayment;
 using LibraryManagement.Charges.Application.Accounts.WaiveCharge;
@@ -34,6 +35,12 @@ public sealed class AccountCommandHandlerTests
                 new RaiseReplacementChargeCommand(memberId, Guid.CreateVersion7(), Guid.CreateVersion7()),
                 Token);
 
+    private ValueTask<Result> Damage(Guid memberId)
+        => new RaiseDamageChargeCommandHandler(_accounts, Policy, FrozenClock.At(Today))
+            .Handle(
+                new RaiseDamageChargeCommand(memberId, Guid.CreateVersion7(), Guid.CreateVersion7()),
+                Token);
+
     private ValueTask<Result> Payment(Guid memberId, decimal amount)
         => new TakePaymentCommandHandler(_accounts).Handle(new TakePaymentCommand(memberId, amount), Token);
 
@@ -44,6 +51,18 @@ public sealed class AccountCommandHandlerTests
         => result.Match<ErrorCode?>(() => null, errors => errors[0].ErrorCode);
 
     // --- Where the account comes from --------------------------------------------------------------
+
+    [Fact]
+    public async Task ADamage_OpensTheAccountItsFirstChargeNeeds()
+    {
+        var memberId = Guid.CreateVersion7();
+
+        (await Damage(memberId)).HasErrors().ShouldBeFalse();
+
+        _accounts.Opened.ShouldBeTrue();
+        (await _accounts.GetByMemberAsync(MemberId.Create(memberId), Token))!
+            .Balance.ShouldBe(Money.Of(Policy.DamageCharge));
+    }
 
     [Fact]
     public async Task TheFirstCharge_OpensTheAccount()

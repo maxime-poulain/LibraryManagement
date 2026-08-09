@@ -46,10 +46,11 @@ subscriber owes idempotence** — by `EventId`, or by a domain operation that is
 
 Both kinds are in use. `Copy.DeclareLost` answers success for a copy already lost, which the aggregate
 decided for its own reasons long before this mechanism existed. Charges deduplicates on the aggregate
-instead: a charge records the loan it prices, so an account that has already priced a loan refuses to
-price it twice, per kind — which is why
-[`tactical-design-charges.md`](../tactical-design-charges.md) §10 could record that redelivery needed
-no table.
+instead — and its first attempt is the caution worth keeping: reading the memory off the outstanding
+charges expired the guarantee the moment the desk settled one, so the account keeps a memory of
+priced loans that outlives its charges. Aggregate-side idempotence must rest on state that nothing
+legitimately empties — [`tactical-design-charges.md`](../tactical-design-charges.md) §10 records the
+correction.
 
 ## Alternatives rejected
 

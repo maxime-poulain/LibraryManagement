@@ -21,6 +21,7 @@
         <!-- And answers the port Circulation declared for it, and listens to the two facts
              Circulation announces. Published languages only — both reference nothing themselves. -->
         <ProjectReference Include="..\..\Circulation\LibraryManagement.Circulation.PublishedLanguage\LibraryManagement.Circulation.PublishedLanguage.csproj" />
+        <ProjectReference Include="..\..\Holdings\LibraryManagement.Holdings.PublishedLanguage\LibraryManagement.Holdings.PublishedLanguage.csproj" />
     </ItemGroup>
 
 </Project>

@@ -77,4 +77,44 @@ public sealed class HoldQueueRepository(CirculationDbContext context) : IHoldQue
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }
+
+    /// <inheritdoc/>
+    public async ValueTask<IReadOnlyList<BorrowerId>> BorrowersWithLiveHoldsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        // Identifiers alone, no aggregate: the sweep loads a queue only for the few borrowers the
+        // balance actually blocks, and materializing every queue to name their occupants would
+        // read the whole hold shelf to ask a yes/no per person.
+        return await context.HoldQueues
+            .SelectMany(queue => queue.Holds)
+            .Select(hold => hold.BorrowerId)
+            .Distinct()
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async ValueTask<HoldQueue?> TrappingCopyAsync(
+        CopyId copyId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(copyId);
+
+        return await context.HoldQueues
+            .Include(queue => queue.Holds)
+            .Where(queue => queue.Holds.Any(hold => hold.TrappedCopyId == copyId))
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async ValueTask<IReadOnlyList<HoldQueue>> WithLiveHoldsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return await context.HoldQueues
+            .Include(queue => queue.Holds)
+            .Where(queue => queue.Holds.Any())
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
 }

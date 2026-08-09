@@ -44,8 +44,8 @@ public sealed class EnrollMemberCommandHandlerTests
         outcome.HasErrors().ShouldBeFalse();
 
         var member = _members.Added.Single();
-        member.Name.ToString().ShouldBe("Antoine Doinel");
-        member.CardNumber.Value.ShouldBe("20260000512");
+        member.Name!.ToString().ShouldBe("Antoine Doinel");
+        member.CardNumber!.Value.ShouldBe("20260000512");
         member.MembershipStart.ShouldBe(Today);
         member.MembershipEnd.ShouldBe(Today.AddMonths(Member.MembershipDurationInMonths));
     }

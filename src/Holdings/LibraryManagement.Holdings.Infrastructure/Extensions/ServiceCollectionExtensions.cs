@@ -77,6 +77,10 @@ public static class ServiceCollectionExtensions
             IIntegrationEventSubscriber<CopyReportedLost>,
             IntegrationEvents.DeclareCopyLostOnCopyReportedLost>();
 
+        services.AddScoped<
+            IIntegrationEventSubscriber<CopyReturned>,
+            IntegrationEvents.NoteCopyAccountedForOnCopyReturned>();
+
         // The JSON side of this module's value objects, for the outbox.
         services.AddSingleton<JsonConverter, BarcodeJsonConverter>();
         services.AddSingleton<JsonConverter, ShelfmarkJsonConverter>();

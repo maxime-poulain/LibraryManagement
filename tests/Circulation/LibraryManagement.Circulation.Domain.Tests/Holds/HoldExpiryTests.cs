@@ -241,6 +241,94 @@ public sealed class HoldExpiryTests
         readied.PickupDeadline.ShouldBe(Today.AddDays(10));
     }
 
+    // --- The promise taken back -----------------------------------------------------------------
+
+    [Fact]
+    public void ReleaseTrappedCopy_PutsTheClaimBackAtTheHeadOfTheQueue()
+    {
+        // The set-aside copy left service before the borrower came. The claim keeps its placement
+        // instant, so it stands first among the queued by construction — the borrower did nothing
+        // and loses nothing but the trip, which the announcement spares them.
+        var queue = AQueue();
+        var promised = BorrowerId.Generate();
+        var behind = BorrowerId.Generate();
+        var copyId = CopyId.Generate();
+
+        queue.PlaceHold(HoldId.Generate(), promised, ThisMorning);
+        queue.PlaceHold(HoldId.Generate(), behind, ThisMorning.AddHours(1));
+        queue.TrapOldestQueued(copyId, Today.AddDays(7), NobodyBlocked);
+        queue.ClearDomainEvents();
+
+        var released = queue.ReleaseTrappedCopy(copyId);
+
+        released.ShouldNotBeNull();
+        released.Status.ShouldBe(HoldStatus.Queued);
+        released.TrappedCopyId.ShouldBeNull();
+        released.PickupDeadline.ShouldBeNull();
+        queue.QueuedBorrowersInOrder()[0].ShouldBe(promised);
+
+        var withdrawn = queue.Event<HoldPickupWithdrawn>();
+        withdrawn.BorrowerId.ShouldBe(promised);
+        withdrawn.CopyId.ShouldBe(copyId);
+    }
+
+    [Fact]
+    public void ReleaseTrappedCopy_ResetsTheExpiryWarning()
+    {
+        // The next copy set aside for this claim is a fresh appointment, warned about afresh.
+        var queue = AQueueWithATrappedCopy(out _, out var copyId, Today);
+        queue.WarnOfImminentExpiry(Today);
+        queue.ClearDomainEvents();
+
+        queue.ReleaseTrappedCopy(copyId);
+
+        queue.Holds.Single().ExpiryWarningSent.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ReleaseTrappedCopy_ACopyPromisedToNobody_ReleasesNothing()
+    {
+        // The ordinary case by far: most departures from service concern copies nobody was
+        // promised, and a redelivery lands here too.
+        var queue = AQueueWithATrappedCopy(out _, out _, Today);
+        queue.ClearDomainEvents();
+
+        queue.ReleaseTrappedCopy(CopyId.Generate()).ShouldBeNull();
+
+        queue.DomainEvents.ShouldBeEmpty();
+    }
+
+    // --- The queue that cannot be served ----------------------------------------------------------
+
+    [Fact]
+    public void CancelAllUnfulfillable_EndsEveryClaim_EachOutLoud()
+    {
+        var queue = AQueue();
+        var first = BorrowerId.Generate();
+        var second = BorrowerId.Generate();
+
+        queue.PlaceHold(HoldId.Generate(), first, ThisMorning);
+        queue.PlaceHold(HoldId.Generate(), second, ThisMorning.AddHours(1));
+        queue.ClearDomainEvents();
+
+        queue.CancelAllUnfulfillable();
+
+        queue.Holds.ShouldBeEmpty();
+        queue.DomainEvents.OfType<HoldCancelledUnfulfillable>()
+            .Select(cancelled => cancelled.BorrowerId)
+            .ShouldBe([first, second], ignoreOrder: true);
+    }
+
+    [Fact]
+    public void CancelAllUnfulfillable_AnEmptyQueue_SaysNothing()
+    {
+        var queue = AQueue();
+
+        queue.CancelAllUnfulfillable();
+
+        queue.DomainEvents.ShouldBeEmpty();
+    }
+
     [Fact]
     public void AClaimHandedASecondCopy_MayBeWarnedAboutItInTurn()
     {

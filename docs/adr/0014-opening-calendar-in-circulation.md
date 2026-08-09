@@ -41,7 +41,7 @@ open days, since nothing is billed per day there.
 ## Consequences
 
 **The meaning of `daysLate` crosses a boundary, and that is why this is an ADR.** The
-`LoanReturnedLate` contract now carries open days, net of closures. Charges multiplies the number
+`LoanReturned` contract now carries open days, net of closures. Charges multiplies the number
 it is told and never learns the calendar — the tariff stays in the money context, the calendar
 stays at the desk, and a grace period remains meaningful because the days it forgives are days the
 member could actually have used. Nothing about the contract's *shape* changed, so no stored

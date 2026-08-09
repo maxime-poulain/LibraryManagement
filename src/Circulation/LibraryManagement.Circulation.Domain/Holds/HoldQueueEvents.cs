@@ -117,3 +117,41 @@ public sealed record HoldCancelledForDebt(
     EditionId EditionId,
     HoldId HoldId,
     BorrowerId BorrowerId) : DomainEvent;
+
+/// <summary>
+/// A pickup already announced was withdrawn: the set-aside copy left service before the borrower
+/// came, and their claim went back to the head of the queue.
+/// </summary>
+/// <param name="EditionId">The queue.</param>
+/// <param name="HoldId">The claim released.</param>
+/// <param name="BorrowerId">Who was promised the copy.</param>
+/// <param name="CopyId">The copy that is no longer there to be collected.</param>
+/// <remarks>
+/// Consequential, always sent: the borrower was told a copy waited for them, and silence now
+/// would send them to the desk for a copy that is not there — the trip this whole design exists
+/// to spare. The claim itself lost nothing but the wait: it keeps its placement instant, so it
+/// stands first for the next copy that comes back.
+/// </remarks>
+public sealed record HoldPickupWithdrawn(
+    EditionId EditionId,
+    HoldId HoldId,
+    BorrowerId BorrowerId,
+    CopyId CopyId) : DomainEvent;
+
+/// <summary>
+/// A claim was cancelled because its edition has no copy left to serve it with — the last one
+/// was withdrawn, lost, or shut away, and nothing is expected back.
+/// </summary>
+/// <param name="EditionId">The queue that can no longer promise anything.</param>
+/// <param name="HoldId">The claim ended.</param>
+/// <param name="BorrowerId">Who was waiting.</param>
+/// <remarks>
+/// Consequential, always sent, and one per claim for the aggregate-boundary reason the debt
+/// cancellation records. The message it becomes is the one a queue owes the people in it: a claim
+/// is a promise of the next available copy, and a promise that can no longer be kept must be
+/// withdrawn out loud rather than left to occupy one of the borrower's five places forever.
+/// </remarks>
+public sealed record HoldCancelledUnfulfillable(
+    EditionId EditionId,
+    HoldId HoldId,
+    BorrowerId BorrowerId) : DomainEvent;

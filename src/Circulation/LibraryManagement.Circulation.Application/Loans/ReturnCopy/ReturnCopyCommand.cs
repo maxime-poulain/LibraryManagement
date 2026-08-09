@@ -9,10 +9,13 @@ namespace LibraryManagement.Circulation.Application.Loans.ReturnCopy;
 /// </summary>
 /// <param name="CopyId">The copy in hand. The desk scans an object, not a loan, so the object
 /// names the command and the active loan is found from it.</param>
+/// <param name="ReturnedDamaged">Whether the librarian, object in hand, judges it came back
+/// spoiled. An input and never a derivation: attributing damage to a loan is a desk judgement,
+/// and making it at the return is what settles whose loan it was by construction.</param>
 /// <remarks>
 /// A borrower may always return: no standing, no cap, no queue is consulted on the way in. In one
 /// transaction the loan closes, lateness is computed and recorded, and the edition's queue is
 /// asked whether the copy is wanted — trapped for the oldest claim in good standing, or back to
 /// the shelf.
 /// </remarks>
-public sealed record ReturnCopyCommand(Guid CopyId) : ICommand<Result>;
+public sealed record ReturnCopyCommand(Guid CopyId, bool ReturnedDamaged = false) : ICommand<Result>;

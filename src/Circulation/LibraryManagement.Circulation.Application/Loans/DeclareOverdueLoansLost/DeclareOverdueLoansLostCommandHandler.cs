@@ -40,7 +40,7 @@ public sealed class DeclareOverdueLoansLostCommandHandler(
 
         foreach (var loan in overdue.Where(loan => loan.IsLongOverdue(today, policy)))
         {
-            loan.DeclareLost().TapError(errors.AddErrors);
+            loan.DeclareLost(today).TapError(errors.AddErrors);
         }
 
         return errors.Count > 0 ? Result.Failure(errors) : Result.Success();

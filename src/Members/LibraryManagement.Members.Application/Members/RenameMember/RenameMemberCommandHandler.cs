@@ -30,11 +30,6 @@ public sealed class RenameMemberCommandHandler(IMemberRepository members)
         }
 
         return MemberName.Create(command.GivenName, command.FamilyName)
-            .Bind(name =>
-            {
-                member.Rename(name);
-
-                return Result.Success();
-            });
+            .Bind(member.Rename);
     }
 }

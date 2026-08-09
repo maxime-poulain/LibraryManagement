@@ -28,6 +28,7 @@ is a bug: fix the pair in the same change.
 | Document | Decides |
 |---|---|
 | `docs/strategic-design.md` | Boundaries, subdomains, context map. §4 is the **glossary — the binding ubiquitous language**. §10 is the codebase rules. |
+| `docs/tactical-design-catalog.md` | Catalog's aggregates and moments: the two ways a name changes, the thin edition, the access-point index, and the merge question its clients have already named. |
 | `docs/tactical-design-circulation.md` | Circulation's aggregates, invariants and moments. Desk moments, the daily process and both directions of the Charges cycle implemented; §10 records what building each taught. |
 | `docs/tactical-design-holdings.md` | Holdings' aggregate and moments. Implemented; §10 records what building it taught. |
 | `docs/tactical-design-members.md` | Members' aggregate and moments. Implemented; §10 records what building it taught. |
@@ -158,6 +159,10 @@ Item), `Shelfmark` (never call number), `InService` (never OnShelf), `Balance` i
   why, and a dead link is worse than no link because it looks like it should work. What the commit
   has to justify itself with is its own message. The attribution stays because authorship is a fact
   about the change; the transcript is not.
+- **Pull requests carry no session URL either**, for the same reason: a PR body outlives the
+  conversation that produced it, and a link nobody can open decorates without informing. The
+  attribution line may stay; the `https://claude.ai/code/session_…` link may not — strip it even
+  when tooling appends one by default.
 
 ## Repository philosophy
 

@@ -40,6 +40,27 @@ public sealed record LoanReturned(
     int DaysLate) : DomainEvent;
 
 /// <summary>
+/// A copy came back spoiled — pages torn, water through the spine — and the desk said so while
+/// closing the loan.
+/// </summary>
+/// <param name="LoanId">The loan whose return carried the observation.</param>
+/// <param name="CopyId">The copy that came back worse than it went out.</param>
+/// <param name="BorrowerId">Who brought it back.</param>
+/// <remarks>
+/// A fact beside <see cref="LoanReturned"/>, never a flag on it: the return says a copy is back
+/// and how late, this says the state it is back in, and the two have different audiences — a
+/// priced lateness would survive unchanged if the library stopped billing damage tomorrow. The
+/// attribution is settled by construction: the observation is made at the return, with the
+/// borrower standing there, so nobody later guesses whose loan spoiled the copy. What the object
+/// itself becomes — worn, withdrawn, sent for rebinding — stays Holdings' record, entered by its
+/// own moments.
+/// </remarks>
+public sealed record CopyReturnedDamaged(
+    LoanId LoanId,
+    CopyId CopyId,
+    BorrowerId BorrowerId) : DomainEvent;
+
+/// <summary>
 /// A copy is due back soon, and the borrower has not been told yet.
 /// </summary>
 /// <param name="LoanId">The loan.</param>
@@ -97,3 +118,26 @@ public sealed record LoanDeclaredLost(
     LoanId LoanId,
     CopyId CopyId,
     BorrowerId BorrowerId) : DomainEvent;
+
+/// <summary>
+/// The copy of a written-off loan turned up, and the lateness it had accrued is finally known.
+/// </summary>
+/// <param name="LoanId">The loan, still ended — a recovery reopens nothing.</param>
+/// <param name="CopyId">The copy that turned up.</param>
+/// <param name="BorrowerId">Who had it.</param>
+/// <param name="DaysLate">
+/// Open days from the due date to the day the library stopped waiting — never to the recovery:
+/// the years a book spends behind a radiator are nobody's fine, and the count froze the day the
+/// loss was declared.
+/// </param>
+/// <remarks>
+/// It leaves this context through the same contract an ordinary return does, because to the
+/// reader it is the same fact — this loan's lateness, priced by whoever prices time. The
+/// replacement the loss once cost is cancelled by the find on another road entirely, and this
+/// context knows nothing about it.
+/// </remarks>
+public sealed record LoanRecovered(
+    LoanId LoanId,
+    CopyId CopyId,
+    BorrowerId BorrowerId,
+    int DaysLate) : DomainEvent;

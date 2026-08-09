@@ -56,6 +56,7 @@ public sealed class LoanConfiguration : AggregateRootConfiguration<Loan, LoanId>
         builder.Property(loan => loan.DueDate).IsRequired();
         builder.Property(loan => loan.RenewalCount).IsRequired();
         builder.Property(loan => loan.ReturnedOn);
+        builder.Property(loan => loan.DeclaredLostOn);
 
         // A table of its own rather than a JSON column, the same call the variant names made: this
         // is a set the scheduled process asks about, and the composite key of the loan and the
