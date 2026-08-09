@@ -246,6 +246,12 @@ public sealed class HoldQueue : AggregateRoot<EditionId>
     /// that no live claim owns is a promise to nobody.
     /// </para>
     /// <para>
+    /// The deadline is judged through the calendar as it stands, not as it stood: the trapping
+    /// already slid it off a closed day, so ordinarily this moves nothing, but a closure declared
+    /// afterwards — a strike landing on the stored deadline — must not cost a borrower their
+    /// claim for not walking through a locked door.
+    /// </para>
+    /// <para>
     /// The copy is released before it is re-offered, so the rule that a trapped copy belongs to
     /// exactly one claim holds at every instant in between.
     /// </para>
@@ -259,7 +265,9 @@ public sealed class HoldQueue : AggregateRoot<EditionId>
         ArgumentNullException.ThrowIfNull(policy);
 
         var uncollected = _holds
-            .Where(hold => hold.Status == HoldStatus.AwaitingPickup && hold.PickupDeadline < today)
+            .Where(hold => hold.Status == HoldStatus.AwaitingPickup
+                && hold.PickupDeadline is { } deadline
+                && policy.Calendar.FirstOpenDayOnOrAfter(deadline) < today)
             .ToList();
 
         foreach (var hold in uncollected)
@@ -270,7 +278,7 @@ public sealed class HoldQueue : AggregateRoot<EditionId>
 
             AddDomainEvent(new HoldExpired(Id, hold.Id, hold.BorrowerId, releasedCopy));
 
-            TrapOldestQueued(releasedCopy, today.AddDays(policy.PickupPeriodInDays), blocked);
+            TrapOldestQueued(releasedCopy, policy.PickupDeadlineFor(today), blocked);
         }
     }
 

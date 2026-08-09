@@ -52,7 +52,7 @@ public sealed class ReturnCopyCommandHandler(
 
         var today = clock.Today();
 
-        var returned = loan.Return(today);
+        var returned = loan.Return(today, policy);
 
         if (returned.HasErrors())
         {
@@ -70,7 +70,7 @@ public sealed class ReturnCopyCommandHandler(
 
             // Null when every queued borrower is blocked: the copy goes back to the shelf, and
             // nothing is recorded — Holdings never learns a return happened, by design.
-            queue.TrapOldestQueued(copyId, today.AddDays(policy.PickupPeriodInDays), blocked);
+            queue.TrapOldestQueued(copyId, policy.PickupDeadlineFor(today), blocked);
         }
 
         return Result.Success();

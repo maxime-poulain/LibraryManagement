@@ -102,7 +102,7 @@ public sealed class ChargesCycleTests(SqlServerFixture sqlServer) : IAsyncLifeti
             Today.AddDays(-Policy.LoanDurationInDays - daysLate),
             Policy);
 
-        loan.Return(Today);
+        loan.Return(Today, Policy);
 
         context.Add(loan);
         await context.SaveChangesAsync(Token);

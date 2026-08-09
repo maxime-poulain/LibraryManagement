@@ -61,7 +61,7 @@ public sealed class CancelHoldCommandHandler(
 
                     queue.TrapOldestQueued(
                         cancellation.ReleasedCopyId,
-                        today.AddDays(policy.PickupPeriodInDays),
+                        policy.PickupDeadlineFor(today),
                         blocked);
                 }
 

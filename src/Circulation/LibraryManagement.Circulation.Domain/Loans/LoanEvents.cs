@@ -28,9 +28,11 @@ public sealed record LoanCheckedOut(
 /// <param name="LoanId">The loan that ended.</param>
 /// <param name="CopyId">The copy that came back.</param>
 /// <param name="BorrowerId">Who brought it.</param>
-/// <param name="DaysLate">How late it was, and zero is published all the same: whether a return
-/// was late is a circulation fact; what lateness costs is a money question, and Charges answers
-/// it — a price here would move the tariff into lending.</param>
+/// <param name="DaysLate">How late it was, in days the library was open — a closed day is never
+/// billed, and the calendar that decides which days those are stays in this context. Zero is
+/// published all the same: whether a return was late is a circulation fact; what lateness costs
+/// is a money question, and Charges answers it — a price here would move the tariff into
+/// lending.</param>
 public sealed record LoanReturned(
     LoanId LoanId,
     CopyId CopyId,
@@ -67,7 +69,9 @@ public sealed record LoanDueSoon(
 /// <param name="DaysOverdue">
 /// How late it actually is on the day of announcing — not the stage of the schedule that
 /// triggered the message. A run that missed days announces the truth, not the appointment it is
-/// catching up on.
+/// catching up on. Elapsed days, deliberately, where the fine counts open ones: a message says
+/// how long the copy has been kept, a fine says what the kept days cost, and the borrower's own
+/// calendar agrees with the first.
 /// </param>
 public sealed record LoanBecameOverdue(
     LoanId LoanId,

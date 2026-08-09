@@ -51,14 +51,16 @@ of one context's design; none is reversible cheaply once its module carries data
 | A hold is placed on an *edition* | On a work — any edition will do — or on a specific copy | **decided** |
 | Overdue fines are charged, from the first cent | Fine-free, or a threshold below which nothing is blocked | **decided** |
 | A flat cap of five items, all categories alike | A policy table indexed by member category | **decided** |
+| A due date never falls on a closed day, and a closed day is never billed | Calendar days throughout, closures ignored | **decided** |
 
 The fine-free alternative is not a simplification for its own sake: many public libraries have
 abolished fines, having found they deter the poorest readers and cost more to collect than they
 raise. The model charges them, but note that **a fine and a suspension are two different levers**,
 and the second works without the first.
 
-The loan rules themselves — cap, durations, reminder schedule, when an item is declared lost — are
-set out in [tactical-design-circulation.md](tactical-design-circulation.md).
+The loan rules themselves — cap, durations, reminder schedule, when an item is declared lost, and
+the opening calendar the durations are counted across — are set out in
+[tactical-design-circulation.md](tactical-design-circulation.md).
 
 ## 4. Ubiquitous language
 
@@ -123,7 +125,7 @@ three times is an enumeration that has not been decided.
 | `Checkout` | Emprunt | The act of starting a loan. |
 | `Return` | Retour | The act of ending one. |
 | `Renewal` | Prolongation | Moving a due date forward without returning the copy. |
-| `DueDate` | Date de retour | When the copy is expected back. |
+| `DueDate` | Date de retour | When the copy is expected back. Never a day the library is closed: a deadline a member must meet falls on a day they can meet it. |
 | `Overdue` | En retard | Past the due date and not returned. |
 | `Hold` | Réservation | A claim on the next available copy of an edition. |
 | `HoldQueue` | File d'attente | The ordered claims on one edition. |
@@ -132,6 +134,7 @@ three times is an enumeration that has not been decided.
 | `DeclaredLost` | Déclaré perdu | The terminal state of a loan that ended by a decision rather than by a return. The participle is the point: Holdings' `Lost` is something nobody decided, this is something someone did. |
 | `Borrower` | Emprunteur | A member, seen as circulation sees them: an identity, a category, a current load, a standing. `BorrowerId` and `MemberId` carry the **same** value — it is the model that the anticorruption layer translates, never the identity. Nobody should go looking for a correspondence table. |
 | `CirculationPolicy` | Règles de circulation | How many, how long, how often — and what a debt forbids. It governs holds and pickup deadlines as much as loans, which is why it is not called a loan policy. |
+| `OpeningCalendar` | Calendrier d'ouverture | The days the library is open: the policy's record of weekly closed days and dated closures — public holidays entered as dates, never computed. Owned here because what a closed day *does* is a circulation rule: a due date slides off it, and it is never billed. |
 | `Debt` | Dette | A balance the borrower has not settled, **seen from here**. Charges says `Balance` and never `Debt`; Circulation says `Debt` and never `Balance`. One amount, two words, because each context names what it does with it: Charges records it, Circulation is what it forbids. |
 | `Standing` | Situation | Whether what a borrower owes forbids borrowing, renewing or placing a hold. Judged **here**, from the balance Charges exposes: Charges states an amount and never the consequence. |
 
@@ -258,9 +261,9 @@ Circulation owns what that category may do. "An adult may hold ten items for twe
 circulation rule that happens to be indexed by a membership concept. Putting it in Members would make
 the lending rules change every time the subscription rules did.
 
-**The policy is data, not code.** Durations and quotas per member category and material type change
-by a decision of the library, not of the developers. Written into the aggregates, every such decision
-becomes a deployment.
+**The policy is data, not code.** Durations, quotas and the opening calendar change by a decision
+of the library, not of the developers. Written into the aggregates, every such decision becomes a
+deployment.
 
 **`Borrower` is not `Member`.** Circulation keeps its own model of the person: an identity, a
 category, a current load, a standing. Not their address, not their phone number, not when they

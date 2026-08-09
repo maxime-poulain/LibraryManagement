@@ -196,6 +196,52 @@ public sealed class HoldExpiryTests
     }
 
     [Fact]
+    public void ExpireUncollectedHolds_WhoseDeadlineAClosureTook_WaitsForTheFirstOpenDayToPass()
+    {
+        // The stored deadline fell on a day the library never opened — a strike, declared after
+        // the copy was set aside. Losing the claim for not walking through a locked door is the
+        // injustice the calendar exists to remove, so the deadline is judged through the calendar
+        // as it stands: the first open day stands in for the closed one, and only its passing
+        // expires the claim.
+        var queue = AQueueWithATrappedCopy(out _, out _, Today.AddDays(-1));
+        var strike = Policy with
+        {
+            Calendar = new OpeningCalendar([], [Today.AddDays(-1)]),
+        };
+
+        queue.ExpireUncollectedHolds(Today, NobodyBlocked, strike);
+        queue.DomainEvents.ShouldBeEmpty();
+
+        queue.ExpireUncollectedHolds(Today.AddDays(1), NobodyBlocked, strike);
+        queue.DomainEvents.OfType<HoldExpired>().ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public void ExpireUncollectedHolds_HandsTheCopyOn_WithADeadlineSlidOffAClosedDay()
+    {
+        // The next borrower's seven days land on a closed Sunday: the last day their copy waits
+        // must be one they can walk in on, so it slides past the closed Monday too. The run
+        // itself keeps no desk hours — expiring on a Sunday is ordinary.
+        var closedSundayAndMonday = Policy with
+        {
+            Calendar = new OpeningCalendar([DayOfWeek.Sunday, DayOfWeek.Monday], []),
+        };
+        var queue = AQueue();
+        var next = BorrowerId.Generate();
+
+        queue.PlaceHold(HoldId.Generate(), BorrowerId.Generate(), ThisMorning);
+        queue.PlaceHold(HoldId.Generate(), next, ThisMorning.AddHours(1));
+        queue.TrapOldestQueued(CopyId.Generate(), Today, NobodyBlocked);
+        queue.ClearDomainEvents();
+
+        queue.ExpireUncollectedHolds(Today.AddDays(1), NobodyBlocked, closedSundayAndMonday);
+
+        var readied = queue.Event<HoldReadyForPickup>();
+        readied.BorrowerId.ShouldBe(next);
+        readied.PickupDeadline.ShouldBe(Today.AddDays(10));
+    }
+
+    [Fact]
     public void AClaimHandedASecondCopy_MayBeWarnedAboutItInTurn()
     {
         // A fresh deadline is a fresh appointment, so the warning already spent on the first copy

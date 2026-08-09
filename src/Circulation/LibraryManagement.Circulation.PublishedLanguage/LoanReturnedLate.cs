@@ -10,8 +10,10 @@ namespace LibraryManagement.Circulation.PublishedLanguage;
 /// <param name="LoanId">The loan that closed.</param>
 /// <param name="CopyId">The copy that came back.</param>
 /// <param name="DaysLate">
-/// How late, as this context counted it. Zero is possible and is announced all the same — whether
-/// there is anything to charge for it is not a circulation question.
+/// How late, as this context counted it: open days of the library's calendar, never the closed
+/// ones — a day nobody could return is a day nobody is billed for, and the calendar that decides
+/// which days those are stays on this side of the boundary. Zero is possible and is announced all
+/// the same — whether there is anything to charge for it is not a circulation question.
 /// </param>
 /// <remarks>
 /// <para>

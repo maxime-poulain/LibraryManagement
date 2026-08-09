@@ -109,7 +109,7 @@ public sealed class Loan : AggregateRoot<LoanId>
         ArgumentNullException.ThrowIfNull(policy);
 
         var loan = new Loan(
-            id, copyId, editionId, borrowerId, today, today.AddDays(policy.LoanDurationInDays));
+            id, copyId, editionId, borrowerId, today, policy.DueDateFollowing(today));
 
         loan.AddDomainEvent(new LoanCheckedOut(id, copyId, editionId, borrowerId, loan.DueDate));
 
@@ -124,10 +124,10 @@ public sealed class Loan : AggregateRoot<LoanId>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="policy"/> is null.</exception>
     /// <remarks>
     /// <para>
-    /// The new due date is the old one plus the loan duration — the arithmetic the membership
-    /// renewal already decided, for the same reason: renewing early costs nothing, or borrowers
-    /// would learn to renew at the last minute. Being at the cap does not prevent a renewal;
-    /// nothing is added.
+    /// The new due date is the old one plus the loan duration, slid off a closed day — the
+    /// arithmetic the membership renewal already decided, for the same reason: renewing early
+    /// costs nothing, or borrowers would learn to renew at the last minute. Being at the cap does
+    /// not prevent a renewal; nothing is added.
     /// </para>
     /// <para>
     /// This aggregate refuses the two conditions it can see — an inactive loan, an exhausted
@@ -154,7 +154,7 @@ public sealed class Loan : AggregateRoot<LoanId>
         }
 
         RenewalCount++;
-        DueDate = DueDate.AddDays(policy.LoanDurationInDays);
+        DueDate = policy.DueDateFollowing(DueDate);
 
         // The schedule starts again with the period. Keeping the sent reminders would silence the
         // courtesy reminder of every renewed loan — the borrower was told about a due date that no
@@ -285,14 +285,26 @@ public sealed class Loan : AggregateRoot<LoanId>
     /// even when it is zero — Charges decides there is nothing to charge, not this context.
     /// </summary>
     /// <param name="returnedOn">The day of the return.</param>
+    /// <param name="policy">The circulation policy, which decides what a late day is.</param>
     /// <returns>Success, or the reason the return was refused.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="policy"/> is null.</exception>
     /// <remarks>
+    /// <para>
     /// A borrower may always return: no standing, no cap, no queue is consulted. A block that
     /// prevented returning would create the opposite incentive to the one intended — and it is
     /// often the return itself that settles the debt.
+    /// </para>
+    /// <para>
+    /// Lateness is counted in <em>open</em> days, against the due date slid through the calendar
+    /// as it stands: a day nobody could return is a day nobody is billed for. The reminders'
+    /// elapsed count keeps its own arithmetic — the two answer different questions, how long
+    /// against what it costs.
+    /// </para>
     /// </remarks>
-    public Result Return(DateOnly returnedOn)
+    public Result Return(DateOnly returnedOn, CirculationPolicy policy)
     {
+        ArgumentNullException.ThrowIfNull(policy);
+
         if (Status != LoanStatus.Active)
         {
             return Result.Failure(
@@ -303,7 +315,7 @@ public sealed class Loan : AggregateRoot<LoanId>
         ReturnedOn = returnedOn;
         Status = LoanStatus.Returned;
 
-        var daysLate = Math.Max(0, returnedOn.DayNumber - DueDate.DayNumber);
+        var daysLate = policy.BillableDaysLate(DueDate, returnedOn);
 
         AddDomainEvent(new LoanReturned(Id, CopyId, BorrowerId, daysLate));
 

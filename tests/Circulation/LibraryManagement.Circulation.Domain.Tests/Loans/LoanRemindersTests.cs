@@ -97,7 +97,7 @@ public sealed class LoanRemindersTests
     public void RemindOfDueDate_OnALoanThatEnded_SaysNothing()
     {
         var loan = ALoan();
-        loan.Return(Today);
+        loan.Return(Today, Policy);
         loan.ClearDomainEvents();
 
         loan.RemindOfDueDate(Today, anyoneIsWaiting: false, Policy);
@@ -222,7 +222,7 @@ public sealed class LoanRemindersTests
     public void IsLongOverdue_OfALoanThatEnded_IsFalse()
     {
         var loan = ALoan();
-        loan.Return(Today);
+        loan.Return(Today, Policy);
 
         loan.IsLongOverdue(loan.DueDate.AddDays(Policy.DeclaredLostAfterDays), Policy)
             .ShouldBeFalse();

@@ -21,14 +21,15 @@ internal static class Desk
     internal static Loan ALoan(
         BorrowerId? borrowerId = null,
         CopyId? copyId = null,
-        EditionId? editionId = null)
+        EditionId? editionId = null,
+        CirculationPolicy? policy = null)
         => Loan.CheckOut(
             LoanId.Generate(),
             copyId ?? CopyId.Generate(),
             editionId ?? EditionId.Generate(),
             borrowerId ?? BorrowerId.Generate(),
             Today,
-            Policy);
+            policy ?? Policy);
 
     /// <summary>An empty queue for a fresh edition.</summary>
     internal static HoldQueue AQueue(EditionId? editionId = null)

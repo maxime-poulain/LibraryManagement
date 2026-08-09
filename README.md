@@ -172,7 +172,7 @@ dotnet test LibraryManagement.slnx --configuration Release --no-build \
             --filter "Category!=Integration"
 ```
 
-The unit filter runs **990 tests across 19 projects**.
+The unit filter runs **1015 tests across 19 projects**.
 
 Integration tests start SQL Server 2022 through Testcontainers, or target the server named by the
 `LIBRARYMANAGEMENT_TEST_SQLSERVER` environment variable.
@@ -262,7 +262,7 @@ The design documents are the source of truth. Read the relevant one before model
 | [`tactical-design-charges.md`](docs/tactical-design-charges.md) | Charges' aggregate, invariants and moments. |
 | [`outbox.md`](docs/outbox.md) | Domain events: same-save storage, drain, failure semantics, the cross-module passage (§9). |
 | [`migrations.md`](docs/migrations.md) | Why `EnsureCreated` for now, and the trigger for the switch. |
-| [`adr/`](docs/adr/README.md) | Thirteen decision records — what was decided, when, and what it costs. |
+| [`adr/`](docs/adr/README.md) | Fourteen decision records — what was decided, when, and what it costs. |
 
 Each tactical design's **§10 records what building the module taught** — including the places the
 code corrected the design, which are usually the most useful paragraphs in the document.
