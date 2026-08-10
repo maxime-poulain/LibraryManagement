@@ -573,7 +573,13 @@ rule inside the module that owns it.
   Decided ground and open remainder both now live where tactical questions belong, in
   [tactical-design-catalog.md](tactical-design-catalog.md) — alongside the question that document
   adds to this list: the merge of two records, which Holdings and Members have each already named
-  as the event their identifiers wait on.
+  as the event their identifiers wait on. **This list used to stop there, and it was wrong to.**
+  Circulation waits on it too, and it waits hardest: Holdings and Charges hold the identifier as a
+  field, while `HoldQueue` is an aggregate *keyed* by `EditionId`, so a merge does not repoint a
+  column there — it makes two aggregates into one, against an invariant that says a borrower
+  appears at most once in a queue.
+  [ADR-0017](adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) decides the shape: what
+  crosses, what each consumer owes, and which of the queue's rules bends.
 * Whether a hold may be placed on a *work* — any edition will do — as well as on an edition. Members
   ask for both, and the queue rules differ.
 * Whether a copy's loan history stays in Circulation forever or is archived. It is the only thing in

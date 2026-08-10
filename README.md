@@ -37,6 +37,7 @@ strategic design had decided in full and nothing had yet exercised.
 |---|---|---|
 | Notifications, Staff access | Generic subdomains, out of the modeled domain | [strategic design §6](docs/strategic-design.md) |
 | MARC import | The Catalog's real feed; the manual commands are the fallback, not the design | [strategic design §6](docs/strategic-design.md) |
+| Merging two records | Decided on paper and not yet built: a merge is an event the downstream consumes, and Circulation — which keys an aggregate by the merged identifier — is what it costs | [ADR-0017](docs/adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) |
 
 ---
 
@@ -337,7 +338,7 @@ The design documents are the source of truth. Read the relevant one before model
 | [`tactical-design-charges.md`](docs/tactical-design-charges.md) | Charges' aggregate, invariants and moments. |
 | [`outbox.md`](docs/outbox.md) | Domain events: same-save storage, drain, failure semantics, the cross-module passage (§9). |
 | [`migrations.md`](docs/migrations.md) | One migrations project per module, a history table per schema, and why it took until the first host. |
-| [`adr/`](docs/adr/README.md) | Sixteen decision records — what was decided, when, and what it costs. |
+| [`adr/`](docs/adr/README.md) | Seventeen decision records — what was decided, when, and what it costs. |
 
 Each tactical design's **§10 records what building the module taught** — including the places the
 code corrected the design, which are usually the most useful paragraphs in the document.

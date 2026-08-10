@@ -331,8 +331,15 @@ its own, tracked in a history table inside its own schema (`migrations.md` §3).
 it acquires one, every `Copy` holding the absorbed `EditionId` points at a record that no longer
 answers. No database will report it: referencing across schemas by identifier is the right call and
 it is precisely what removes that net. Whatever merge Catalog eventually publishes has to be an
-event this context consumes, and Holdings is the first module that makes the gap concrete rather
+event this context consumes, and Holdings is the first module that made the gap concrete rather
 than theoretical.
+
+It is now decided, in
+[ADR-0017](adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md): Catalog publishes
+`EditionsMerged`, and this context's subscriber dispatches a command of its own that repoints every
+affected `Copy`. Holdings turns out to be the *simple* consumer — it holds the identifier in a
+column, where Circulation keys an aggregate by it — which is why the record puts this subscriber
+second in the build order, as the one that proves the passage before the hard case is attempted.
 
 Open, and each deferred for a stated reason rather than forgotten:
 
