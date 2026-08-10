@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using FluentValidation;
+using LibraryManagement.Catalog.PublishedLanguage;
 using LibraryManagement.Circulation.PublishedLanguage;
 using LibraryManagement.Holdings.Application.Copies.AcquireCopy;
 using LibraryManagement.Holdings.Domain.Copies;
@@ -80,6 +81,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<
             IIntegrationEventSubscriber<CopyReturned>,
             IntegrationEvents.NoteCopyAccountedForOnCopyReturned>();
+
+        // And to the one fact Catalog states on its own initiative. Everything else this module
+        // gets from that context is an answer to a question it asked.
+        services.AddScoped<
+            IIntegrationEventSubscriber<EditionsMerged>,
+            IntegrationEvents.RepointCopiesOnEditionsMerged>();
 
         // The JSON side of this module's value objects, for the outbox.
         services.AddSingleton<JsonConverter, BarcodeJsonConverter>();

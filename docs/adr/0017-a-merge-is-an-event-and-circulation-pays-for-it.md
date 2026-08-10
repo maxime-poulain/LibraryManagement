@@ -125,6 +125,23 @@ later by someone reading `PlaceHold` and wondering why the queue holds a borrowe
 The merge stays unbuilt. What changes today is that it is decided, and that the next person to
 start it knows Circulation is the expensive part rather than finding out in the middle.
 
+**Progress against the build order**, kept here because a record whose consequences read as future
+tense long after the fact misleads whoever reads it next:
+
+| Step | State |
+|---|---|
+| 1. Catalog's merge operation and its event | Built |
+| 2. Holdings' subscriber | Built — the passage is proved |
+| 3. Circulation's `Loan.EditionId` repointing | Open |
+| 4. The queue merge, and `CancelFor` tightened | Open |
+| 5. Members' merge and its own event | Open |
+
+Nothing in the decision above changed while steps 1 and 2 were built. Two things it did not
+anticipate are recorded where they belong rather than here: that all four merge rules want to live
+together in a domain service (`tactical-design-catalog.md` §10), and that the consuming side's three
+tempting guards — the copy's status, the survivor's existence, a deduplication table — are all wrong
+(`tactical-design-holdings.md` §10).
+
 ## Alternatives rejected
 
 **Refusing the merge while any copy is awaiting pickup.** Clean, and it makes the invariant

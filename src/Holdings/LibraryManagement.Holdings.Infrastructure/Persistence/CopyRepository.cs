@@ -24,6 +24,24 @@ public sealed class CopyRepository(HoldingsDbContext context) : ICopyRepository
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Tracked, unlike a read model's query: the caller repoints every copy it gets back, and the
+    /// module's unit of work writes them once the command has succeeded. The index the mapping
+    /// declares on this column is what makes the sweep cheap.
+    /// </remarks>
+    public async ValueTask<IReadOnlyList<Copy>> OfEditionAsync(
+        EditionId editionId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(editionId);
+
+        return await context.Copies
+            .Where(copy => copy.EditionId == editionId)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
     public async ValueTask<bool> BarcodeIsTakenAsync(
         Barcode barcode,
         CopyId? except = null,

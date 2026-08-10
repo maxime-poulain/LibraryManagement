@@ -212,10 +212,10 @@ Open, each deferred for a stated reason rather than forgotten:
 * **Merging two records was the gap every client had named. This context's half of it is now
   built**, under [ADR-0017](adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md), which
   decides the whole shape: `EditionsMerged` crosses, carrying the absorbed identifier and the
-  surviving one and nothing else, and each consumer dispatches a command of its own. What remains
-  open is the consuming half — **no module has subscribed yet**, so today the fact is announced and
-  nobody acts on it. That is deliberate and it is the honest state to record: the event had to
-  exist before a consumer could be written against it, and the record names the order.
+  surviving one and nothing else, and each consumer dispatches a command of its own. **The first
+  consumer is now listening**: Holdings refiles every copy of the absorbed record under the
+  survivor, which is what turned this context's announcement from a fact stated into a fact acted
+  on. Circulation and Members remain, and the record names the order.
   Two things the record establishes are worth repeating here. The **authority** merge does not
   cross at all, since no module outside this context holds an `AuthorId` — it is an internal change
   to `Work.AuthorIds` and the access-point index, and it is not built either. And the expensive

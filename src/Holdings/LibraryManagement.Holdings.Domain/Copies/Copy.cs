@@ -41,7 +41,12 @@ public sealed class Copy : AggregateRoot<CopyId>
     }
 
     /// <summary>Gets the edition this is a copy of. Identity only, never the edition.</summary>
-    public EditionId EditionId { get; }
+    /// <remarks>
+    /// Settable only from inside, and only by <see cref="RepointTo"/>: what a copy is a copy of does
+    /// not change on this side of the boundary. It moves when Catalog says two of its records were
+    /// one all along.
+    /// </remarks>
+    public EditionId EditionId { get; private set; }
 
     /// <summary>Gets the label this copy is identified by at the desk.</summary>
     public Barcode Barcode { get; private set; }
@@ -392,6 +397,51 @@ public sealed class Copy : AggregateRoot<CopyId>
         AddDomainEvent(new CopyWithdrawn(Id));
 
         return Result.Success();
+    }
+
+    /// <summary>
+    /// Points the copy at the edition that survived a merge of two catalog records.
+    /// </summary>
+    /// <param name="survivingEditionId">The record that goes on answering.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="survivingEditionId"/> is null.</exception>
+    /// <remarks>
+    /// <para>
+    /// <strong>Not a correction of a mistake.</strong> The open question in
+    /// <c>tactical-design-holdings.md</c> §10 — whether a mis-cataloged copy is corrected in place —
+    /// is a different moment and will keep its own name: that one says the object was attached to
+    /// the wrong record. Here the object never moved and neither did what it is a copy of; two
+    /// records that described one edition became one, and this is the shelf list catching up.
+    /// </para>
+    /// <para>
+    /// <strong>It refuses nothing, and the missing <see cref="Result"/> is the honest return.</strong>
+    /// Every rule that could refuse was enforced in Catalog, by the service that decided the merge;
+    /// nothing here can be asked of a copy that would make this wrong. Repointing to where it already
+    /// points records nothing, exactly as reshelving to where it already stands does.
+    /// </para>
+    /// <para>
+    /// <strong>The status is deliberately ignored</strong>, where <see cref="Reshelve"/>,
+    /// <see cref="Relabel"/> and <see cref="RecordCondition"/> all refuse a withdrawn copy. Those are
+    /// acts upon the object's disposition, which a copy that left the collection no longer has. This
+    /// is not an act upon the object at all. A withdrawn or lost copy still records which edition it
+    /// was a copy of, and leaving that identifier pointing at a record which stopped answering is
+    /// precisely the orphan the merge is announced to repair — a shelf of forty in which one copy
+    /// was weeded would otherwise keep the defect for the whole shelf, since a refusal fails the
+    /// command that carries all forty.
+    /// </para>
+    /// </remarks>
+    public void RepointTo(EditionId survivingEditionId)
+    {
+        ArgumentNullException.ThrowIfNull(survivingEditionId);
+
+        if (survivingEditionId == EditionId)
+        {
+            return;
+        }
+
+        var previous = EditionId;
+        EditionId = survivingEditionId;
+
+        AddDomainEvent(new CopyRepointed(Id, previous, survivingEditionId));
     }
 
     /// <summary>

@@ -24,6 +24,14 @@ internal sealed class InMemoryCopyRepository : ICopyRepository
     public ValueTask<Copy?> GetByIdAsync(CopyId id, CancellationToken cancellationToken = default)
         => ValueTask.FromResult(_copies.GetValueOrDefault(id));
 
+    // Every copy of the edition, in whatever state — the same breadth the real query has, and the
+    // breadth is the point: a filter here would hide the withdrawn copies the merge must move.
+    public ValueTask<IReadOnlyList<Copy>> OfEditionAsync(
+        EditionId editionId,
+        CancellationToken cancellationToken = default)
+        => ValueTask.FromResult<IReadOnlyList<Copy>>(
+            [.. _copies.Values.Where(copy => copy.EditionId == editionId)]);
+
     public ValueTask<bool> BarcodeIsTakenAsync(
         Barcode barcode,
         CopyId? except = null,

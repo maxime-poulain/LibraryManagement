@@ -46,6 +46,25 @@ public sealed record CopyRelabelled(
     Barcode NewBarcode) : DomainEvent;
 
 /// <summary>
+/// A copy now names a different edition, because Catalog merged two records into one.
+/// </summary>
+/// <param name="CopyId">The copy. Nothing about the object changed, which is the point.</param>
+/// <param name="PreviousEditionId">
+/// The record that stopped answering. A projection keyed on the edition has to retract this one.
+/// </param>
+/// <param name="NewEditionId">The record it is filed under from now on.</param>
+/// <remarks>
+/// The one event here that is not this context's own observation: it reports what Holdings did in
+/// answer to a fact Catalog announced. Both identifiers travel for the reason
+/// <see cref="CopyRelabelled"/> carries both labels — a stock ledger counting copies per edition
+/// must subtract before it adds.
+/// </remarks>
+public sealed record CopyRepointed(
+    CopyId CopyId,
+    EditionId PreviousEditionId,
+    EditionId NewEditionId) : DomainEvent;
+
+/// <summary>
 /// A copy's physical state was recorded.
 /// </summary>
 /// <param name="CopyId">The copy.</param>

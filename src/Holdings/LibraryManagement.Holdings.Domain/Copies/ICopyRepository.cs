@@ -24,6 +24,21 @@ public interface ICopyRepository
     ValueTask<Copy?> GetByIdAsync(CopyId id, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets every copy filed under an edition, whatever state each is in.
+    /// </summary>
+    /// <param name="editionId">The edition to collect the copies of.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The copies, empty when the library holds none of that edition.</returns>
+    /// <remarks>
+    /// Withdrawn and lost copies included, deliberately: the one caller is the merge of two catalog
+    /// records, and a copy that left the collection still records which edition it was a copy of.
+    /// Filtering here would leave exactly those rows pointing at a record that stopped answering.
+    /// </remarks>
+    ValueTask<IReadOnlyList<Copy>> OfEditionAsync(
+        EditionId editionId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Determines whether a barcode is already on a copy.
     /// </summary>
     /// <param name="barcode">The label to look for.</param>
