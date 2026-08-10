@@ -40,9 +40,11 @@ oversight in it.
 Each module maps its own outbox table into its own schema, which is forced by
 [ADR-0006](0006-transactional-outbox-per-module.md) rather than chosen here.
 
-Two contexts over one database do not compose for free. `EnsureCreated` builds the database for the
-first context and answers "already there" for the second, leaving that module's tables unbuilt —
-[ADR-0010](0010-ensurecreated-before-migrations.md) carries the workaround and its expiry.
+Five contexts over one database do not compose for free, and the seam moved rather than closing:
+`EnsureCreated` used to leave the second context's tables unbuilt, and migrations answer that — but
+only because each module's history table sits in its own schema. Left at the default they share one,
+and each reads the others' rows as migrations it never applied.
+[ADR-0010](0010-ensurecreated-before-migrations.md) carries the whole story.
 
 ## Alternatives rejected
 

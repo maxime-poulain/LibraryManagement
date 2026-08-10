@@ -16,9 +16,10 @@ not just outcomes.
 its daily scheduled process, and Charges — the last one built — are in place, and so is the passage
 that carries a fact from one module to another. The one cycle the context map draws now turns both
 ways: Circulation announces a return or a loss, Charges prices it, Charges announces the amount, and
-Circulation judges it against its own threshold and cancels the borrower's holds. There is
-no runnable host — the composition root lives in the composition tests — and no EF migrations,
-deliberately (`docs/migrations.md`).
+Circulation judges it against its own threshold and cancels the borrower's holds. Every module's
+schema comes from its own migrations, in a project beside the host (`docs/migrations.md`), and the
+host itself exists: `src/Host/LibraryManagement.Host` composes the five modules, migrates at startup
+and owns the schedule (ADR-0015).
 
 ## The documents are the authority
 
@@ -34,18 +35,30 @@ is a bug: fix the pair in the same change.
 | `docs/tactical-design-members.md` | Members' aggregate and moments. Implemented; §10 records what building it taught. |
 | `docs/tactical-design-charges.md` | Charges' aggregate, invariants and moments. Implemented; §10 records what building it taught, including the one place the mapping had to depart from the rest of the solution. |
 | `docs/outbox.md` | Domain events: same-save storage, drain, failure semantics, the cross-module passage (§9), and what renames break. |
-| `docs/migrations.md` | Why `EnsureCreated` for now, the shape migrations will take, and the trigger for the switch. |
-| `docs/adr/` | Fourteen decision records — what was decided, when, what it costs, what was rejected. Navigation, not argument: where a decision is argued at length above, the record points there rather than restating it. Start at `docs/adr/README.md`. |
+| `docs/migrations.md` | One migrations project per module, the history table per schema that makes five contexts share one database, and how to add a migration. |
+| `docs/adr/` | Fifteen decision records — what was decided, when, what it costs, what was rejected. Navigation, not argument: where a decision is argued at length above, the record points there rather than restating it. Start at `docs/adr/README.md`. |
 | `README.md` | The public face: state, context map, build and test, the rules, and the index to all of the above. It summarizes and never decides — when it disagrees with a document here, the document wins. |
 
-## Build and test
+## Build, test and run
 
 ```bash
 dotnet build LibraryManagement.slnx --configuration Release
 dotnet test  LibraryManagement.slnx --configuration Release --no-build   # full suite — needs Docker
 dotnet test  LibraryManagement.slnx --configuration Release --no-build \
              --filter "Category!=Integration"                            # CI's view — no Docker
+dotnet run   --project src/Host/LibraryManagement.Host                   # the host
 ```
+
+- The host needs `ConnectionStrings:LibraryManagement` and refuses to start without it. It migrates
+  all five modules at startup, then schedules the drains (`Cron.Minutely`), the daily run and the
+  purge (`Cron.Daily`); `/hangfire` is the dashboard, local requests only. `Hangfire:RunServer=false`
+  serves without running the schedule.
+- **The API**: one minimal-API group per module, the command record *is* the JSON body, and only
+  desk acts are routed — never the seven the daily process owns, never the commands a module
+  dispatches for another. 204 for a command, 200 for a query, 422 for a refusal, 400 validation,
+  409 concurrency; **404 only from a query**, since a command's route names an act that exists
+  whether or not its referent does (ADR-0015).
+- `dotnet ef` comes from `dotnet tool restore`; adding a migration is `docs/migrations.md` §3.
 
 - Integration tests start SQL Server 2022 through Testcontainers, or target the server named by
   the `LIBRARYMANAGEMENT_TEST_SQLSERVER` environment variable (a CI service container, a local
@@ -80,9 +93,13 @@ src/Shared/       Technical kernel: Entity, ValueObject, Result, CQS, pipeline b
                   outbox, audit. Building blocks only — never business concepts.
 src/<Module>/     One bounded context: Domain / Application / Infrastructure /
                   PublishedLanguage (what the module says to the ones downstream of it).
+src/Host/         The runnable host, plus LibraryManagement.<Module>.Migrations.SqlServer,
+                  one per module — its migrations, its design-time factory, and the single
+                  Use<Module>SqlServer that everyone configures through. The only place that
+                  names the engine or the scheduler.
 tests/            Mirrors src/, plus Architecture.Tests (reflection rules over the built
-                  assemblies) and Composition.Tests (whole pipeline, all five modules and
-                  their five outbox drains, Hangfire).
+                  assemblies), Composition.Tests (whole pipeline, all five modules and their
+                  five outbox drains) and Host.Tests (the real host, booted).
 docs/             The design. Authoritative.
 docs/adr/         Decision records — navigation over the above, never a second authority.
 README.md         The public face. Summarizes; decides nothing.
@@ -101,8 +118,10 @@ bug to fix.
 - Modules talk only through `*.PublishedLanguage` projects, which reference nothing and traffic
   in primitives — never a module's own types. No module references another's Domain,
   Application or Infrastructure.
-- Nothing under `src/` names a database provider (EF `Relational` only) or a scheduler (no
-  Hangfire). Both are host decisions; today "the host" is the composition tests.
+- No **module** names a database provider (EF `Relational` only) or a scheduler (no Hangfire).
+  Both are host decisions, and both are named in `src/Host/` — the provider by the migrations
+  projects, which cannot avoid naming one, and Hangfire by the host itself, whose whole scheduling
+  surface is `OutboxJobs`, `CirculationDailyRun` and `OutboxPurgeJob`.
 
 **Write path.**
 - A command is the unit of consistency. Handlers and repositories never call
@@ -152,7 +171,7 @@ Item), `Shelfmark` (never call number), `InService` (never OnShelf), `Balance` i
   drain method in `OutboxJobs`; `MapOutbox()` in the module's `DbContext`.
 - **Prose**: XML docs and comments state the constraint and the alternative that was rejected —
   never what the next line does. Commit subjects are plain sentences, not conventional-commit
-  prefixes; the log reads as a narrative and should stay one.
+  prefixes; the body carries the narrative, and it should read as one.
 - **Commit trailers**: exactly one, `Co-authored-by: Claude <noreply@anthropic.com>`, and **never a
   session URL**. A `Claude-Session:` link points at a conversation nobody outside it can open, and
   it dates the moment rather than the change — the log is read years later by someone reconstructing
@@ -163,6 +182,17 @@ Item), `Shelfmark` (never call number), `InService` (never OnShelf), `Balance` i
   conversation that produced it, and a link nobody can open decorates without informing. The
   attribution line may stay; the `https://claude.ai/code/session_…` link may not — strip it even
   when tooling appends one by default.
+- **One commit per pull request.** A branch under review carries exactly one commit, and it stays
+  one: every further push integrates the new work, **re-squashes the whole branch onto its base**,
+  rewrites subject and body to cover everything the branch now does, keeps the single trailer, and
+  force-pushes with `--force-with-lease` — never a bare `--force`, which would discard whatever
+  reached the remote while you were working. The rejected alternative is the usual one: let the
+  branch accumulate and squash at merge. It gives the same `main` and a worse review, because
+  between the first push and the merge the *branch* is what a reviewer reads, and six commits
+  invite review of the steps taken rather than of the change proposed. The pull request is the unit
+  of review, so it is the unit of history too. The narrative is not lost — it moves from the log
+  into the body, which is where someone reconstructing the decision years later already looks. The
+  two rules above bind that rewritten message exactly as they bound the ones it replaces.
 
 ## Repository philosophy
 

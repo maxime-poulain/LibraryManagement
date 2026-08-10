@@ -17,6 +17,26 @@
         <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
     </ItemGroup>
 
+    <ItemGroup Label="The provider and the scheduler — the host, its migrations, and the tests">
+        <!-- Named by the host, by the migrations projects beside it, and by the integration tests.
+             Never by a module: a module maps tables and schemas, and which engine serves them is
+             the host's decision, made once at startup. Integration tests run against that same
+             engine because a lighter stand-in has neither the schemas the boundary rests on nor
+             the rowversion optimistic concurrency rests on. -->
+        <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10" />
+        <!-- The outbox drain's and the daily run's scheduler, in the host alone. No module names a
+             scheduler, exactly as none names a provider: the processor is a plain class, and what
+             puts it on a clock is the host's decision. -->
+        <PackageVersion Include="Hangfire.Core" Version="1.8.24" />
+        <PackageVersion Include="Hangfire.SqlServer" Version="1.8.24" />
+        <PackageVersion Include="Hangfire.NetCore" Version="1.8.24" />
+        <PackageVersion Include="Hangfire.AspNetCore" Version="1.8.24" />
+        <!-- Not referenced directly by anything. Hangfire depends on 11.0.1, which NuGet audit
+             flags (GHSA-5crp-9r3c-p9vr); transitive pinning lifts it to a patched version. -->
+        <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
+    </ItemGroup>
+
     <ItemGroup Label="Testing">
         <PackageVersion Include="xunit.v3" Version="3.2.2" />
         <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
@@ -24,22 +44,8 @@
         <PackageVersion Include="Shouldly" Version="4.3.0" />
         <PackageVersion Include="coverlet.collector" Version="10.0.1" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
-        <!-- Integration tests run against the engine the modules actually target. A different one
-             would prove the mapping works somewhere the system will never run: schemas and
-             rowversion are exactly what the module boundary and optimistic concurrency rest on,
-             and they are exactly what a stand-in engine does not have. -->
-        <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
+        <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.10" />
         <PackageVersion Include="Testcontainers.MsSql" Version="4.13.0" />
-        <!-- The outbox drain's scheduler. Referenced by the composition root alone — today the
-             composition tests, the host later. No module names a scheduler, exactly as none names
-             a database provider: the processor is a plain class, and what triggers it is the
-             host's decision. -->
-        <PackageVersion Include="Hangfire.Core" Version="1.8.24" />
-        <PackageVersion Include="Hangfire.SqlServer" Version="1.8.24" />
-        <PackageVersion Include="Hangfire.NetCore" Version="1.8.24" />
-        <!-- Not referenced directly by anything. Hangfire depends on 11.0.1, which NuGet audit
-             flags (GHSA-5crp-9r3c-p9vr); transitive pinning lifts it to a patched version. -->
-        <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
     </ItemGroup>
 
     <ItemGroup Label="Analyzers applied to every project">

@@ -1,17 +1,17 @@
 using LibraryManagement.Charges.Domain.Accounts;
 using LibraryManagement.Charges.Infrastructure.Extensions;
 using LibraryManagement.Charges.Infrastructure.Persistence;
+using LibraryManagement.Charges.Migrations.SqlServer;
 using LibraryManagement.Circulation.Domain;
 using LibraryManagement.Circulation.Domain.Holds;
 using LibraryManagement.Circulation.Domain.Loans;
 using LibraryManagement.Circulation.Infrastructure.Extensions;
 using LibraryManagement.Circulation.Infrastructure.Persistence;
+using LibraryManagement.Circulation.Migrations.SqlServer;
 using LibraryManagement.Circulation.PublishedLanguage;
 using LibraryManagement.Shared.Infrastructure.Outbox;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 // Three modules declare a LoanId and a CopyId carrying the same Guid, and none knows another's.
 // A file that touches all three is forced to say which it means, which is the context map's
@@ -61,21 +61,18 @@ public sealed class ChargesCycleTests(SqlServerFixture sqlServer) : IAsyncLifeti
         _provider = CompositionRoot.Services()
             .AddSingleton<TimeProvider>(new FrozenClock(
                 new DateTimeOffset(Today, TimeOnly.MinValue, TimeSpan.Zero)))
-            .AddCirculationModule(options => options.UseSqlServer(ConnectionString))
-            .AddChargesModule(options => options.UseSqlServer(ConnectionString))
+            .AddCirculationModule(options => options.UseCirculationSqlServer(ConnectionString))
+            .AddChargesModule(options => options.UseChargesSqlServer(ConnectionString))
             .BuildServiceProvider();
 
         await using var scope = _provider.CreateAsyncScope();
 
         var circulation = scope.ServiceProvider.GetRequiredService<CirculationDbContext>();
         await circulation.Database.EnsureDeletedAsync(Token);
-        await circulation.Database.EnsureCreatedAsync(Token);
+        await circulation.Database.MigrateAsync(Token);
 
-        // The seam TwoModulesTests documents: EnsureCreated answers "already there" for a second
-        // context over one database, leaving its schema unbuilt.
         var charges = scope.ServiceProvider.GetRequiredService<ChargesDbContext>();
-        await ((IRelationalDatabaseCreator)charges.Database.GetService<IDatabaseCreator>())
-            .CreateTablesAsync(Token);
+        await charges.Database.MigrateAsync(Token);
     }
 
     public async ValueTask DisposeAsync() => await _provider.DisposeAsync();

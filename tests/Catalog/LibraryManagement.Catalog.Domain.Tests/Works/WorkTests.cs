@@ -48,7 +48,23 @@ public sealed class WorkTests
     }
 
     [Fact]
-    public void CreditAuthor_AddsOne()
+    public void Register_AnnouncesTheWorkBeforeItsCredits()
+    {
+        // The outbox preserves insertion order, so the stream must never credit a work that does
+        // not yet exist — the registration leads, one credit per author follows, in credit order.
+        var first = AuthorId.Generate();
+        var second = AuthorId.Generate();
+
+        var work = AWork(first, second);
+
+        work.DomainEvents.ShouldSatisfyAllConditions(
+            events => events[0].ShouldBeOfType<WorkRegistered>(),
+            events => events.OfType<WorkAuthorCredited>()
+                .Select(credited => credited.AuthorId).ShouldBe([first, second]));
+    }
+
+    [Fact]
+    public void CreditAuthor_AddsOneAndSaysSo()
     {
         var work = AWork();
         var author = AuthorId.Generate();
@@ -56,10 +72,11 @@ public sealed class WorkTests
         Succeeded(work.CreditAuthor(author)).ShouldBeTrue();
 
         work.AuthorIds.ShouldBe([author]);
+        work.DomainEvents.OfType<WorkAuthorCredited>().Single().AuthorId.ShouldBe(author);
     }
 
     [Fact]
-    public void CreditAuthor_Twice_IsRefused()
+    public void CreditAuthor_Twice_IsRefusedAndAnnouncesNothingMore()
     {
         var author = AuthorId.Generate();
         var work = AWork(author);
@@ -68,6 +85,7 @@ public sealed class WorkTests
             .ShouldBe(CatalogErrorCodes.DuplicateAuthor);
 
         work.AuthorIds.Count.ShouldBe(1);
+        work.DomainEvents.OfType<WorkAuthorCredited>().Count().ShouldBe(1);
     }
 
     [Fact]
@@ -79,6 +97,20 @@ public sealed class WorkTests
         work.RemoveAuthorCredit(author).ShouldBeTrue();
         work.RemoveAuthorCredit(author).ShouldBeFalse();
         work.AuthorIds.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void RemoveAuthorCredit_AnnouncesOnlyTheRemovalThatHappened()
+    {
+        // The handler treats both answers as success, so the aggregate alone knows whether
+        // anything happened — the second ask reached a state already held and must say nothing.
+        var author = AuthorId.Generate();
+        var work = AWork(author);
+
+        work.RemoveAuthorCredit(author);
+        work.RemoveAuthorCredit(author);
+
+        work.DomainEvents.OfType<WorkAuthorCreditRemoved>().Single().AuthorId.ShouldBe(author);
     }
 
     [Fact]

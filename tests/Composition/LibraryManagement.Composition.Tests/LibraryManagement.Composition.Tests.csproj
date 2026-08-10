@@ -21,20 +21,24 @@
         <PackageReference Include="Shouldly" />
         <PackageReference Include="coverlet.collector" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-        <!-- A composition root chooses the provider; the modules never name one. -->
-        <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
         <PackageReference Include="Testcontainers.MsSql" />
-        <!-- The same principle, applied to the scheduler: Hangfire exists here and nowhere in
-             src/. The drain is a plain class; this project is what puts it on a clock. -->
-        <PackageReference Include="Hangfire.Core" />
-        <PackageReference Include="Hangfire.SqlServer" />
-        <PackageReference Include="Hangfire.NetCore" />
         <!-- The source generator lives here and nowhere else. It insists on a coherent set of
              handlers — one per message, one for every message — and what it registers it resolves:
              the first Send builds every handler the container knows about. Both are true of a
              composition root and false of the architecture tests, whose fixtures are handlers
              written to be wrong on purpose and never meant to run. -->
         <PackageReference Include="Mediator.SourceGenerator" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- The provider, through the same extensions the host uses: a composition root chooses the
+             engine, the modules never name one, and the migrations projects are where that choice
+             is spelled — so these tests build their schemas exactly as a deployment does. -->
+        <ProjectReference Include="..\..\..\src\Host\LibraryManagement.Catalog.Migrations.SqlServer\LibraryManagement.Catalog.Migrations.SqlServer.csproj" />
+        <ProjectReference Include="..\..\..\src\Host\LibraryManagement.Charges.Migrations.SqlServer\LibraryManagement.Charges.Migrations.SqlServer.csproj" />
+        <ProjectReference Include="..\..\..\src\Host\LibraryManagement.Circulation.Migrations.SqlServer\LibraryManagement.Circulation.Migrations.SqlServer.csproj" />
+        <ProjectReference Include="..\..\..\src\Host\LibraryManagement.Holdings.Migrations.SqlServer\LibraryManagement.Holdings.Migrations.SqlServer.csproj" />
+        <ProjectReference Include="..\..\..\src\Host\LibraryManagement.Members.Migrations.SqlServer\LibraryManagement.Members.Migrations.SqlServer.csproj" />
     </ItemGroup>
 
     <ItemGroup>

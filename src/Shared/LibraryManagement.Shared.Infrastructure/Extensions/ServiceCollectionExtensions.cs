@@ -132,6 +132,12 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<IDomainEventPublisher, MediatorDomainEventPublisher>();
         services.TryAddSingleton<OutboxProcessor<TContext>>();
 
+        // And what empties the table behind it. Registered here rather than left to the host to
+        // remember, for the reason the purge exists at all: a module wired without one keeps every
+        // payload it ever wrote, personal data included. The host still chooses the window and the
+        // clock that runs it — the obligation is the module's, the schedule is the host's.
+        services.TryAddSingleton<OutboxPurge<TContext>>();
+
         // The hop to other modules, one level out from the domain event's own delivery. Registered
         // beside it because it is reached the same way — from a translator running in the drain's
         // scope — and scoped for the same reason: a subscriber dispatches a command, and that

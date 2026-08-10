@@ -385,3 +385,12 @@ dotnet_diagnostic.S4035.severity = silent
 # sync-over-async call — File.ReadAllText inside an async method — no longer surfaces through this
 # rule; CA1849 covers that ground for the BCL and stays enabled.
 dotnet_diagnostic.S6966.severity = silent
+
+# The migrations, which the tooling writes and nobody edits by hand.
+# `dotnet ef migrations add` emits block-scoped namespaces and a using directive it does not always
+# need, and neither is a style this repository chose — it is the generator's. Marking the folder as
+# generated is the honest statement: these files are output, regenerated whenever the model moves,
+# and reformatting them by hand would be undone by the next `migrations add`. The hand-written
+# files beside them — the design-time factory, the provider extension — keep every rule.
+[**/Migrations/*.cs]
+generated_code = true

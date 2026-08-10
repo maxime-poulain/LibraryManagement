@@ -6,20 +6,19 @@ using LibraryManagement.Holdings.Infrastructure.Persistence;
 using LibraryManagement.Members.Infrastructure.Persistence;
 using LibraryManagement.Shared.Infrastructure.Outbox;
 
-namespace LibraryManagement.Composition.Tests.Outbox;
+namespace LibraryManagement.Host.Jobs;
 
 /// <summary>
-/// The composition root's Hangfire-facing surface: one method per module, each delegating to that
-/// module's <see cref="OutboxProcessor{TContext}"/>.
+/// The host's Hangfire-facing surface: one method per module, each delegating to that module's
+/// <see cref="OutboxProcessor{TContext}"/>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// This class is the whole reason no project under <c>src/</c> references Hangfire. The processor
-/// is a plain class; putting it on a clock is the host's decision, and this thin wrapper is where
-/// the host makes it — today the composition tests, later the real host, which will register it
-/// with <c>RecurringJob.AddOrUpdate</c> per module on <c>Cron.Minutely()</c>, Hangfire's floor. A
-/// minute of drain latency is comfortably inside the boundary test the strategic design is built
-/// on: a few seconds of disagreement no librarian notices.
+/// This class is the whole reason no module references Hangfire. The processor is a plain class;
+/// putting it on a clock is the host's decision, and this thin wrapper is where the host makes it —
+/// registered with <c>RecurringJob.AddOrUpdate</c> per module on <c>Cron.Minutely</c>, Hangfire's
+/// floor. A minute of drain latency is comfortably inside the boundary test the strategic design is
+/// built on: a few seconds of disagreement no librarian notices.
 /// </para>
 /// <para>
 /// <strong>The recurring tick is also the retry.</strong> A blocked head is simply retried by the
@@ -58,6 +57,9 @@ public sealed class OutboxJobs(
 
     /// <summary>The recurring job identifier the host registers the Circulation drain under.</summary>
     public const string CirculationJobId = "circulation-outbox";
+
+    /// <summary>The recurring job identifier the host registers the Charges drain under.</summary>
+    public const string ChargesJobId = "charges-outbox";
 
     /// <summary>
     /// Drains the Catalog module's outbox.

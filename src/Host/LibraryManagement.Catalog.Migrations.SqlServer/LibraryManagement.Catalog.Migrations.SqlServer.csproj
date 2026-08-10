@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <RootNamespace>LibraryManagement.Catalog.Migrations.SqlServer</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- The provider, named here and nowhere inside the module. A migration is provider-specific
+             down to its generated code — nvarchar(max), rowversion, IDENTITY — which is precisely
+             why it lives beside the host rather than in Catalog.Infrastructure. -->
+        <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+        <!-- Design-time only: the tooling that writes the migrations, never shipped with them. -->
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- The provider call and the design-time factory, spelled once for all five modules. -->
+        <ProjectReference Include="..\LibraryManagement.Migrations.SqlServer\LibraryManagement.Migrations.SqlServer.csproj" />
+        <ProjectReference Include="..\..\Catalog\LibraryManagement.Catalog.Infrastructure\LibraryManagement.Catalog.Infrastructure.csproj" />
+    </ItemGroup>
+
+</Project>

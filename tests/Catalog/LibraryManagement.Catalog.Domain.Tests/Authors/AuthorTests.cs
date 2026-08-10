@@ -151,6 +151,43 @@ public sealed class AuthorTests
         author.DomainEvents.OfType<AuthorRenamed>().ShouldBeEmpty();
     }
 
+    // --- Correcting life years: the same statement about the record, about a different fact --------
+
+    [Fact]
+    public void CorrectLifeYears_ReplacesTheYearsAndAnnouncesBothReadings()
+    {
+        var author = AnAuthor("Ernaux, Annie");
+
+        author.CorrectLifeYears(Years(1940, null));
+
+        author.LifeYears.ShouldBe(Years(1940, null));
+        var corrected = author.DomainEvents.OfType<AuthorLifeYearsCorrected>().Single();
+        corrected.PreviousLifeYears.ShouldBe(LifeYears.Unknown);
+        corrected.CorrectedLifeYears.ShouldBe(Years(1940, null));
+    }
+
+    [Fact]
+    public void CorrectLifeYears_ToTheYearsAlreadyOnRecord_RecordsNothing()
+    {
+        // Nothing happened — the Retitle reading of a change that changes nothing.
+        var author = AnAuthor("Ernaux, Annie");
+        author.CorrectLifeYears(Years(1940, null));
+
+        author.CorrectLifeYears(Years(1940, null));
+
+        author.DomainEvents.OfType<AuthorLifeYearsCorrected>().Count().ShouldBe(1);
+    }
+
+    [Fact]
+    public void Register_WithKnownYears_IsNotACorrection()
+    {
+        // No reading stood before the record opened, so there is nothing to have repaired.
+        var author = Author.Register(AuthorId.Generate(), Name("Ernaux, Annie"), Years(1940, null));
+
+        author.LifeYears.ShouldBe(Years(1940, null));
+        author.DomainEvents.OfType<AuthorLifeYearsCorrected>().ShouldBeEmpty();
+    }
+
     // --- Variant names ----------------------------------------------------------------------------
 
     [Fact]

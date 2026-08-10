@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <RootNamespace>LibraryManagement.Host</RootNamespace>
+        <!-- MSG0005: message without any registered handler.
+             It fires on every domain event, and it is wrong to do so. An event announces that
+             something happened; the aggregate that raised it does not know or care who listens, and
+             nobody listening is a legitimate state rather than a missing registration. -->
+        <NoWarn>$(NoWarn);MSG0005</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- The engine and the clock, named here because this is the place that decides them.
+             Hangfire.AspNetCore brings the activator that resolves a job from a container scope,
+             which is what lets a drain open one scope per message. -->
+        <PackageReference Include="Hangfire.Core" />
+        <PackageReference Include="Hangfire.SqlServer" />
+        <PackageReference Include="Hangfire.AspNetCore" />
+        <!-- The generator runs in exactly two assemblies — this one and the composition tests.
+             PrivateAssets is what keeps it there: without it a project referencing this one runs
+             the generator too and emits a second Mediator and AddMediator under the same names,
+             which is a collision rather than a duplicate. -->
+        <PackageReference Include="Mediator.SourceGenerator" PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- The first place in the solution to need this, and it needs it for a reason peculiar to a
+             host: its public surface is HTTP, not types. The endpoint groups and the result mapper
+             are internal because nothing should call them from C# — and the tests are the exception
+             that proves it, since a mapper tested only through requests would need a database to
+             assert a status code. Modules keep testing through their public seams. -->
+        <InternalsVisibleTo Include="LibraryManagement.Host.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- The five modules, and the five migrations projects that spell the provider for them. -->
+        <ProjectReference Include="..\..\Catalog\LibraryManagement.Catalog.Infrastructure\LibraryManagement.Catalog.Infrastructure.csproj" />
+        <ProjectReference Include="..\..\Charges\LibraryManagement.Charges.Infrastructure\LibraryManagement.Charges.Infrastructure.csproj" />
+        <ProjectReference Include="..\..\Circulation\LibraryManagement.Circulation.Infrastructure\LibraryManagement.Circulation.Infrastructure.csproj" />
+        <ProjectReference Include="..\..\Holdings\LibraryManagement.Holdings.Infrastructure\LibraryManagement.Holdings.Infrastructure.csproj" />
+        <ProjectReference Include="..\..\Members\LibraryManagement.Members.Infrastructure\LibraryManagement.Members.Infrastructure.csproj" />
+        <ProjectReference Include="..\LibraryManagement.Catalog.Migrations.SqlServer\LibraryManagement.Catalog.Migrations.SqlServer.csproj" />
+        <ProjectReference Include="..\LibraryManagement.Charges.Migrations.SqlServer\LibraryManagement.Charges.Migrations.SqlServer.csproj" />
+        <ProjectReference Include="..\LibraryManagement.Circulation.Migrations.SqlServer\LibraryManagement.Circulation.Migrations.SqlServer.csproj" />
+        <ProjectReference Include="..\LibraryManagement.Holdings.Migrations.SqlServer\LibraryManagement.Holdings.Migrations.SqlServer.csproj" />
+        <ProjectReference Include="..\LibraryManagement.Members.Migrations.SqlServer\LibraryManagement.Members.Migrations.SqlServer.csproj" />
+    </ItemGroup>
+
+</Project>

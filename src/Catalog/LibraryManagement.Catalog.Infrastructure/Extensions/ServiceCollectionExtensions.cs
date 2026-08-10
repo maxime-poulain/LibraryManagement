@@ -75,6 +75,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<JsonConverter, NameFormJsonConverter>();
         services.AddSingleton<JsonConverter, TitleJsonConverter>();
         services.AddSingleton<JsonConverter, IsbnJsonConverter>();
+        services.AddSingleton<JsonConverter, LifeYearsJsonConverter>();
 
         return services;
     }

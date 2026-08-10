@@ -2,23 +2,24 @@ using LibraryManagement.Catalog.Application.Editions.RegisterEdition;
 using LibraryManagement.Catalog.Application.Works.RegisterWork;
 using LibraryManagement.Catalog.Infrastructure.Extensions;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
+using LibraryManagement.Catalog.Migrations.SqlServer;
 using LibraryManagement.Circulation.Domain;
 using LibraryManagement.Circulation.Domain.Loans;
 using LibraryManagement.Circulation.Infrastructure.Extensions;
 using LibraryManagement.Circulation.Infrastructure.Persistence;
+using LibraryManagement.Circulation.Migrations.SqlServer;
 using LibraryManagement.Circulation.PublishedLanguage;
 using LibraryManagement.Holdings.Application.Copies.AcquireCopy;
 using LibraryManagement.Holdings.Application.Copies.WithdrawCopy;
 using LibraryManagement.Holdings.Domain.Copies;
 using LibraryManagement.Holdings.Infrastructure.Extensions;
 using LibraryManagement.Holdings.Infrastructure.Persistence;
+using LibraryManagement.Holdings.Migrations.SqlServer;
 using LibraryManagement.Shared.Application.CQS;
 using LibraryManagement.Shared.Domain.Results;
 using LibraryManagement.Shared.Infrastructure.Outbox;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 // Both modules declare a CopyId and an EditionId carrying the same Guid, and neither knows the
 // other's — the context map's "a cross-module reference is an identifier, redeclared locally", made
@@ -67,9 +68,9 @@ public sealed class CopyReportedLostTests(SqlServerFixture sqlServer) : IAsyncLi
     public async ValueTask InitializeAsync()
     {
         _provider = CompositionRoot.Services()
-            .AddCatalogModule(options => options.UseSqlServer(ConnectionString))
-            .AddHoldingsModule(options => options.UseSqlServer(ConnectionString))
-            .AddCirculationModule(options => options.UseSqlServer(ConnectionString))
+            .AddCatalogModule(options => options.UseCatalogSqlServer(ConnectionString))
+            .AddHoldingsModule(options => options.UseHoldingsSqlServer(ConnectionString))
+            .AddCirculationModule(options => options.UseCirculationSqlServer(ConnectionString))
             .AddSingleton<IMemberBalance, NoChargesYet>()
             .BuildServiceProvider();
 
@@ -77,20 +78,17 @@ public sealed class CopyReportedLostTests(SqlServerFixture sqlServer) : IAsyncLi
 
         var catalog = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
         await catalog.Database.EnsureDeletedAsync(Token);
-        await catalog.Database.EnsureCreatedAsync(Token);
+        await catalog.Database.MigrateAsync(Token);
 
-        // The seam TwoModulesTests documents: EnsureCreated answers "already there" for the second
-        // and third contexts over one database, leaving their schemas unbuilt.
-        await CreateTablesOfAsync<HoldingsDbContext>(scope.ServiceProvider);
-        await CreateTablesOfAsync<CirculationDbContext>(scope.ServiceProvider);
+        await MigrateAsync<HoldingsDbContext>(scope.ServiceProvider);
+        await MigrateAsync<CirculationDbContext>(scope.ServiceProvider);
     }
 
-    private static async Task CreateTablesOfAsync<TContext>(IServiceProvider services)
+    private static async Task MigrateAsync<TContext>(IServiceProvider services)
         where TContext : DbContext
     {
         var context = services.GetRequiredService<TContext>();
-        await ((IRelationalDatabaseCreator)context.Database.GetService<IDatabaseCreator>())
-            .CreateTablesAsync(Token);
+        await context.Database.MigrateAsync(Token);
     }
 
     public async ValueTask DisposeAsync() => await _provider.DisposeAsync();

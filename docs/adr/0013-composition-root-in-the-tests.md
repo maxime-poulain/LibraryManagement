@@ -1,6 +1,7 @@
 # ADR-0013 — No runnable host; the composition root lives in the tests
 
-- **Status**: Accepted
+- **Status**: Superseded by [ADR-0015](0015-the-first-host.md) — the host exists; the
+  composition root moved into it, and the two job classes below moved with it
 - **Date**: 2026-07-29
 - **Authority**: [`outbox.md`](../outbox.md) §7,
   [`strategic-design.md`](../strategic-design.md) §10
@@ -24,10 +25,13 @@ Testcontainers.
 
 Two rules keep the modules host-agnostic, and both are checked:
 
-- **Nothing under `src/` names a database provider.** Every infrastructure project references
-  `Microsoft.EntityFrameworkCore.Relational` and no provider;
-  `Microsoft.EntityFrameworkCore.SqlServer` is declared once, in the `Testing` group of
-  `Directory.Packages.props`.
+- **No module names a database provider.** Every infrastructure project references
+  `Microsoft.EntityFrameworkCore.Relational` and no provider. `Microsoft.EntityFrameworkCore.SqlServer`
+  belongs to the composition root and to the migrations projects that arrived with it under
+  `src/Host/` — the rule was written as "nothing under `src/`" while `src/` held only modules, and
+  what it always meant is that a *module* stays engine-agnostic. See
+  [ADR-0010](0010-ensurecreated-before-migrations.md) and [`migrations.md`](../migrations.md) §2 for
+  why the migrations sit beside the host rather than inside the modules they describe.
 - **Nothing under `src/` names a scheduler.** `OutboxProcessor<TContext>` is a plain class. Hangfire
   appears only in the composition tests, whose whole surface is `OutboxJobs` — one method per module,
   `[DisableConcurrentExecution]` so a tick and a late run never drain the same table at once.

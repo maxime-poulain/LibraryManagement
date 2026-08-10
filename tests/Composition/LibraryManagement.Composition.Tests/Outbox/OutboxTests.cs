@@ -5,6 +5,7 @@ using LibraryManagement.Catalog.Domain.Authors;
 using LibraryManagement.Catalog.Infrastructure.Extensions;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
 using LibraryManagement.Catalog.Infrastructure.Search;
+using LibraryManagement.Catalog.Migrations.SqlServer;
 using LibraryManagement.Composition.Tests.Logging;
 using LibraryManagement.Shared.Application.CQS;
 using LibraryManagement.Shared.Application.DomainEvents;
@@ -22,8 +23,8 @@ namespace LibraryManagement.Composition.Tests.Outbox;
 /// </summary>
 /// <remarks>
 /// The processor is invoked directly rather than through a scheduler, deliberately: every behavior
-/// here is deterministic. What Hangfire adds — a clock — is proven once, in
-/// <see cref="HangfireDrainTests"/>, and nowhere else.
+/// here is deterministic. What Hangfire adds — a clock — is proven once, by the host's own
+/// <c>HangfireDrainTests</c>, and nowhere else.
 /// </remarks>
 [Collection(SqlServerCollection.Name)]
 [Trait("Category", "Integration")]
@@ -46,13 +47,13 @@ public sealed class OutboxTests(SqlServerFixture sqlServer) : IAsyncLifetime
                 .AddProvider(_logs)
                 .AddFilter<RecordedLogs>((category, _) =>
                     category?.StartsWith("LibraryManagement", StringComparison.Ordinal) == true))
-            .AddCatalogModule(options => options.UseSqlServer(sqlServer.ConnectionString))
+            .AddCatalogModule(options => options.UseCatalogSqlServer(sqlServer.ConnectionString))
             .BuildServiceProvider();
 
         await using var scope = _provider.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
         await context.Database.EnsureDeletedAsync(Token);
-        await context.Database.EnsureCreatedAsync(Token);
+        await context.Database.MigrateAsync(Token);
     }
 
     public async ValueTask DisposeAsync() => await _provider.DisposeAsync();

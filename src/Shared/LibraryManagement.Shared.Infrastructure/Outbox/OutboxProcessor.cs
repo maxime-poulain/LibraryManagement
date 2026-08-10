@@ -47,8 +47,10 @@ namespace LibraryManagement.Shared.Infrastructure.Outbox;
 /// possible, and <c>IDomainEvent.EventId</c> is what a handler deduplicates by.
 /// </para>
 /// <para>
-/// Processed rows accumulate; a purge policy is deliberately deferred to the host, alongside the
-/// scheduler that will own it.
+/// Processed rows accumulate, and <see cref="OutboxPurge{TContext}"/> is what removes them. The
+/// drain never deletes: a run that both delivered and cleaned would tie how long history is kept to
+/// how often the queue is emptied, and the two answer to different things — one to the reader's
+/// latency, the other to what the library may keep about a member.
 /// </para>
 /// </remarks>
 public sealed class OutboxProcessor<TContext>(

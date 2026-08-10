@@ -321,10 +321,11 @@ A copy's status has to be *stored* as its name rather than its number, for the r
 point index already stored its kind that way: this table is read by a human when something looks
 wrong, and `InRepair` answers where `1` asks.
 
-And one database holding two modules' schemas does not compose for free. `EnsureCreated` builds the
-database and then answers "already there" for the second context over it, leaving that module's
-tables unbuilt — the relational creator has to be asked for them directly. It is a test's problem
-today and a host's problem tomorrow, and the answer there is migrations.
+And one database holding two modules' schemas does not compose for free. `EnsureCreated` built the
+database and then answered "already there" for the second context over it, leaving that module's
+tables unbuilt — the relational creator had to be asked for them directly. Called a test's problem
+then and a host's problem later, and the answer both times was migrations: each module now applies
+its own, tracked in a history table inside its own schema (`migrations.md` §3).
 
 **A merged edition orphans this context's identifiers.** Catalog has no merge operation, and the day
 it acquires one, every `Copy` holding the absorbed `EditionId` points at a record that no longer

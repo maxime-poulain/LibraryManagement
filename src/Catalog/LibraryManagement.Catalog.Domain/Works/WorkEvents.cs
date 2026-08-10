@@ -1,3 +1,4 @@
+using LibraryManagement.Catalog.Domain.Authors;
 using LibraryManagement.Shared.Domain;
 
 namespace LibraryManagement.Catalog.Domain.Works;
@@ -22,3 +23,29 @@ public sealed record WorkRegistered(WorkId WorkId, Title PreferredTitle) : Domai
 /// findable, the model gains variants first and this event follows.
 /// </remarks>
 public sealed record WorkRetitled(WorkId WorkId, Title PreviousTitle, Title NewTitle) : DomainEvent;
+
+/// <summary>
+/// An author is now credited with a work.
+/// </summary>
+/// <param name="WorkId">The work.</param>
+/// <param name="AuthorId">The author now credited.</param>
+/// <remarks>
+/// Nothing consumes this yet — the access-point index reads names off the author record, not the
+/// credit — and it is published all the same, for the standing reason: an event not published when
+/// it happened cannot be recovered afterwards. The work registered with its authors announces its
+/// registration first, then one credit per author, so the stream never credits a work that does not
+/// yet exist.
+/// </remarks>
+public sealed record WorkAuthorCredited(WorkId WorkId, AuthorId AuthorId) : DomainEvent;
+
+/// <summary>
+/// An author's credit was removed from a work.
+/// </summary>
+/// <param name="WorkId">The work.</param>
+/// <param name="AuthorId">The author no longer credited.</param>
+/// <remarks>
+/// Raised only when there was a credit to remove: asking again for a state already reached is a
+/// success that changes nothing, and an event saying otherwise would announce a removal that never
+/// happened.
+/// </remarks>
+public sealed record WorkAuthorCreditRemoved(WorkId WorkId, AuthorId AuthorId) : DomainEvent;

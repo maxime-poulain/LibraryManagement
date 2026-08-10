@@ -57,3 +57,21 @@ public sealed record AuthorPreferredNameCorrected(
 /// search projection must learn of it the moment it is recorded, exactly as it learns of the preferred name.
 /// </remarks>
 public sealed record AuthorVariantNameAdded(AuthorId AuthorId, NameForm VariantName) : DomainEvent;
+
+/// <summary>
+/// The years of birth and death on record were wrong, and have been corrected.
+/// </summary>
+/// <param name="AuthorId">The record that changed.</param>
+/// <param name="PreviousLifeYears">The years as the record had them.</param>
+/// <param name="CorrectedLifeYears">The years from now on.</param>
+/// <remarks>
+/// A correction of the record, never a fact about the person — nobody's years change; what was
+/// wrong is what the catalog said about them. Both values are carried, the shape every corrected
+/// pair here takes, so a consumer keyed on the old reading can retract it. Registration is not a
+/// correction: an author registered with known years announces them in no event but the opening of
+/// the record, and this event marks only the repair of a reading that stood.
+/// </remarks>
+public sealed record AuthorLifeYearsCorrected(
+    AuthorId AuthorId,
+    LifeYears PreviousLifeYears,
+    LifeYears CorrectedLifeYears) : DomainEvent;

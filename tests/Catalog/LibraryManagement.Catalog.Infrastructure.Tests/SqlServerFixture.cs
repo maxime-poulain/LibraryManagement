@@ -1,5 +1,6 @@
 using LibraryManagement.Catalog.Infrastructure.Persistence;
 using Microsoft.Data.SqlClient;
+using LibraryManagement.Catalog.Migrations.SqlServer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Testcontainers.MsSql;
@@ -59,9 +60,11 @@ public sealed class SqlServerFixture : IAsyncLifetime
 
         // Dropped and rebuilt, so a run never inherits the schema of an older model. On a container
         // this costs nothing; on a server that outlives the run it is what keeps the suite honest.
+        // Built by the migrations rather than from the model: the suite now tests the schema a
+        // deployment would get, and a migration that drifted from the model fails here.
         await using var context = NewContext();
         await context.Database.EnsureDeletedAsync();
-        await context.Database.EnsureCreatedAsync();
+        await context.Database.MigrateAsync();
     }
 
     // A database of this suite's own, whichever server it is. A container hands back a connection
@@ -81,7 +84,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
     /// </param>
     public CatalogDbContext NewContext(params IInterceptor[] interceptors)
         => new(new DbContextOptionsBuilder<CatalogDbContext>()
-            .UseSqlServer(_connectionString)
+            .UseCatalogSqlServer(_connectionString)
             .AddInterceptors(interceptors)
             .Options);
 

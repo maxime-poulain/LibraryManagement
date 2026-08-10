@@ -35,6 +35,17 @@
     <Project Path="src/Members/LibraryManagement.Members.Infrastructure/LibraryManagement.Members.Infrastructure.csproj" />
     <Project Path="src/Members/LibraryManagement.Members.PublishedLanguage/LibraryManagement.Members.PublishedLanguage.csproj" />
   </Folder>
+  <Folder Name="/src/Host/">
+    <Project Path="src/Host/LibraryManagement.Host/LibraryManagement.Host.csproj" />
+  </Folder>
+  <Folder Name="/src/Host/Migrations/">
+    <Project Path="src/Host/LibraryManagement.Migrations.SqlServer/LibraryManagement.Migrations.SqlServer.csproj" />
+    <Project Path="src/Host/LibraryManagement.Catalog.Migrations.SqlServer/LibraryManagement.Catalog.Migrations.SqlServer.csproj" />
+    <Project Path="src/Host/LibraryManagement.Charges.Migrations.SqlServer/LibraryManagement.Charges.Migrations.SqlServer.csproj" />
+    <Project Path="src/Host/LibraryManagement.Circulation.Migrations.SqlServer/LibraryManagement.Circulation.Migrations.SqlServer.csproj" />
+    <Project Path="src/Host/LibraryManagement.Holdings.Migrations.SqlServer/LibraryManagement.Holdings.Migrations.SqlServer.csproj" />
+    <Project Path="src/Host/LibraryManagement.Members.Migrations.SqlServer/LibraryManagement.Members.Migrations.SqlServer.csproj" />
+  </Folder>
   <Folder Name="/src/Shared/">
     <Project Path="src/Shared/LibraryManagement.Shared.Application/LibraryManagement.Shared.Application.csproj" />
     <Project Path="src/Shared/LibraryManagement.Shared.Domain/LibraryManagement.Shared.Domain.csproj" />
@@ -43,6 +54,9 @@
   <Folder Name="/Tests/" />
   <Folder Name="/Tests/Architecture/">
     <Project Path="tests/Architecture/LibraryManagement.Architecture.Tests/LibraryManagement.Architecture.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Host/">
+    <Project Path="tests/Host/LibraryManagement.Host.Tests/LibraryManagement.Host.Tests.csproj" />
   </Folder>
   <Folder Name="/Tests/Composition/">
     <Project Path="tests/Composition/LibraryManagement.Composition.Tests/LibraryManagement.Composition.Tests.csproj" />

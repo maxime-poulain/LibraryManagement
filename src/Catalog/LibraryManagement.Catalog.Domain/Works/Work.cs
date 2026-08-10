@@ -55,6 +55,12 @@ public sealed class Work : AggregateRoot<WorkId>
 
         var work = new Work(id, title);
 
+        // The registration is announced before the credits: each credit raises its own event, the
+        // outbox preserves insertion order, and a stream that credited a work before registering
+        // it would ask every future consumer to buffer. On a refusal the work is discarded
+        // unsaved, so the events raised up to it go with it.
+        work.AddDomainEvent(new WorkRegistered(id, title));
+
         foreach (var authorId in authorIds ?? [])
         {
             var refusal = work.CreditAuthor(authorId)
@@ -65,8 +71,6 @@ public sealed class Work : AggregateRoot<WorkId>
                 return refusal;
             }
         }
-
-        work.AddDomainEvent(new WorkRegistered(id, title));
 
         return Result<Work>.Success(work);
     }
@@ -113,6 +117,7 @@ public sealed class Work : AggregateRoot<WorkId>
         }
 
         _authorIds.Add(authorId);
+        AddDomainEvent(new WorkAuthorCredited(Id, authorId));
 
         return Result.Success();
     }
@@ -130,6 +135,15 @@ public sealed class Work : AggregateRoot<WorkId>
     {
         ArgumentNullException.ThrowIfNull(authorId);
 
-        return _authorIds.Remove(authorId);
+        if (!_authorIds.Remove(authorId))
+        {
+            return false;
+        }
+
+        // The handler treats both answers as success on purpose, so the aggregate is the only
+        // place that still knows whether anything happened — and an event may only say it did.
+        AddDomainEvent(new WorkAuthorCreditRemoved(Id, authorId));
+
+        return true;
     }
 }

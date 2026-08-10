@@ -4,6 +4,7 @@ using LibraryManagement.Catalog.Domain;
 using LibraryManagement.Catalog.Domain.Authors;
 using LibraryManagement.Catalog.Infrastructure.Extensions;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
+using LibraryManagement.Catalog.Migrations.SqlServer;
 using LibraryManagement.Composition.Tests.Logging;
 using LibraryManagement.Shared.Application.CQS;
 using LibraryManagement.Shared.Application.Errors;
@@ -44,13 +45,13 @@ public sealed class CatalogPipelineTests(SqlServerFixture sqlServer) : IAsyncLif
                 .AddProvider(_logs)
                 .AddFilter<RecordedLogs>((category, _) =>
                     category?.StartsWith("LibraryManagement", StringComparison.Ordinal) == true))
-            .AddCatalogModule(options => options.UseSqlServer(sqlServer.ConnectionString))
+            .AddCatalogModule(options => options.UseCatalogSqlServer(sqlServer.ConnectionString))
             .BuildServiceProvider();
 
         await using var scope = _provider.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
         await context.Database.EnsureDeletedAsync(Token);
-        await context.Database.EnsureCreatedAsync(Token);
+        await context.Database.MigrateAsync(Token);
     }
 
     public async ValueTask DisposeAsync() => await _provider.DisposeAsync();

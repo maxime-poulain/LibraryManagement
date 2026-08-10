@@ -53,8 +53,9 @@ corrupt column.
 **The stored type name is an address**: `"{FullName}, {AssemblySimpleName}"`, no version, so an
 assembly bump orphans nothing. The flip side is a rule worth stating twice: **renaming or moving an
 event type is a breaking change to every stored row that carries it.** Either the table drains
-first, or the rename ships with a migration rewriting the stored names — and today only the first of
-those exists, for the reasons [migrations.md](migrations.md) records.
+first, or the rename ships with a migration rewriting the stored names — and both halves exist now
+that [migrations.md](migrations.md) has its subject, which is what makes these tables safe to rename
+against once they hold rows.
 
 **The same holds one level down, and it is easier to miss.** An event is a `record`, and each of its
 positional parameters becomes a property name in the stored payload. Renaming
@@ -129,15 +130,17 @@ message a transient fault would have released — and reschedule *the drain*, ne
 job: the failed message is always the head, so retrying it and draining are the same act. The
 processor already reports everything the decision needs (`OutboxDrainOutcome`).
 
-## 7. The scheduler lives in the composition root
+## 7. The scheduler lives in the host
 
-No project under `src/` references Hangfire, for the same reason none names a database provider:
-the processor is a plain class, and what puts it on a clock is the host's decision. The host's
-whole surface is `OutboxJobs` — one method per module, `[DisableConcurrentExecution]` so a tick and
-a late run never drain the same table at once — plus the storage configuration, in the `hangfire`
-schema beside the module schemas, owned by infrastructure the way `sys` is.
+No module references Hangfire, for the same reason none names a database provider: the processor is
+a plain class, and what puts it on a clock is the host's decision. The host's whole scheduling
+surface is three classes — `OutboxJobs`, one method per module; `CirculationDailyRun`; and
+`OutboxPurgeJob` — each carrying `[DisableConcurrentExecution]` so a tick and a late run never work
+the same table at once, plus the storage configuration in the `hangfire` schema beside the module
+schemas, owned by infrastructure the way `sys` is. The drains run on `Cron.Minutely`, Hangfire's
+floor; the daily run and the purge on `Cron.Daily`.
 
-Two consequences bind every future host. **The mediator must be registered scoped**
+Two consequences bind the host, and would bind any other. **The mediator must be registered scoped**
 (`options.ServiceLifetime = ServiceLifetime.Scoped`), discovered the hard way: the default
 singleton resolves every handler from the root scope, which worked by accident while everything
 shared one scope and breaks the drain's one-scope-per-message save — the handler would write to a
@@ -161,7 +164,15 @@ unit of work so a malformed command never writes.
 
 The host also chooses the log sinks. The modules only speak `ILogger`: the shared registration
 calls `AddLogging()` so a logger always resolves, and adds no provider — console, a collector,
-OpenTelemetry are host decisions, exactly as the storage is.
+OpenTelemetry are host decisions, exactly as the storage is. The host takes the defaults
+`WebApplication.CreateBuilder` gives it, which is a decision and not an omission: a console sink is
+what an operator running this on one machine reads.
+
+**Whether the process runs the jobs at all is configuration** (`Hangfire:RunServer`, on by default).
+The storage is shared, so the day the desk's traffic and the drains want separate machines, the
+worker is this same host with its web pipeline idle — never a second program that would have to
+re-derive what a day consists of. A process that does not run them does not register the schedule
+either, or it would rewrite the definitions of the one that does.
 
 ## 8. Rules this imposes on handlers
 
@@ -250,15 +261,29 @@ module with two namespaces, and the day one of them moves out of the process the
 rebuilt from nothing. The separation of the contexts is the boundary; a transaction across it is a
 hole in the boundary, whatever it buys.
 
-## 10. Deferred, deliberately
-
-Processed rows accumulate: a purge policy arrives with the real host, alongside the scheduler that
-owns it. The Hangfire dashboard is a host concern too.
+## 10. The purge, and what is still deferred
 
 **The purge is a requirement and not only a convenience, and it took another document to notice.**
 A delivered row keeps its payload, and a payload is whatever the event carried — which for Members
 means a name, a set of contact details, a guardian. Nothing else bounds that copy: the aggregate can
 be emptied on request, and those rows would still hold what it used to say. So the window is what
-makes erasure elsewhere real, and a host that never sets one has a second store of personal data it
-did not decide to keep. How long the window is stays the host's call, as the scheduler and the sinks
-are; that there is one is not. `docs/tactical-design-members.md` §10 records the other side.
+makes erasure elsewhere real, and a host that never set one would have a second store of personal
+data it did not decide to keep. `docs/tactical-design-members.md` §10 records the other side.
+
+`OutboxPurge<TContext>` is what removes them — registered per module beside the drain, by
+`AddModuleStore`, rather than left for a host to remember: a module wired without one keeps every
+payload it ever wrote. **How long the window is stays the host's call, as the scheduler and the sinks
+are; that there is one is not.** The purge never runs inside the drain, because how long history is
+kept and how often the queue is emptied answer to different things — one to what the library may
+keep about a member, the other to the reader's latency.
+
+**Dead rows go with the delivered ones, and that is the harder half.** §6 says a dead letter stays
+in the table because it is an operator's problem, and a problem that vanished is not solved — but
+*kept for an operator* cannot mean *kept forever*, or the rule that makes erasure real has an
+exception wide enough to walk through. So the window doubles as the operator's response time, and
+its end is announced rather than silent: a run that removes dead rows says so at Warning, with the
+count, which is a failure closing unresolved rather than a failure disappearing. The two counts
+travel separately in `OutboxPurgeOutcome` for that reason — a single number would hide the one that
+matters behind the one that does not.
+
+**Still deferred.** The Hangfire dashboard, and the retry ladder §6 records as removed.
