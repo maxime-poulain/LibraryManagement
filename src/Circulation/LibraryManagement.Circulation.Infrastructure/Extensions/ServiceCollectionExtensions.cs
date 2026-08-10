@@ -57,6 +57,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILoanRepository, LoanRepository>();
         services.AddScoped<IHoldQueueRepository, HoldQueueRepository>();
 
+        // The rules of a union, which belong to neither queue alone and need no store once both are
+        // loaded. Scoped like every other seam; the service is stateless, so the lifetime carries
+        // nothing.
+        services.AddScoped<IHoldQueueMergeDomainService, HoldQueueMergeDomainService>();
+
         services.AddSingleton(CirculationPolicy.Current);
 
         // The module's validators, from the assembly that declares its commands. A validator
@@ -89,6 +94,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<
             IIntegrationEventSubscriber<Catalog.PublishedLanguage.EditionsMerged>,
             IntegrationEvents.RepointLoansOnEditionsMerged>();
+
+        // The second reaction to that one fact, and a subscriber of its own rather than a second
+        // dispatch inside the first: the loans and the queues are separate units of consistency, and
+        // the publisher resolves every subscriber registered for a contract. A throw here leaves the
+        // announcing row unmarked and replays both, which the loan sweep survives by being
+        // idempotent.
+        services.AddScoped<
+            IIntegrationEventSubscriber<Catalog.PublishedLanguage.EditionsMerged>,
+            IntegrationEvents.MergeHoldQueuesOnEditionsMerged>();
 
         // No JSON converters: this module's events carry identifiers, dates and enums, all of
         // which the shared serializer already speaks. No published-language adapter either — the

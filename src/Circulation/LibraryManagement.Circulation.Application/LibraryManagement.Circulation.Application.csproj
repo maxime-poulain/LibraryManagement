@@ -11,6 +11,10 @@
              applications: Circulation names a copy and a person without describing either. -->
         <ProjectReference Include="..\..\Holdings\LibraryManagement.Holdings.PublishedLanguage\LibraryManagement.Holdings.PublishedLanguage.csproj" />
         <ProjectReference Include="..\..\Members\LibraryManagement.Members.PublishedLanguage\LibraryManagement.Members.PublishedLanguage.csproj" />
+        <!-- And Catalog's, for one question: does this identifier still name a record? A hold is
+             placed on an edition, and an identifier Catalog has merged away must not acquire new
+             claims. Holdings asks the same context the same question before accessioning a copy. -->
+        <ProjectReference Include="..\..\Catalog\LibraryManagement.Catalog.PublishedLanguage\LibraryManagement.Catalog.PublishedLanguage.csproj" />
         <!-- Its own published language too, for the one port that runs the other way: Circulation
              declared the balance question there so that Charges may implement it, and consumes it
              here. -->

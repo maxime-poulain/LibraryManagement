@@ -15,10 +15,10 @@ public sealed class CancelHoldCommandHandlerTests
     private readonly InMemoryHoldQueueRepository _queues = new();
     private readonly StubBalances _balances = new();
 
-    private ValueTask<Result> Handle(Guid edition, Guid borrower)
+    private ValueTask<Result> Handle(Guid edition, Guid borrower, Guid hold)
         => new CancelHoldCommandHandler(
                 _queues, _balances, CirculationPolicy.Current, FrozenClock.At(Today))
-            .Handle(new CancelHoldCommand(edition, borrower), Token);
+            .Handle(new CancelHoldCommand(edition, borrower, hold), Token);
 
     private static List<ErrorCode> CodesOf(Result outcome)
         => outcome.Match(() => [], errors => errors.Select(error => error.ErrorCode).ToList());
@@ -27,11 +27,12 @@ public sealed class CancelHoldCommandHandlerTests
     public async Task Handle_RemovesAQueuedClaim()
     {
         var borrower = BorrowerId.Generate();
+        var holdId = HoldId.Generate();
         var queue = HoldQueue.For(EditionId.Generate());
-        queue.PlaceHold(HoldId.Generate(), borrower, DateTimeOffset.UnixEpoch);
+        queue.PlaceHold(holdId, borrower, DateTimeOffset.UnixEpoch);
         _queues.With(queue);
 
-        var outcome = await Handle(queue.Id.Value, borrower.Value);
+        var outcome = await Handle(queue.Id.Value, borrower.Value, holdId.Value);
 
         outcome.HasErrors().ShouldBeFalse();
         queue.Holds.ShouldBeEmpty();
@@ -47,13 +48,14 @@ public sealed class CancelHoldCommandHandlerTests
         var next = BorrowerId.Generate();
         var copy = CopyId.Generate();
 
+        var theirs = HoldId.Generate();
         var queue = HoldQueue.For(EditionId.Generate());
-        queue.PlaceHold(HoldId.Generate(), collector, DateTimeOffset.UnixEpoch);
+        queue.PlaceHold(theirs, collector, DateTimeOffset.UnixEpoch);
         queue.PlaceHold(HoldId.Generate(), next, DateTimeOffset.UnixEpoch.AddHours(1));
         queue.TrapOldestQueued(copy, Today.AddDays(7), new HashSet<BorrowerId>());
         _queues.With(queue);
 
-        var outcome = await Handle(queue.Id.Value, collector.Value);
+        var outcome = await Handle(queue.Id.Value, collector.Value, theirs.Value);
 
         outcome.HasErrors().ShouldBeFalse();
 
@@ -71,14 +73,15 @@ public sealed class CancelHoldCommandHandlerTests
         var owing = BorrowerId.Generate();
         _balances.Owing(owing.Value, 1m);
 
+        var theirs = HoldId.Generate();
         var queue = HoldQueue.For(EditionId.Generate());
-        queue.PlaceHold(HoldId.Generate(), collector, DateTimeOffset.UnixEpoch);
+        queue.PlaceHold(theirs, collector, DateTimeOffset.UnixEpoch);
         queue.PlaceHold(HoldId.Generate(), owing, DateTimeOffset.UnixEpoch.AddHours(1));
         queue.TrapOldestQueued(CopyId.Generate(), Today.AddDays(7), new HashSet<BorrowerId>());
         queue.ClearDomainEvents();
         _queues.With(queue);
 
-        var outcome = await Handle(queue.Id.Value, collector.Value);
+        var outcome = await Handle(queue.Id.Value, collector.Value, theirs.Value);
 
         outcome.HasErrors().ShouldBeFalse();
         queue.DomainEvents.OfType<HoldReadyForPickup>().ShouldBeEmpty();
@@ -88,7 +91,7 @@ public sealed class CancelHoldCommandHandlerTests
     [Fact]
     public async Task Handle_AnEditionWithNoQueue_IsRefused()
     {
-        CodesOf(await Handle(Guid.CreateVersion7(), Guid.CreateVersion7()))
+        CodesOf(await Handle(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7()))
             .ShouldContain(CirculationErrorCodes.NoSuchHold);
     }
 
@@ -99,7 +102,23 @@ public sealed class CancelHoldCommandHandlerTests
         queue.PlaceHold(HoldId.Generate(), BorrowerId.Generate(), DateTimeOffset.UnixEpoch);
         _queues.With(queue);
 
-        CodesOf(await Handle(queue.Id.Value, Guid.CreateVersion7()))
+        CodesOf(await Handle(queue.Id.Value, Guid.CreateVersion7(), Guid.CreateVersion7()))
             .ShouldContain(CirculationErrorCodes.NoSuchHold);
+    }
+
+    [Fact]
+    public async Task Handle_SomebodyElsesClaim_IsRefused()
+    {
+        // The identifier alone would be enough to end a claim, so the borrower travels with it and
+        // the aggregate checks the pair.
+        var mine = HoldId.Generate();
+        var queue = HoldQueue.For(EditionId.Generate());
+        queue.PlaceHold(mine, BorrowerId.Generate(), DateTimeOffset.UnixEpoch);
+        _queues.With(queue);
+
+        CodesOf(await Handle(queue.Id.Value, Guid.CreateVersion7(), mine.Value))
+            .ShouldContain(CirculationErrorCodes.NoSuchHold);
+
+        queue.Holds.Count.ShouldBe(1);
     }
 }

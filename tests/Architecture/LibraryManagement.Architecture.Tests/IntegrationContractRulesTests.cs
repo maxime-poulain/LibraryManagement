@@ -43,6 +43,10 @@ public sealed class IntegrationContractRulesTests
         // And the same fact reaching a second consumer, in another module: one contract with two
         // subscribers is the shape a scan pinned to a single type would stop noticing.
         subscribers.ShouldContain(typeof(RepointLoansOnEditionsMerged).FullName);
+
+        // Two subscribers of one contract inside one module, which the publisher supports and a
+        // scan would happily miss: the loans and the queues are separate units of consistency.
+        subscribers.ShouldContain(typeof(MergeHoldQueuesOnEditionsMerged).FullName);
     }
 
     // --- The rule itself, exercised against deliberate violations --------------------------------

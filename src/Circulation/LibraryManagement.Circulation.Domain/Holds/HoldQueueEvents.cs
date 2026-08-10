@@ -155,3 +155,55 @@ public sealed record HoldCancelledUnfulfillable(
     EditionId EditionId,
     HoldId HoldId,
     BorrowerId BorrowerId) : DomainEvent;
+
+/// <summary>
+/// A claim now waits in a different queue, because Catalog merged two records into one.
+/// </summary>
+/// <param name="EditionId">The queue it waits in from now on — the surviving record.</param>
+/// <param name="HoldId">The claim. It kept its identity and its place in time, which is the point.</param>
+/// <param name="BorrowerId">Who is waiting.</param>
+/// <param name="PreviousEditionId">
+/// The queue it waited in. A projection keyed on the pair of edition and hold has to retract that
+/// row: here the aggregate's own key changed under the claim, which no other moment in this context
+/// does.
+/// </param>
+/// <remarks>
+/// Informational rather than consequential: the borrower loses nothing and keeps their placement
+/// instant, so their position among the people ahead of them is exactly what it was. Telling them
+/// that two catalog records turned out to describe one edition would explain a cataloger's work to
+/// somebody waiting for a book.
+/// </remarks>
+public sealed record HoldMovedToMergedQueue(
+    EditionId EditionId,
+    HoldId HoldId,
+    BorrowerId BorrowerId,
+    EditionId PreviousEditionId) : DomainEvent;
+
+/// <summary>
+/// One of a borrower's two queued claims ended, because the merge revealed they were claims on the
+/// same edition.
+/// </summary>
+/// <param name="EditionId">The merged queue.</param>
+/// <param name="HoldId">The claim that ended — the later of the two.</param>
+/// <param name="BorrowerId">Whose claim it was.</param>
+/// <param name="SurvivingHoldId">
+/// Their claim that remains, and the older one. Carried so a projection can stitch the two
+/// histories together rather than showing a claim that stops without a successor.
+/// </param>
+/// <remarks>
+/// <para>
+/// Its own event rather than <see cref="HoldCancelled"/>, by the argument that already separated
+/// <see cref="HoldCancelledForDebt"/>: <em>why did I lose my place</em> is the first question a
+/// borrower asks, and it must not become a question about a flag.
+/// </para>
+/// <para>
+/// And the honest answer here is that nothing was lost. The surviving claim is the older of the
+/// two, so the borrower waits from the first time they asked — a message about this would report a
+/// change in the catalog as though it were a change in their standing.
+/// </para>
+/// </remarks>
+public sealed record HoldCancelledAsDuplicate(
+    EditionId EditionId,
+    HoldId HoldId,
+    BorrowerId BorrowerId,
+    HoldId SurvivingHoldId) : DomainEvent;

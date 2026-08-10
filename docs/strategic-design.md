@@ -578,14 +578,14 @@ rule inside the module that owns it.
   as the event their identifiers wait on. **This list used to stop there, and it was wrong to.**
   Circulation waits on it too, and it waits hardest: Holdings and Charges hold the identifier as a
   field, while `HoldQueue` is an aggregate *keyed* by `EditionId`, so a merge does not repoint a
-  column there — it makes two aggregates into one, against an invariant that says a borrower
-  appears at most once in a queue.
+  column there — it makes two aggregates into one, against an invariant that said a borrower
+  appeared at most once in a queue, and which the merge showed to have been overstated.
   [ADR-0017](adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) decides the shape: what
-  crosses, what each consumer owes, and which of the queue's rules bends. Catalog now announces
-  `EditionsMerged`; Holdings refiles its copies under the survivor, and Circulation points every loan
-  *still out* at it — the two field-shaped consumers, built first because they prove the passage.
-  What stays open is the queue merge, which is the aggregate-shaped one, and the member merge behind
-  it.
+  crosses, what each consumer owes, and which of the queue's rules bends. It is built for editions:
+  Catalog announces `EditionsMerged`, Holdings refiles its copies, Circulation points every loan
+  *still out* at the survivor and makes the two hold queues into one. What stays open is the same
+  question asked of **members**, which reaches the queues from the other side and reuses the
+  machinery this one built.
 * Whether a hold may be placed on a *work* — any edition will do — as well as on an edition. Members
   ask for both, and the queue rules differ.
 * Whether a copy's loan history stays in Circulation forever or is archived. It is the only thing in

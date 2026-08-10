@@ -45,21 +45,28 @@ internal static class DebtCancellation
 
         foreach (var queue in occupied)
         {
-            var cancellation = queue.CancelForDebt(borrowerId);
+            // Every claim of theirs in this queue, not the first: a merged queue may hold two of
+            // one borrower's, and leaving one behind would leave somebody who owes money occupying
+            // a place — exactly the invariant this rule exists to buy.
+            var cancellations = queue.CancelForDebt(borrowerId);
 
-            if (cancellation?.ReleasedCopyId is null || !queue.AnyoneIsWaiting)
+            foreach (var released in cancellations
+                         .Select(cancellation => cancellation.ReleasedCopyId)
+                         .OfType<CopyId>())
             {
-                continue;
+                if (!queue.AnyoneIsWaiting)
+                {
+                    break;
+                }
+
+                // Asked again per copy: the previous offer may have taken the only borrower in good
+                // standing, and the answer is about whoever is left.
+                var blocked = await Standing.BlockedAmongAsync(
+                        queue.QueuedBorrowersInOrder(), balances, policy, cancellationToken)
+                    .ConfigureAwait(false);
+
+                queue.TrapOldestQueued(released, policy.PickupDeadlineFor(today), blocked);
             }
-
-            var blocked = await Standing.BlockedAmongAsync(
-                    queue.QueuedBorrowersInOrder(), balances, policy, cancellationToken)
-                .ConfigureAwait(false);
-
-            queue.TrapOldestQueued(
-                cancellation.ReleasedCopyId,
-                policy.PickupDeadlineFor(today),
-                blocked);
         }
     }
 }

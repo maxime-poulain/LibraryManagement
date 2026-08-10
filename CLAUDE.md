@@ -24,10 +24,10 @@ publish a query, and the host composes the member's file at the edge from the th
 page, and the decision about what it does when a module cannot answer is ADR-0016. Catalog has
 begun the merge ADR-0017 decides: two editions join, the absorbed record becomes a pointer, and
 `EditionsMerged` is announced — and **two modules listen**: Holdings refiles every copy of the
-absorbed record under the survivor, and Circulation points every loan still out at it, leaving ended
-loans saying what was borrowed. Three of the record's five steps, and both field-shaped consumers;
-what remains is the aggregate-shaped one — `HoldQueue` is *keyed* by `EditionId`, so two queues must
-become one — and the member merge behind it.
+absorbed record under the survivor, and Circulation both points every loan still out at it and makes
+the two hold queues into one, leaving ended loans saying what was borrowed. Four of the record's five
+steps; what remains is the same question asked of **members**, which reaches the queues from the
+other side and reuses this machinery.
 
 ## The documents are the authority
 
@@ -38,7 +38,7 @@ is a bug: fix the pair in the same change.
 |---|---|
 | `docs/strategic-design.md` | Boundaries, subdomains, context map. §4 is the **glossary — the binding ubiquitous language**. §10 is the codebase rules. |
 | `docs/tactical-design-catalog.md` | Catalog's aggregates and moments: the two ways a name changes, the thin edition, the access-point index, and the merge its clients had named — decided in ADR-0017, and this context's half of it built. |
-| `docs/tactical-design-circulation.md` | Circulation's aggregates, invariants and moments. Desk moments, the daily process, both directions of the Charges cycle and the loan half of a merge implemented; §10 records what building each taught, and why a merged edition costs this context more than any other. |
+| `docs/tactical-design-circulation.md` | Circulation's aggregates, invariants and moments. Desk moments, the daily process, both directions of the Charges cycle and both halves of an edition merge implemented; §10 records what building each taught, including why an invariant can be right and overstated at once. |
 | `docs/tactical-design-holdings.md` | Holdings' aggregate and moments, including what it owes a merge in Catalog. Implemented; §10 records what building it taught, and which three guards it taught not to write. |
 | `docs/tactical-design-members.md` | Members' aggregate and moments. Implemented; §10 records what building it taught. |
 | `docs/tactical-design-charges.md` | Charges' aggregate, invariants and moments. Implemented; §10 records what building it taught, including the one place the mapping had to depart from the rest of the solution. |
@@ -318,9 +318,18 @@ suffix for domain concepts.
 
 **`EditionMergeDomainService` is the first in the repository and the reference example**: four rules
 about two records, none of which needs a store once both are loaded, with `Edition.AbsorbInto`
-internal behind it. `Standing` in Circulation is the same kind of object — a stateless judgement —
-and predates this convention: `public static`, in the Application layer, unsuffixed. Known, not yet
-reconciled.
+internal behind it.
+
+**`HoldQueueMergeDomainService` is the second, and it is worth reading next** because it answers the
+question the first one leaves: the two aggregates are of the *same type*. Two `HoldQueue`s become
+one, so no argument about which of them "owns" the rule can be made from the types — the rule is
+about the pair, and that is the whole test. It also shows the shape at its fullest: two `internal`
+mutators on the aggregate (`AbsorbHoldsFrom` and `CancelAsDuplicate`), the service holding every
+decision about which claims survive, and the handler holding only the questions the store must
+answer — do these queues exist, and does the survivor need one opened.
+
+`Standing` in Circulation is the same kind of object — a stateless judgement — and predates this
+convention: `public static`, in the Application layer, unsuffixed. Known, not yet reconciled.
 
 ## Commit messages
 

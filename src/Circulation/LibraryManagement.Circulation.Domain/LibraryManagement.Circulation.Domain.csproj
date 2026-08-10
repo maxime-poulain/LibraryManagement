@@ -1,6 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <ItemGroup>
+        <!-- The same grant Catalog.Domain makes, for the same reason: HoldQueue's merge mutators are
+             internal so the domain service is the only way in, and without this the choice would be
+             between widening them back to public "for the tests" and never exercising them alone.
+             One project wide; everything else tests through the public seams. -->
+        <InternalsVisibleTo Include="LibraryManagement.Circulation.Domain.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\..\Shared\LibraryManagement.Shared.Domain\LibraryManagement.Shared.Domain.csproj" />
     </ItemGroup>
 

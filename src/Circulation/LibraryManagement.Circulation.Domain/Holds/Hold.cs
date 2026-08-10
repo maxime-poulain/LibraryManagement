@@ -57,6 +57,32 @@ public sealed class Hold
     internal static Hold PlacedBy(HoldId id, BorrowerId borrowerId, DateTimeOffset placedOn)
         => new(id, borrowerId, placedOn);
 
+    /// <summary>
+    /// The same claim, as an object the surviving queue of a merge can hold.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <strong>A new instance, and the store is what requires it.</strong> A hold belongs to its
+    /// queue as an owned collection, so its key is the pair of the queue's edition and its own
+    /// identifier — and an owned entity cannot change owners, because its identity contains its
+    /// parent's. Handing the same object to another queue is refused outright by the change tracker,
+    /// not merely awkward.
+    /// </para>
+    /// <para>
+    /// So the row moves as a deletion and an insertion, and every field the claim holds travels with
+    /// it, <see cref="Id"/> included. What the borrower has is the same claim: the identifier the
+    /// history projection follows, the placement instant the queue orders by, and the copy set aside
+    /// for them if one was.
+    /// </para>
+    /// </remarks>
+    internal Hold SameClaimInAnotherQueue() => new(Id, BorrowerId, PlacedOn)
+    {
+        Status = Status,
+        TrappedCopyId = TrappedCopyId,
+        PickupDeadline = PickupDeadline,
+        ExpiryWarningSent = ExpiryWarningSent,
+    };
+
     internal void Trap(CopyId copyId, DateOnly pickupDeadline)
     {
         Status = HoldStatus.AwaitingPickup;

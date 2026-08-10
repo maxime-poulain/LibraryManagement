@@ -35,6 +35,7 @@ public sealed class CancelHoldCommandHandler(
 
         var editionId = EditionId.Create(command.EditionId);
         var borrowerId = BorrowerId.Create(command.BorrowerId);
+        var holdId = HoldId.Create(command.HoldId);
 
         var queue = await queues.GetByEditionAsync(editionId, cancellationToken)
             .ConfigureAwait(false);
@@ -43,10 +44,10 @@ public sealed class CancelHoldCommandHandler(
         {
             return Result.Failure(
                 CirculationErrorCodes.NoSuchHold,
-                "No hold of this borrower waits on this edition.");
+                "No hold of this borrower waits on this edition under that identifier.");
         }
 
-        var cancelled = queue.CancelFor(borrowerId);
+        var cancelled = queue.CancelFor(holdId, borrowerId);
 
         return await cancelled.MatchAsync(
             async cancellation =>

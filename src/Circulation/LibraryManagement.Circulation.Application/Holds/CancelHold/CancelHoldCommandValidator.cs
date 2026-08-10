@@ -19,5 +19,9 @@ public sealed class CancelHoldCommandValidator : AbstractValidator<CancelHoldCom
         RuleFor(command => command.BorrowerId)
             .NotEmpty()
             .WithMessage("A borrower identifier is required.");
+
+        RuleFor(command => command.HoldId)
+            .NotEmpty()
+            .WithMessage("A hold identifier is required.");
     }
 }
