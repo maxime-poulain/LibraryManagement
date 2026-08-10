@@ -36,4 +36,23 @@ public static class CatalogErrorCodes
 
     /// <summary>The author is already credited on this work.</summary>
     public static readonly ErrorCode DuplicateAuthor = new("Catalog.DuplicateAuthor");
+
+    /// <summary>No edition is cataloged under that identifier.</summary>
+    public static readonly ErrorCode EditionNotFound = new("Catalog.EditionNotFound");
+
+    /// <summary>An edition cannot be merged into itself.</summary>
+    public static readonly ErrorCode EditionCannotAbsorbItself = new("Catalog.EditionCannotAbsorbItself");
+
+    /// <summary>
+    /// The record was merged into another and no longer acts. Refused on either side of a second
+    /// merge: absorbing it again would be a mistake, and merging *into* it would leave a downstream
+    /// identifier pointing at a pointer.
+    /// </summary>
+    public static readonly ErrorCode EditionAlreadyAbsorbed = new("Catalog.EditionAlreadyAbsorbed");
+
+    /// <summary>
+    /// Two editions that print different works are not duplicates of each other. Merging them
+    /// would repoint copies onto an edition of another book, which no later correction recovers.
+    /// </summary>
+    public static readonly ErrorCode EditionsPrintDifferentWorks = new("Catalog.EditionsPrintDifferentWorks");
 }

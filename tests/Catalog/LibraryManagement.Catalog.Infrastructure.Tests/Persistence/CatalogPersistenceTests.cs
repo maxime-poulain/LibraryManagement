@@ -318,6 +318,46 @@ public sealed class CatalogPersistenceTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public async Task AnAbsorbedEdition_ComesBackPointingAtItsSurvivor()
+    {
+        // The terminal state has to survive the round trip through a value converter, and the
+        // record has to still be *there*: downstream contexts hold this identifier, so the row
+        // stays and stops being a record rather than being deleted.
+        var work = AWork(TitleOf("Les Années"));
+        var surviving = Edition.Register(EditionId.Generate(), work.Id, isbn: null);
+        var absorbed = Edition.Register(EditionId.Generate(), work.Id, isbn: null);
+
+        await SaveAsync(context =>
+        {
+            new WorkRepository(context).Add(work);
+            new EditionRepository(context).Add(surviving);
+            new EditionRepository(context).Add(absorbed);
+        });
+
+        await using (var updating = sqlServer.NewContext())
+        {
+            var repository = new EditionRepository(updating);
+            var loaded = await repository.GetByIdAsync(absorbed.Id, Token);
+            var survivor = await repository.GetByIdAsync(surviving.Id, Token);
+
+            new EditionMergeDomainService()
+                .Merge(loaded.ShouldNotBeNull(), survivor.ShouldNotBeNull())
+                .HasErrors().ShouldBeFalse();
+
+            await new CatalogUnitOfWork(updating).SaveChangesAsync(Token);
+        }
+
+        await using var reader = sqlServer.NewContext();
+        var editions = new EditionRepository(reader);
+
+        (await editions.GetByIdAsync(absorbed.Id, Token))
+            .ShouldNotBeNull().AbsorbedInto.ShouldBe(surviving.Id);
+
+        (await editions.GetByIdAsync(surviving.Id, Token))
+            .ShouldNotBeNull().AbsorbedInto.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task AWorksExistence_IsAnsweredWithoutLoadingIt()
     {
         var work = AWork(TitleOf("Mille plateaux"));

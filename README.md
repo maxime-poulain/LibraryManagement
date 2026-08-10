@@ -37,7 +37,8 @@ strategic design had decided in full and nothing had yet exercised.
 |---|---|---|
 | Notifications, Staff access | Generic subdomains, out of the modeled domain | [strategic design §6](docs/strategic-design.md) |
 | MARC import | The Catalog's real feed; the manual commands are the fallback, not the design | [strategic design §6](docs/strategic-design.md) |
-| Merging two records | Decided on paper and not yet built: a merge is an event the downstream consumes, and Circulation — which keys an aggregate by the merged identifier — is what it costs | [ADR-0017](docs/adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) |
+| Consuming a merge | Catalog now merges two editions and announces it; **no module subscribes yet**, so the fact is stated and nobody acts on it. The event had to exist before a consumer could be written against it, and Circulation — which keys an aggregate by the merged identifier — is the expensive one | [ADR-0017](docs/adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) |
+| Merging two authority records | The other half of a merge, and the easy one: no module outside Catalog holds an `AuthorId`, so it never crosses a boundary | [ADR-0017](docs/adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) |
 
 ---
 

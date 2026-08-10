@@ -28,7 +28,13 @@
              host: its public surface is HTTP, not types. The endpoint groups and the result mapper
              are internal because nothing should call them from C# — and the tests are the exception
              that proves it, since a mapper tested only through requests would need a database to
-             assert a status code. Modules keep testing through their public seams. -->
+             assert a status code.
+
+             Catalog.Domain does it too now, for the related reason and not the same one: an
+             aggregate mutator guarded by a domain service is internal so the application layer
+             cannot reach past the service, and the grant is what lets that surface stay narrow
+             rather than widen to be testable. Both grants exist so a public API can stay honest;
+             neither is a licence to test around a module's seams. -->
         <InternalsVisibleTo Include="LibraryManagement.Host.Tests" />
     </ItemGroup>
 

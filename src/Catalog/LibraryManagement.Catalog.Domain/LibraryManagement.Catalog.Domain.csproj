@@ -1,6 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <ItemGroup>
+        <!-- So the module's public surface can stay as narrow as the design wants it. An aggregate
+             mutator whose guards live in a domain service is internal on purpose — the application
+             layer must not be able to reach past the service — and without this the choice would be
+             between widening it back to public "for the tests", which trades encapsulation for
+             tooling, and never exercising it alone. The grant is one project wide: everything else
+             tests through the public seams. -->
+        <InternalsVisibleTo Include="LibraryManagement.Catalog.Domain.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\..\Shared\LibraryManagement.Shared.Domain\LibraryManagement.Shared.Domain.csproj" />
     </ItemGroup>
 

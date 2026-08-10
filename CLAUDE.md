@@ -21,7 +21,10 @@ schema comes from its own migrations, in a project beside the host (`docs/migrat
 host itself exists: `src/Host/LibraryManagement.Host` composes the five modules, migrates at startup
 and owns the schedule (ADR-0015). The read side has begun: Members, Circulation and Charges each
 publish a query, and the host composes the member's file at the edge from the three — the first
-page, and the decision about what it does when a module cannot answer is ADR-0016.
+page, and the decision about what it does when a module cannot answer is ADR-0016. Catalog has
+begun the merge ADR-0017 decides: two editions join, the absorbed record becomes a pointer, and
+`EditionsMerged` is announced — but **no module subscribes to it yet**, which is the first step of
+five the record names.
 
 ## The documents are the authority
 
@@ -256,9 +259,65 @@ Code and documentation must always evolve together.
 
 A Domain Service represents domain logic that does not naturally belong to a single Aggregate.
 
-Every Domain Service must be explicitly suffixed with `DomainService`.
+### When to write one
 
-Avoid the generic `*Service` suffix for domain concepts.
+**A business operation that spans several Aggregates belongs in a Domain Service** rather than in a
+command handler — but the boundary is *not* the number of aggregates, and reading it that way would
+make this rule false against code that is already correct. The boundary is **whether the store has
+to be asked**:
+
+- the question needs a **lookup** — *does this identifier resolve?* — → **the handler asks it**.
+  That is orchestration, not domain logic, and it belongs where the unit of consistency is visible.
+- the rule is about aggregates **already in hand** and needs no store, yet belongs to none of them
+  alone → **a Domain Service**.
+
+**The counter-example matters as much as the rule**, because it is the first thing a reader will
+test it against: `RegisterWorkCommandHandler` and `RegisterEditionCommandHandler` each hold a rule
+that spans two aggregates, in a handler, and both are right to. Neither ever has two aggregates —
+it has one being created and an *identifier* whose referent may not exist — and a service could only
+answer by taking a repository, which is the next rule. Applied without its boundary, this convention
+would turn two good handlers into two empty services.
+
+### The form
+
+An abstraction and an implementation: `I<Name>DomainService` and a `sealed` class, **both in the
+module's Domain**. Splitting a contract from its implementation across layers is what dependency
+inversion is for, and there is nothing to invert here — a Domain Service names no infrastructure,
+which is the same property that made it one. Registered in `Add<Module>Module` like every other
+seam, and injected.
+
+### Its dependencies
+
+**A Domain Service may depend on a repository abstraction, but only when retrieving an Aggregate is
+intrinsically part of its business logic. Otherwise the Aggregates it needs are loaded by the
+Application layer and passed to it.**
+
+The test for *intrinsically*, without which the word means "when convenient": **can the caller name
+what to load?** If it can, loading is the caller's job. If the rule must consult a set the caller
+cannot name in advance — a uniqueness sweep across a whole collection, choosing a candidate from a
+queue — then retrieval is part of the rule and the repository belongs in the service.
+
+Leaning toward the parameter keeps two things: the unit of consistency stays visible in the handler
+— *a command is the unit of consistency* is the hardest write-path rule here — and the logic stays
+decidable without I/O, so it tests as a function.
+
+### The aggregate it guards
+
+Where a Domain Service holds an aggregate's invariants, that aggregate's mutator becomes
+**`internal`**, so the service is the only way in rather than one path among two. The module then
+grants `InternalsVisibleTo` to its own test project, which is what lets the surface stay narrow
+instead of widening to become testable.
+
+### Naming
+
+Every Domain Service must be explicitly suffixed with `DomainService`. Avoid the generic `*Service`
+suffix for domain concepts.
+
+**`EditionMergeDomainService` is the first in the repository and the reference example**: four rules
+about two records, none of which needs a store once both are loaded, with `Edition.AbsorbInto`
+internal behind it. `Standing` in Circulation is the same kind of object — a stateless judgement —
+and predates this convention: `public static`, in the Application layer, unsuffixed. Known, not yet
+reconciled.
 
 ## Commit messages
 

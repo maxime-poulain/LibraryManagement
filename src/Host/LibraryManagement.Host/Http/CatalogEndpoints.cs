@@ -3,6 +3,7 @@ using LibraryManagement.Catalog.Application.Authors.CorrectAuthorLifeYears;
 using LibraryManagement.Catalog.Application.Authors.CorrectAuthorPreferredName;
 using LibraryManagement.Catalog.Application.Authors.RegisterAuthor;
 using LibraryManagement.Catalog.Application.Authors.RenameAuthor;
+using LibraryManagement.Catalog.Application.Editions.MergeEditions;
 using LibraryManagement.Catalog.Application.Editions.RegisterEdition;
 using LibraryManagement.Catalog.Application.Search.SearchCatalog;
 using LibraryManagement.Catalog.Application.Works.CreditAuthor;
@@ -44,7 +45,9 @@ internal static class CatalogEndpoints
             .Command<CreditAuthorCommand>("/works/credit-author")
             .Command<RemoveAuthorCreditCommand>("/works/remove-author-credit");
 
-        catalog.Command<RegisterEditionCommand>("/editions");
+        catalog
+            .Command<RegisterEditionCommand>("/editions")
+            .Command<MergeEditionsCommand>("/editions/merge");
 
         catalog.MapGet(
             "/works/{workId:guid}",

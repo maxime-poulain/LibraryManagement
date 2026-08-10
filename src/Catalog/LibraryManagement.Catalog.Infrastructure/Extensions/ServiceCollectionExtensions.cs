@@ -53,6 +53,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IWorkRepository, WorkRepository>();
         services.AddScoped<IEditionRepository, EditionRepository>();
 
+        // The module's domain services. Registered here like every other seam even though this one
+        // reaches no store and holds no state — the lifetime carries nothing, and the consistency
+        // of resolving every collaborator the same way is worth more than saving an allocation.
+        services.AddScoped<IEditionMergeDomainService, EditionMergeDomainService>();
+
         // The module's validators, from the assembly that declares its commands and queries. The
         // shared validation behavior resolves them by the message's concrete type, so a validator
         // nobody registered is a validator that silently never runs.

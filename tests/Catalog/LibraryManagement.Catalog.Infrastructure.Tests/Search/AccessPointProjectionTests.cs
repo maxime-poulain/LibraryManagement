@@ -211,6 +211,57 @@ public sealed class AccessPointProjectionTests(SqlServerFixture sqlServer)
         (await FormsOfAsync(editionId.Value)).ShouldBeEmpty();
     }
 
+    [Fact]
+    public async Task AMergedRecordsForms_LeadToTheSurvivor_AsVariants()
+    {
+        // An ISBN somebody used to find the absorbed record is still printed on the book in their
+        // hand. Deleting it would make a correction of the catalog look, to the person searching,
+        // exactly like the record having been lost.
+        var absorbed = EditionId.Generate();
+        var surviving = EditionId.Generate();
+        var isbn = Isbn.Create("978-2-07-061275-8").Match(value => value, _ => throw new InvalidOperationException());
+
+        await using (var context = sqlServer.NewContext())
+        {
+            await new EditionRegisteredProjector(context)
+                .Handle(new EditionRegistered(absorbed, WorkId.Generate(), isbn), Token);
+            await context.SaveChangesAsync(Token);
+        }
+
+        await using (var context = sqlServer.NewContext())
+        {
+            await new EditionsMergedProjector(context)
+                .Handle(new EditionsMerged(absorbed, surviving), Token);
+            await context.SaveChangesAsync(Token);
+        }
+
+        (await FormsOfAsync(absorbed.Value)).ShouldBeEmpty();
+
+        var moved = (await FormsOfAsync(surviving.Value)).ShouldHaveSingleItem();
+        moved.Form.ShouldBe("9782070612758");
+        moved.Kind.ShouldBe(AccessPointKind.Edition);
+
+        // A variant and never preferred: the survivor's own ISBN is the preferred form, and two
+        // would make two answers to which form this record answers to.
+        moved.IsPreferred.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task AMergeOfARecordWithNoForms_MovesNothingAndDoesNotFail()
+    {
+        var absorbed = EditionId.Generate();
+        var surviving = EditionId.Generate();
+
+        await using (var context = sqlServer.NewContext())
+        {
+            await new EditionsMergedProjector(context)
+                .Handle(new EditionsMerged(absorbed, surviving), Token);
+            await context.SaveChangesAsync(Token);
+        }
+
+        (await FormsOfAsync(surviving.Value)).ShouldBeEmpty();
+    }
+
     // --- At-least-once ---------------------------------------------------------------------------
 
     [Fact]
