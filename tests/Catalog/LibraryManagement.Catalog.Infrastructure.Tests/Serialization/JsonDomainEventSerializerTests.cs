@@ -18,13 +18,23 @@ namespace LibraryManagement.Catalog.Infrastructure.Tests.Serialization;
 public sealed class JsonDomainEventSerializerTests
 {
     private static JsonDomainEventSerializer Serializer()
-        => new([new NameFormJsonConverter(), new TitleJsonConverter(), new IsbnJsonConverter()]);
+        => new(
+        [
+            new NameFormJsonConverter(),
+            new TitleJsonConverter(),
+            new IsbnJsonConverter(),
+            new LifeYearsJsonConverter(),
+        ]);
 
     private static NameForm Name(string value)
         => NameForm.Create(value).Match(name => name, _ => throw new InvalidOperationException());
 
     private static Title TitleOf(string value)
         => Title.Create(value).Match(title => title, _ => throw new InvalidOperationException());
+
+    private static LifeYears Years(int? birth, int? death)
+        => LifeYears.Create(birth, death)
+            .Match(years => years, _ => throw new InvalidOperationException());
 
     private static IDomainEvent RoundTrip(IDomainEvent domainEvent)
     {
@@ -61,9 +71,49 @@ public sealed class JsonDomainEventSerializerTests
     }
 
     [Fact]
+    public void ALifeYearsCorrection_RoundTripsBothReadings()
+    {
+        var original = new AuthorLifeYearsCorrected(
+            AuthorId.Generate(),
+            Years(1940, null),
+            Years(1940, 2022));
+
+        RoundTrip(original).ShouldBe(original);
+    }
+
+    [Fact]
+    public void ALifeYearsCorrection_RoundTripsTheUnknown()
+    {
+        // Unknown is (null, null), not an absent property: the payload must be able to say that a
+        // record's years were corrected back to not-knowing them.
+        var original = new AuthorLifeYearsCorrected(
+            AuthorId.Generate(),
+            Years(1900, 1944),
+            LifeYears.Unknown);
+
+        RoundTrip(original).ShouldBe(original);
+    }
+
+    [Fact]
     public void AWorkRegistration_RoundTrips()
     {
         var original = new WorkRegistered(WorkId.Generate(), TitleOf("Le Petit Prince"));
+
+        RoundTrip(original).ShouldBe(original);
+    }
+
+    [Fact]
+    public void ACredit_RoundTrips()
+    {
+        var original = new WorkAuthorCredited(WorkId.Generate(), AuthorId.Generate());
+
+        RoundTrip(original).ShouldBe(original);
+    }
+
+    [Fact]
+    public void ACreditRemoval_RoundTrips()
+    {
+        var original = new WorkAuthorCreditRemoved(WorkId.Generate(), AuthorId.Generate());
 
         RoundTrip(original).ShouldBe(original);
     }

@@ -1,26 +1,38 @@
 using LibraryManagement.Circulation.Domain;
 using LibraryManagement.Circulation.Domain.Holds;
 using LibraryManagement.Circulation.Domain.Loans;
-using LibraryManagement.Circulation.Infrastructure.Extensions;
 using LibraryManagement.Circulation.Infrastructure.Persistence;
-using LibraryManagement.Circulation.PublishedLanguage;
-using LibraryManagement.Holdings.PublishedLanguage;
+using LibraryManagement.Holdings.Domain.Copies;
+using LibraryManagement.Holdings.Infrastructure.Persistence;
+using LibraryManagement.Host.Jobs;
 using LibraryManagement.Shared.Infrastructure.Outbox;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+using CirculationCopyId = LibraryManagement.Circulation.Domain.CopyId;
+using CirculationEditionId = LibraryManagement.Circulation.Domain.EditionId;
+using HoldingsCopyId = LibraryManagement.Holdings.Domain.Copies.CopyId;
+using HoldingsEditionId = LibraryManagement.Holdings.Domain.Copies.EditionId;
 
-namespace LibraryManagement.Composition.Tests.Scheduling;
+namespace LibraryManagement.Host.Tests;
 
 /// <summary>
-/// The daily process, run through the container the way a host would: seven commands, seven scopes,
-/// seven saves, and the outbox as the record of what the day announced.
+/// The daily process, run by the host that owns it: seven commands, seven scopes, seven saves, and
+/// the outbox as the record of what the day announced.
 /// </summary>
 /// <remarks>
+/// <para>
 /// The test that matters here is the second one. <em>Running it twice must change nothing and
 /// notify nobody twice</em> is the literal requirement the tactical design puts on the scheduled
 /// process, and the outbox is where a broken promise would show: a second run that announced
 /// anything would leave rows behind.
+/// </para>
+/// <para>
+/// Against the real composition, which is what moving this out of the composition tests bought.
+/// The unfulfillability sweep asks Holdings whether an edition can still serve, and the debt
+/// reconciliation asks Charges what a borrower owes — questions that used to be answered by
+/// stand-ins and are now answered by the modules. So the day's setup has to give Holdings a copy of
+/// each edition somebody is waiting for, exactly as a library would have.
+/// </para>
 /// </remarks>
 [Collection(SqlServerCollection.Name)]
 [Trait("Category", "Integration")]
@@ -35,10 +47,8 @@ public sealed class CirculationDailyRunTests(SqlServerFixture sqlServer) : IAsyn
 
     private static CirculationPolicy Policy => CirculationPolicy.Current;
 
-    private ServiceProvider _provider = null!;
+    private TheHost _host = null!;
 
-    // A database of this class's own, for the reason TwoModulesTests keeps one: a class that drops
-    // and rebuilds a schema cannot share a database with the collection's other classes.
     private string ConnectionString => new SqlConnectionStringBuilder(sqlServer.ConnectionString)
     {
         InitialCatalog = "LibraryManagement_CirculationDailyRun_Tests",
@@ -46,52 +56,53 @@ public sealed class CirculationDailyRunTests(SqlServerFixture sqlServer) : IAsyn
 
     public async ValueTask InitializeAsync()
     {
-        // The frozen clock goes in before the module, because the shared store registration adds
-        // the system clock only if nobody else has: none of the seven queries is testable against a
-        // clock that keeps moving.
-        _provider = CompositionRoot.Services()
-            .AddSingleton<TimeProvider>(new FrozenClock(new DateTimeOffset(
-                Today, TimeOnly.MinValue, TimeSpan.Zero)))
-            .AddCirculationModule(options => options.UseSqlServer(ConnectionString))
-            .AddSingleton<IMemberBalance, NoChargesYet>()
-            .AddSingleton<ICopyLendability, EveryEditionStillServes>()
-            .AddTransient<CirculationDailyRun>()
-            .BuildServiceProvider();
+        await Databases.DropAsync(ConnectionString, Token);
 
-        await using var scope = _provider.CreateAsyncScope();
-        var context = scope.ServiceProvider.GetRequiredService<CirculationDbContext>();
-        await context.Database.EnsureDeletedAsync(Token);
-        await context.Database.EnsureCreatedAsync(Token);
+        // A clock that does not move: none of the seven queries is testable against one that does.
+        _host = new TheHost(
+            ConnectionString,
+            clock: new FrozenClock(new DateTimeOffset(Today, TimeOnly.MinValue, TimeSpan.Zero)));
 
         await ADaysWorthOfWorkAsync();
     }
 
-    public async ValueTask DisposeAsync() => await _provider.DisposeAsync();
+    public async ValueTask DisposeAsync() => await _host.DisposeAsync();
 
     /// <summary>
     /// One loan or queue for each row of the design's table, written straight to the store: what
     /// the desk would have left behind over the previous month.
     /// </summary>
-    private async Task ADaysWorthOfWorkAsync()
-    {
-        await using var scope = _provider.CreateAsyncScope();
-        var context = scope.ServiceProvider.GetRequiredService<CirculationDbContext>();
+    private Task ADaysWorthOfWorkAsync()
+        => _host.InScopeAsync(async services =>
+        {
+            var circulation = services.GetRequiredService<CirculationDbContext>();
+            var holdings = services.GetRequiredService<HoldingsDbContext>();
 
-        context.Add(ALoanDueOn(Today.AddDays(Policy.CourtesyReminderDaysBeforeDue)));
-        context.Add(ALoanDueOn(Today.AddDays(-1)));
-        context.Add(ALoanDueOn(Today.AddDays(-Policy.DeclaredLostAfterDays)));
+            circulation.Add(ALoanDueOn(Today.AddDays(Policy.CourtesyReminderDaysBeforeDue)));
+            circulation.Add(ALoanDueOn(Today.AddDays(-1)));
+            circulation.Add(ALoanDueOn(Today.AddDays(-Policy.DeclaredLostAfterDays)));
 
-        context.Add(AQueueAwaitingPickup(Today));
-        context.Add(AQueueAwaitingPickup(Today.AddDays(-1), withSomebodyNextInLine: true));
+            var awaitingToday = AQueueAwaitingPickup(Today);
+            var overdueForPickup = AQueueAwaitingPickup(Today.AddDays(-1), withSomebodyNextInLine: true);
 
-        await context.SaveChangesAsync(Token);
-    }
+            circulation.Add(awaitingToday);
+            circulation.Add(overdueForPickup);
+
+            // A copy of each awaited edition, so the unfulfillability sweep finds something to
+            // promise. Written as aggregates rather than acquired through the desk: what is being
+            // set up is the state a month of work leaves, not the moments that produced it.
+            holdings.Add(ACopyOf(awaitingToday.Id, "31234567890140"));
+            holdings.Add(ACopyOf(overdueForPickup.Id, "31234567890141"));
+
+            await circulation.SaveChangesAsync(Token);
+            await holdings.SaveChangesAsync(Token);
+        });
 
     private static Loan ALoanDueOn(DateOnly dueDate)
         => Loan.CheckOut(
             LoanId.Generate(),
-            CopyId.Generate(),
-            EditionId.Generate(),
+            CirculationCopyId.Generate(),
+            CirculationEditionId.Generate(),
             BorrowerId.Generate(),
             dueDate.AddDays(-Policy.LoanDurationInDays),
             Policy);
@@ -100,7 +111,7 @@ public sealed class CirculationDailyRunTests(SqlServerFixture sqlServer) : IAsyn
         DateOnly deadline,
         bool withSomebodyNextInLine = false)
     {
-        var queue = HoldQueue.For(EditionId.Generate());
+        var queue = HoldQueue.For(CirculationEditionId.Generate());
         queue.PlaceHold(HoldId.Generate(), BorrowerId.Generate(), ThisMorning);
 
         if (withSomebodyNextInLine)
@@ -108,29 +119,36 @@ public sealed class CirculationDailyRunTests(SqlServerFixture sqlServer) : IAsyn
             queue.PlaceHold(HoldId.Generate(), BorrowerId.Generate(), ThisMorning.AddHours(1));
         }
 
-        queue.TrapOldestQueued(CopyId.Generate(), deadline, NobodyBlocked);
+        queue.TrapOldestQueued(CirculationCopyId.Generate(), deadline, NobodyBlocked);
 
         return queue;
     }
 
+    private static Copy ACopyOf(CirculationEditionId editionId, string barcode)
+        => Copy.Acquire(
+            HoldingsCopyId.Generate(),
+            HoldingsEditionId.Create(editionId.Value),
+            Barcode.Create(barcode).Match(code => code, _ => throw new InvalidOperationException()),
+            Shelfmark.Create("843.912 SAI").Match(mark => mark, _ => throw new InvalidOperationException()),
+            CopyCondition.Good,
+            new DateOnly(2024, 3, 14));
+
     private Task<DailyRunOutcome> RunTheDayAsync()
-        => _provider.GetRequiredService<CirculationDailyRun>().RunAsync(Token);
+        => _host.InScopeAsync(services =>
+            services.GetRequiredService<CirculationDailyRun>().RunAsync(Token));
 
-    private async Task<List<string>> AnnouncedAsync()
-    {
-        await using var scope = _provider.CreateAsyncScope();
+    private Task<List<string>> AnnouncedAsync()
+        => _host.InScopeAsync(async services =>
+        {
+            var stored = await services.GetRequiredService<CirculationDbContext>()
+                .Set<OutboxMessage>()
+                .Select(message => message.Type)
+                .ToListAsync(Token);
 
-        var stored = await scope.ServiceProvider.GetRequiredService<CirculationDbContext>()
-            .Set<OutboxMessage>()
-            .Select(message => message.Type)
-            .ToListAsync(Token);
-
-        // The stored type is an address — "{FullName}, {Assembly}" — and the last segment of the
-        // name is what a reader of this test cares about.
-        return stored
-            .Select(type => type.Split(',')[0].Split('.')[^1])
-            .ToList();
-    }
+            // The stored type is an address — "{FullName}, {Assembly}" — and the last segment of
+            // the name is what a reader of this test cares about.
+            return stored.Select(type => type.Split(',')[0].Split('.')[^1]).ToList();
+        });
 
     [Fact]
     public async Task TheRun_AnnouncesEveryMomentTheDayCallsFor()
@@ -192,10 +210,5 @@ public sealed class CirculationDailyRunTests(SqlServerFixture sqlServer) : IAsyn
         outcome.Dispatched.ShouldBe(7);
         outcome.Refused.ShouldBe(0);
         (await AnnouncedAsync()).Count.ShouldBe(settled.Count);
-    }
-
-    private sealed class FrozenClock(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
     }
 }

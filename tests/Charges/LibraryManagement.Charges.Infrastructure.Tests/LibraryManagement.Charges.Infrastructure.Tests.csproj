@@ -13,10 +13,13 @@
         <PackageReference Include="Shouldly" />
         <PackageReference Include="coverlet.collector" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-        <!-- The provider is supplied here, exactly as a host supplies it: the module itself
-             references only EF Core's relational layer and never names a database. -->
-        <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
         <PackageReference Include="Testcontainers.MsSql" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- The provider call and this module's migrations: the fixture builds its schema exactly
+             as the host does, through the one extension that spells both. -->
+        <ProjectReference Include="..\..\..\src\Host\LibraryManagement.Charges.Migrations.SqlServer\LibraryManagement.Charges.Migrations.SqlServer.csproj" />
     </ItemGroup>
 
     <ItemGroup>

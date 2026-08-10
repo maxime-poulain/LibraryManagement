@@ -126,19 +126,34 @@ the standing reason: an event not published when it happened cannot be recovered
 | Event | Consumed by |
 |---|---|
 | `WorkRegistered`, `WorkRetitled(…, previousTitle, newTitle)` | access points |
+| `WorkAuthorCredited`, `WorkAuthorCreditRemoved` | nothing yet |
 | `AuthorRegistered`, `AuthorRenamed(…, previous, new)`, `AuthorPreferredNameCorrected(…, previous, corrected)`, `AuthorVariantNameAdded` | access points |
+| `AuthorLifeYearsCorrected(…, previous, corrected)` | nothing yet |
 | `EditionRegistered(…, workId, isbn?)` | read model |
 
 The corrected/renamed pairs carry both forms because a projection keyed on the old one must
-retract it — the shape `CopyRelabelled` and `CardReplaced` later reused.
+retract it — the shape `CopyRelabelled` and `CardReplaced` later reused, and the shape
+`AuthorLifeYearsCorrected` follows even with no projection to feed: what a corrected pair owes its
+consumers does not depend on how many it has.
 
-**Three mutations announce nothing, and writing this document is what surfaced it.** Crediting an
-author, removing a credit, and correcting life years change a record and raise no event — they
-predate the access-point index, which none of them feeds, and nothing else listened. The standing
-rule says an event not published when it happened cannot be recovered afterwards, and the stock
-ledger and member file both earned their streams on that argument; these three should follow, and
-the gap is recorded here rather than silently normalized. It is the one place this context falls
-short of the solution's own bar, and the fix is three events, not a redesign.
+**Three of these existed only as a gap until this document surfaced it.** Crediting an author,
+removing a credit, and correcting life years changed a record and raised no event — they predate
+the access-point index, which none of them feeds, and nothing else listened, so nothing forced the
+question. The standing rule says an event not published when it happened cannot be recovered
+afterwards, and the stock ledger and member file both earned their streams on that argument; the
+first version of this section recorded the three as the one place the context fell short of the
+solution's own bar, and the three events above are the fix it predicted — three events, not a
+redesign. They are published for the standing reason alone: `nothing yet` in the table is a
+statement about today's consumers, never part of the contract.
+
+Two rules the fix enforced are worth their sentences. A removal that removed nothing announces
+nothing — the command reads "reach this state" and treats the already-reached state as success, so
+the aggregate is the only place that still knows whether anything happened, and an event may only
+say it did. And a registration is not a correction: an author registered with known years, or a
+work registered with its authors, announces one opening fact first — `Register` raises its own
+event before the credits it records, and sets the years without passing through the correction —
+so the stream never credits a work that does not yet exist and never claims a repair of a reading
+that never stood.
 
 **Consumed: nothing.** Only the external supplier is upstream of Catalog, and its records arrive
 through an anticorruption layer, not a subscription.
@@ -170,7 +185,9 @@ found here first and is now a model rule in every module (`ValueGeneratedNever`,
 tells the full story). The access-point kind stored as its name, not its number, became the
 solution-wide rule that statuses humans read are stored as strings. And the Rename/Correct pair
 became the reference other contexts decide against, twice: Members declining it, Holdings leaning
-on it for the mis-cataloged copy.
+on it for the mis-cataloged copy. Closing §8's gap taught one more: a factory that reuses its own
+mutators raises their events, so `Register` must announce the opening before the facts it records
+in passing — an ordering the outbox preserves and no consumer should have to repair.
 
 Open, each deferred for a stated reason rather than forgotten:
 

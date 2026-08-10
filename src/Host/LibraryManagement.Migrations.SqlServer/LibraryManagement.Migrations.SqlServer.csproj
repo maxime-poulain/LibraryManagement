@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <RootNamespace>LibraryManagement.Migrations.SqlServer</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- The provider, named once for the five migrations projects that reference this one.
+             They each name it too, because a migration's generated code is provider-specific; what
+             is not repeated is the configuration around it. -->
+        <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+        <!-- Design-time only: the factory base below implements the tooling's interface. -->
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+    </ItemGroup>
+
+</Project>

@@ -23,12 +23,14 @@ The one cycle the context map draws now turns both ways: Circulation announces a
 Charges prices it, Charges announces the amount, and Circulation judges it against its own threshold
 and cancels the borrower's holds.
 
+It **runs**: `src/Host/LibraryManagement.Host` composes the five modules, applies their migrations at
+startup, and puts the five outbox drains, the daily process and the outbox purge on a clock
+([ADR-0015](docs/adr/0015-the-first-host.md)).
+
 **Deliberately absent, each for a recorded reason:**
 
 | Missing | Why | Record |
 |---|---|---|
-| A runnable host | The composition root is the composition tests, which exercise the whole pipeline | [ADR-0013](docs/adr/0013-composition-root-in-the-tests.md) |
-| EF migrations | A migration names a provider, and a module may not | [ADR-0010](docs/adr/0010-ensurecreated-before-migrations.md) |
 | Notifications, Staff access | Generic subdomains, out of the modeled domain | [strategic design §6](docs/strategic-design.md) |
 | MARC import | The Catalog's real feed; the manual commands are the fallback, not the design | [strategic design §6](docs/strategic-design.md) |
 
@@ -159,9 +161,10 @@ context nobody saves — persisted nowhere, reported by nothing.
 
 ---
 
-## Build and test
+## Build, test and run
 
-Requires the **.NET 10 SDK**. Integration tests additionally need **Docker**.
+Requires the **.NET 10 SDK**. Integration tests additionally need **Docker**; running the host needs
+a SQL Server it can reach.
 
 ```bash
 dotnet build LibraryManagement.slnx --configuration Release
@@ -172,12 +175,49 @@ dotnet test LibraryManagement.slnx --configuration Release --no-build
 # CI's required check — no Docker needed
 dotnet test LibraryManagement.slnx --configuration Release --no-build \
             --filter "Category!=Integration"
+
+# The host: composes the five modules, migrates them, serves, and runs the schedule
+dotnet run --project src/Host/LibraryManagement.Host
 ```
 
-The unit filter runs **1063 tests across 19 projects**.
+The host reads `ConnectionStrings:LibraryManagement` and refuses to start without it — which
+database serves the modules is its decision, and it will not invent one. It applies every module's
+migrations at startup, then puts the five outbox drains on `Cron.Minutely` and the daily process and
+the outbox purge on `Cron.Daily`; `/hangfire` shows them, to local requests only. `Hangfire:RunServer`
+turns the scheduled half off for a process that should only serve. `X-Employee-Id` on a request is
+what the audit columns record — attribution, not authentication, as
+[ADR-0015](docs/adr/0015-the-first-host.md) says.
+
+### The desk's API
+
+One route group per module, minimal APIs, and **the command record is the request body** — there is
+no request type in between, because a command is already a flat record of primitives that a
+validator refuses when it is wrong.
+
+```http
+POST /catalog/authors          { "authorId": "...", "preferredName": "Ernaux, Annie", "birthYear": 1940 }
+POST /circulation/loans        { "loanId": "...", "copyId": "...", "borrowerId": "..." }
+POST /circulation/returns      { "copyId": "...", "returnedDamaged": false }
+POST /members/erase            { "memberId": "..." }
+GET  /catalog/works/{workId}
+GET  /catalog/search?formPrefix=Ern
+```
+
+**Only what a librarian does is routed** — 37 of the 52 commands. Seven belong to the daily process,
+and eight exist because one module reacts to another; a route for those would let a request forge a
+fact only the announcing module is entitled to state.
+
+A command answers **204**, a query **200**. A refusal is **422** — the request was understood and
+the domain said no — with **400** for validation and **409** for a concurrency conflict; only a query
+answers **404**, because a command's route names an act that exists whether or not its referent
+does. Every refusal carries a problem document listing *all* its errors with the module's own codes.
+
+The unit filter runs **1085 tests across 20 projects**.
 
 Integration tests start SQL Server 2022 through Testcontainers, or target the server named by the
-`LIBRARYMANAGEMENT_TEST_SQLSERVER` environment variable.
+`LIBRARYMANAGEMENT_TEST_SQLSERVER` environment variable. Each drops its database and applies that
+module's migrations, so the suite exercises the schema a deployment would get; adding one is
+[`migrations.md`](docs/migrations.md) §3, and `dotnet tool restore` puts `dotnet ef` in place.
 
 **The unit/integration split is by trait, not by project** — two test projects are mixed. Integration
 classes carry `[Collection(SqlServerCollection.Name)]` and `[Trait("Category", "Integration")]` as a
@@ -205,8 +245,11 @@ merging.
 src/Shared/       Technical kernel: Entity, ValueObject, Result, CQS, pipeline behaviors,
                   outbox, audit. Building blocks only — never business concepts.
 src/<Module>/     One bounded context, four projects (above).
+src/Host/         The runnable host, and one migrations project per module beside it. The only
+                  place that names the database engine or the scheduler.
 tests/            Mirrors src/, plus Architecture.Tests (reflection rules over the built
-                  assemblies) and Composition.Tests (whole pipeline, all modules, Hangfire).
+                  assemblies), Composition.Tests (whole pipeline, all modules) and Host.Tests
+                  (the real host, booted).
 docs/             The design. Authoritative.
 docs/adr/         Architecture decision records.
 ```
@@ -224,8 +267,9 @@ Most are enforced — by the compiler, the container, an index, or an architectu
 violates one should fail somewhere; if it does not, that missing enforcement is the first bug to fix.**
 
 **Boundaries.** One `DbContext`, one schema per module, and **no foreign key ever crosses a schema** —
-a cross-module reference is an identifier, redeclared locally. Nothing under `src/` names a database
-provider or a scheduler; both are host decisions.
+a cross-module reference is an identifier, redeclared locally. **No module names a database provider
+or a scheduler**; both are host decisions, and the provider lives in `src/Host/` beside the
+migrations that cannot avoid naming it.
 
 **Write path.** A command is the unit of consistency. Handlers and repositories never call
 `SaveChangesAsync` — `UnitOfWorkBehavior` writes once, on success, through the unit of work of the
@@ -247,7 +291,13 @@ and `VariantName` (never *Heading*), `Copy` (never *Item*), `Shelfmark` (never *
 
 **Prose.** XML docs and comments state the constraint and the alternative that was rejected — never
 what the next line does. Commit subjects are plain sentences, not conventional-commit prefixes; the
-log reads as a narrative and should stay one.
+body carries the narrative, and it should read as one.
+
+**History.** A branch under review carries exactly one commit. Every further push re-squashes the
+whole branch onto its base and force-pushes with `--force-with-lease`, so what a reviewer reads is
+the change rather than the steps that reached it. Neither a commit message nor a pull request body
+carries a session URL — a link nobody outside the conversation can open dates the moment instead of
+explaining the change. The `Co-authored-by` trailer stays; it is a fact about authorship.
 
 ---
 
@@ -264,8 +314,8 @@ The design documents are the source of truth. Read the relevant one before model
 | [`tactical-design-members.md`](docs/tactical-design-members.md) | Members' aggregate and moments. |
 | [`tactical-design-charges.md`](docs/tactical-design-charges.md) | Charges' aggregate, invariants and moments. |
 | [`outbox.md`](docs/outbox.md) | Domain events: same-save storage, drain, failure semantics, the cross-module passage (§9). |
-| [`migrations.md`](docs/migrations.md) | Why `EnsureCreated` for now, and the trigger for the switch. |
-| [`adr/`](docs/adr/README.md) | Fourteen decision records — what was decided, when, and what it costs. |
+| [`migrations.md`](docs/migrations.md) | One migrations project per module, a history table per schema, and why it took until the first host. |
+| [`adr/`](docs/adr/README.md) | Fifteen decision records — what was decided, when, and what it costs. |
 
 Each tactical design's **§10 records what building the module taught** — including the places the
 code corrected the design, which are usually the most useful paragraphs in the document.

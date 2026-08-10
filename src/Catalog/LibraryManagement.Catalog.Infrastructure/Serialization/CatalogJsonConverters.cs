@@ -100,3 +100,84 @@ public sealed class IsbnJsonConverter : JsonConverter<Isbn>
         writer.WriteStringValue(value.Value);
     }
 }
+
+/// <summary>
+/// Serializes <see cref="LifeYears"/> as an object holding both years.
+/// </summary>
+/// <remarks>
+/// The one converter here that is not a single string: the value holds two facts, either of which
+/// may be unknown, and flattening them into one string would invent a format only this converter
+/// could read. Both properties are always written — <c>{"Birth":null,"Death":null}</c> is
+/// <see cref="LifeYears.Unknown"/>, spelled out rather than special-cased.
+/// </remarks>
+public sealed class LifeYearsJsonConverter : JsonConverter<LifeYears>
+{
+    private const string BirthProperty = "Birth";
+    private const string DeathProperty = "Death";
+
+    /// <inheritdoc/>
+    public override LifeYears Read(
+        ref Utf8JsonReader reader,
+        Type typeToConvert,
+        JsonSerializerOptions options)
+    {
+        if (reader.TokenType != JsonTokenType.StartObject)
+        {
+            throw new InvalidOperationException(
+                "The outbox holds life years that are not the expected object of two years.");
+        }
+
+        int? birth = null;
+        int? death = null;
+
+        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+        {
+            var property = reader.GetString();
+            reader.Read();
+
+            var year = reader.TokenType == JsonTokenType.Null ? (int?)null : reader.GetInt32();
+
+            switch (property)
+            {
+                case BirthProperty:
+                    birth = year;
+                    break;
+                case DeathProperty:
+                    death = year;
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"The outbox holds '{property}' among life years, which is not a year.");
+            }
+        }
+
+        return LifeYears.Create(birth, death).Match(
+            lifeYears => lifeYears,
+            _ => throw new InvalidOperationException(
+                $"The outbox holds '{birth}-{death}' as life years, which are not valid ones."));
+    }
+
+    /// <inheritdoc/>
+    public override void Write(Utf8JsonWriter writer, LifeYears value, JsonSerializerOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+
+        writer.WriteStartObject();
+        WriteYear(writer, BirthProperty, value.Birth);
+        WriteYear(writer, DeathProperty, value.Death);
+        writer.WriteEndObject();
+    }
+
+    private static void WriteYear(Utf8JsonWriter writer, string property, int? year)
+    {
+        if (year is null)
+        {
+            writer.WriteNull(property);
+        }
+        else
+        {
+            writer.WriteNumber(property, year.Value);
+        }
+    }
+}

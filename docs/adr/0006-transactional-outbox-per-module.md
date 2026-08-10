@@ -51,8 +51,10 @@ decision, exactly as the database provider is — see
 
 **Processed rows accumulate, and the purge is a requirement rather than housekeeping.** A delivered
 row keeps its payload, and a Members payload is a name, contact details, a guardian. Nothing else
-bounds that copy, so a host that sets no retention window has a second store of personal data it did
-not decide to keep. [`outbox.md`](../outbox.md) §10 and
+bounds that copy, so a module wired without a purge is a second store of personal data nobody decided
+to keep — which is why `OutboxPurge<TContext>` is registered beside the drain by `AddModuleStore`
+rather than left for a host to remember. The host still chooses the window and the clock that runs
+it. [`outbox.md`](../outbox.md) §10 and
 [`tactical-design-members.md`](../tactical-design-members.md) §10 record the two halves.
 
 ## Alternatives rejected

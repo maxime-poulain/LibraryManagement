@@ -1,23 +1,24 @@
 using LibraryManagement.Catalog.Infrastructure.Extensions;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
+using LibraryManagement.Catalog.Migrations.SqlServer;
 using LibraryManagement.Charges.Infrastructure.Extensions;
 using LibraryManagement.Charges.Infrastructure.Persistence;
+using LibraryManagement.Charges.Migrations.SqlServer;
 using LibraryManagement.Circulation.Domain;
 using LibraryManagement.Circulation.Domain.Loans;
 using LibraryManagement.Circulation.Infrastructure.Extensions;
 using LibraryManagement.Circulation.Infrastructure.Persistence;
+using LibraryManagement.Circulation.Migrations.SqlServer;
 using LibraryManagement.Circulation.PublishedLanguage;
 using LibraryManagement.Holdings.Application.Copies.FindCopy;
 using LibraryManagement.Holdings.Domain.Copies;
 using LibraryManagement.Holdings.Infrastructure.Extensions;
 using LibraryManagement.Holdings.Infrastructure.Persistence;
+using LibraryManagement.Holdings.Migrations.SqlServer;
 using LibraryManagement.Shared.Application.CQS;
-using LibraryManagement.Shared.Domain.Results;
 using LibraryManagement.Shared.Infrastructure.Outbox;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using CirculationCopyId = LibraryManagement.Circulation.Domain.CopyId;
 using CirculationEditionId = LibraryManagement.Circulation.Domain.EditionId;
@@ -58,29 +59,28 @@ public sealed class CopyRecoveredTests(SqlServerFixture sqlServer) : IAsyncLifet
         _provider = CompositionRoot.Services()
             .AddSingleton<TimeProvider>(new FrozenClock(
                 new DateTimeOffset(Today, TimeOnly.MinValue, TimeSpan.Zero)))
-            .AddCatalogModule(options => options.UseSqlServer(ConnectionString))
-            .AddHoldingsModule(options => options.UseSqlServer(ConnectionString))
-            .AddCirculationModule(options => options.UseSqlServer(ConnectionString))
-            .AddChargesModule(options => options.UseSqlServer(ConnectionString))
+            .AddCatalogModule(options => options.UseCatalogSqlServer(ConnectionString))
+            .AddHoldingsModule(options => options.UseHoldingsSqlServer(ConnectionString))
+            .AddCirculationModule(options => options.UseCirculationSqlServer(ConnectionString))
+            .AddChargesModule(options => options.UseChargesSqlServer(ConnectionString))
             .BuildServiceProvider();
 
         await using var scope = _provider.CreateAsyncScope();
 
         var catalog = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
         await catalog.Database.EnsureDeletedAsync(Token);
-        await catalog.Database.EnsureCreatedAsync(Token);
+        await catalog.Database.MigrateAsync(Token);
 
-        await CreateTablesOfAsync<HoldingsDbContext>(scope.ServiceProvider);
-        await CreateTablesOfAsync<CirculationDbContext>(scope.ServiceProvider);
-        await CreateTablesOfAsync<ChargesDbContext>(scope.ServiceProvider);
+        await MigrateAsync<HoldingsDbContext>(scope.ServiceProvider);
+        await MigrateAsync<CirculationDbContext>(scope.ServiceProvider);
+        await MigrateAsync<ChargesDbContext>(scope.ServiceProvider);
     }
 
-    private static async Task CreateTablesOfAsync<TContext>(IServiceProvider services)
+    private static async Task MigrateAsync<TContext>(IServiceProvider services)
         where TContext : DbContext
     {
         var context = services.GetRequiredService<TContext>();
-        await ((IRelationalDatabaseCreator)context.Database.GetService<IDatabaseCreator>())
-            .CreateTablesAsync(Token);
+        await context.Database.MigrateAsync(Token);
     }
 
     public async ValueTask DisposeAsync() => await _provider.DisposeAsync();

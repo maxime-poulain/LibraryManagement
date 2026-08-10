@@ -85,6 +85,16 @@ jobs:
       - name: Restore the scanner
         run: dotnet tool restore
 
+      # cpd.exclusions: the migrations are `dotnet ef` output, and they repeat each other by
+      # construction — every module maps the same outbox table into its own schema, so five Initial
+      # migrations necessarily create the same table five times. That is ADR-0006's decision showing
+      # through, not copied code, and it cannot be factored: the next `migrations add` rewrites the
+      # file. The Roslyn analyzers are told the same thing by `generated_code = true` in
+      # .editorconfig; this is the copy-paste detector's half of it.
+      #
+      # Coverage is deliberately *not* excluded. The migrations really do execute — every
+      # integration fixture builds its schema through them — so measuring them is measuring
+      # something true.
       - name: Begin analysis
         run: >
           dotnet dotnet-sonarscanner begin
@@ -93,6 +103,7 @@ jobs:
           /d:sonar.token="$SONAR_TOKEN"
           /d:sonar.host.url="https://sonarcloud.io"
           /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+          /d:sonar.cpd.exclusions="**/Migrations/*.cs"
 
       # The build the scanner instruments. No --no-restore: this job restores on its own schedule.
       - name: Build (Release)

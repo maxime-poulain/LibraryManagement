@@ -8,9 +8,8 @@ using LibraryManagement.Circulation.Application.Loans.RemindOfLoansDueSoon;
 using LibraryManagement.Circulation.Application.Loans.RemindOfOverdueLoans;
 using LibraryManagement.Shared.Application.CQS;
 using LibraryManagement.Shared.Domain.Results;
-using Microsoft.Extensions.DependencyInjection;
 
-namespace LibraryManagement.Composition.Tests.Scheduling;
+namespace LibraryManagement.Host.Jobs;
 
 /// <summary>
 /// What a run of the daily process did.
@@ -23,9 +22,9 @@ namespace LibraryManagement.Composition.Tests.Scheduling;
 public sealed record DailyRunOutcome(int Dispatched, int Refused);
 
 /// <summary>
-/// The composition root's second Hangfire-facing surface, beside <c>OutboxJobs</c>: the daily
-/// process Circulation's tactical design gives it, because the passage of time is not an event and
-/// something has to ask the question.
+/// The host's second Hangfire-facing surface, beside <see cref="OutboxJobs"/>: the daily process
+/// Circulation's tactical design gives it, because the passage of time is not an event and something
+/// has to ask the question.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -48,9 +47,9 @@ public sealed record DailyRunOutcome(int Dispatched, int Refused);
 /// past its deadline is expired, never hurried along.
 /// </para>
 /// <para>
-/// A real host registers this with <c>RecurringJob.AddOrUpdate</c> on <c>Cron.Daily()</c> under
-/// <see cref="JobId"/>. Daily and not minutely, unlike the drains: this run asks about days, and
-/// asking twice in one day is safe but pointless — every command it dispatches is idempotent.
+/// Registered with <c>RecurringJob.AddOrUpdate</c> on <c>Cron.Daily</c> under <see cref="JobId"/>.
+/// Daily and not minutely, unlike the drains: this run asks about days, and asking twice in one day
+/// is safe but pointless — every command it dispatches is idempotent.
 /// </para>
 /// </remarks>
 public sealed class CirculationDailyRun(IServiceScopeFactory scopes)
@@ -88,7 +87,8 @@ public sealed class CirculationDailyRun(IServiceScopeFactory scopes)
 
         foreach (var command in TheDaysWork)
         {
-            await using var scope = scopes.CreateAsyncScope();
+            var scope = scopes.CreateAsyncScope();
+            await using var _ = scope.ConfigureAwait(false);
 
             var outcome = await scope.ServiceProvider
                 .GetRequiredService<ICommandDispatcher>()

@@ -329,8 +329,9 @@ on purpose.
 The one copy this misses is the outbox. `MemberRenamed` carries both names, `ContactDetailsChanged`
 the channels, `GuardianChanged` a whole guardian, and those payloads sit in this module's own table
 after they are delivered. Emptying the aggregate and leaving them would be erasure in name only, and
-[outbox.md](outbox.md) §10 now carries the retention window that bounds them — a purge that was
-deferred as a storage convenience and turns out to be a requirement. This module has no projection
+[outbox.md](outbox.md) §10 carries the purge that bounds them — deferred as a storage convenience,
+found to be a requirement here, and now a mechanism every module is wired with rather than a policy a
+host might forget. This module has no projection
 today, so those rows are the *only* second copy; a projection added later inherits the same duty.
 
 **A member who still owes money is a decision at the desk, not a rule in the model.** The balance is

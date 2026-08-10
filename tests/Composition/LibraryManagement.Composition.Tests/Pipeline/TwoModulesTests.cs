@@ -2,17 +2,17 @@ using LibraryManagement.Catalog.Application.Editions.RegisterEdition;
 using LibraryManagement.Catalog.Application.Works.RegisterWork;
 using LibraryManagement.Catalog.Infrastructure.Extensions;
 using LibraryManagement.Catalog.Infrastructure.Persistence;
+using LibraryManagement.Catalog.Migrations.SqlServer;
 using LibraryManagement.Holdings.Application.Copies.AcquireCopy;
 using LibraryManagement.Holdings.Domain;
 using LibraryManagement.Holdings.Infrastructure.Extensions;
 using LibraryManagement.Holdings.Infrastructure.Persistence;
+using LibraryManagement.Holdings.Migrations.SqlServer;
 using LibraryManagement.Holdings.PublishedLanguage;
 using LibraryManagement.Shared.Application.CQS;
 using LibraryManagement.Shared.Domain.Results;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LibraryManagement.Composition.Tests.Pipeline;
@@ -55,25 +55,23 @@ public sealed class TwoModulesTests(SqlServerFixture sqlServer) : IAsyncLifetime
         // One host, both modules. Holdings deliberately does not register Catalog for the caller:
         // deciding the composition is the host's business.
         _provider = CompositionRoot.Services()
-            .AddCatalogModule(options => options.UseSqlServer(ConnectionString))
-            .AddHoldingsModule(options => options.UseSqlServer(ConnectionString))
+            .AddCatalogModule(options => options.UseCatalogSqlServer(ConnectionString))
+            .AddHoldingsModule(options => options.UseHoldingsSqlServer(ConnectionString))
             .BuildServiceProvider();
 
         await using var scope = _provider.CreateAsyncScope();
 
+        // Both modules migrate, and the second is no longer a special case. EnsureCreated used to
+        // build the first and answer "already there" for the second, leaving that module's schema
+        // unbuilt — a seam this class was the first to hit, worked around here with the relational
+        // creator, and named in migrations.md as what the host would answer with migrations. It
+        // did: each module's history table lives in its own schema, so each applies its own.
         var catalog = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
         await catalog.Database.EnsureDeletedAsync(Token);
-        await catalog.Database.EnsureCreatedAsync(Token);
+        await catalog.Database.MigrateAsync(Token);
 
-        // Not EnsureCreated: that one creates the database, and answers "already there" for a second
-        // context over the same one — leaving this module's schema unbuilt and every query against
-        // it failing on a name the model insists exists. The relational creator builds the tables of
-        // the model in hand and nothing else, which is exactly what a second module needs. It is
-        // also the first sign that one database per solution and one context per module do not
-        // compose for free; a host will meet the same seam and answer it with migrations.
         var holdings = scope.ServiceProvider.GetRequiredService<HoldingsDbContext>();
-        await ((IRelationalDatabaseCreator)holdings.Database.GetService<IDatabaseCreator>())
-            .CreateTablesAsync(Token);
+        await holdings.Database.MigrateAsync(Token);
     }
 
     public async ValueTask DisposeAsync() => await _provider.DisposeAsync();

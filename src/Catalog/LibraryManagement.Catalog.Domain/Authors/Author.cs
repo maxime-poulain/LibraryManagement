@@ -30,8 +30,8 @@ public sealed class Author : AggregateRoot<AuthorId>
     /// </summary>
     /// <remarks>
     /// Takes only what identifies the record and what it cannot exist without. The years are set
-    /// afterwards, by <see cref="CorrectLifeYears"/>, which is also what lets a mapper rebuild an
-    /// author from the store: a complex value cannot be passed through a constructor there.
+    /// afterwards, through the property, which is also what lets a mapper rebuild an author from
+    /// the store: a complex value cannot be passed through a constructor there.
     /// </remarks>
     private Author(AuthorId id, NameForm preferredName) : base(id)
     {
@@ -71,7 +71,11 @@ public sealed class Author : AggregateRoot<AuthorId>
         ArgumentNullException.ThrowIfNull(lifeYears);
 
         var author = new Author(id, preferredName);
-        author.CorrectLifeYears(lifeYears);
+
+        // Assigned directly, not through CorrectLifeYears: a registration is not a correction —
+        // no reading stood before this one — and the correction's event would say here that a
+        // record repaired what it never yet claimed.
+        author.LifeYears = lifeYears;
         author.AddDomainEvent(new AuthorRegistered(id, preferredName));
 
         return author;
@@ -198,11 +202,23 @@ public sealed class Author : AggregateRoot<AuthorId>
     /// </summary>
     /// <param name="lifeYears">The years to record.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="lifeYears"/> is null.</exception>
+    /// <remarks>
+    /// Correcting to the years already on record records nothing — nothing happened, the
+    /// <see cref="Works.Work.Retitle"/> reading of a change that changes nothing.
+    /// </remarks>
     public void CorrectLifeYears(LifeYears lifeYears)
     {
         ArgumentNullException.ThrowIfNull(lifeYears);
 
+        if (lifeYears == LifeYears)
+        {
+            return;
+        }
+
+        var previous = LifeYears;
         LifeYears = lifeYears;
+
+        AddDomainEvent(new AuthorLifeYearsCorrected(Id, previous, lifeYears));
     }
 
     /// <summary>

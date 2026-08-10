@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <RootNamespace>LibraryManagement.Charges.Migrations.SqlServer</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- The provider, named here and nowhere inside the module. See the Catalog migrations
+             project for the argument; every module's is the same one. -->
+        <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+        <!-- Design-time only: the tooling that writes the migrations, never shipped with them. -->
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- The provider call and the design-time factory, spelled once for all five modules. -->
+        <ProjectReference Include="..\LibraryManagement.Migrations.SqlServer\LibraryManagement.Migrations.SqlServer.csproj" />
+        <ProjectReference Include="..\..\Charges\LibraryManagement.Charges.Infrastructure\LibraryManagement.Charges.Infrastructure.csproj" />
+    </ItemGroup>
+
+</Project>

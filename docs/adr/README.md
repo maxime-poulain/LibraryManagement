@@ -10,7 +10,7 @@ each `tactical-design-*.md` decides one context's aggregates, `outbox.md` and `m
 two technical mechanisms. They are long because the argument is the point.
 
 An ADR is not a summary of one of those. It is the **decision record**: what was decided, when, what
-it costs, and what was rejected — in a form that a reader scanning fourteen titles can navigate. Where
+it costs, and what was rejected — in a form that a reader scanning fifteen titles can navigate. Where
 a decision is argued at length elsewhere, the record says so and points there rather than restating
 it. When a record and its authority disagree, the authority wins and the record is the bug.
 
@@ -23,6 +23,9 @@ context's tactical design.
 **Accepted** — in force, and the code holds to it. **Superseded by ADR-N** — replaced; the record
 stays, because a decision that vanished is a decision nobody can learn from. **Deferred** — the
 decision is made *not* to decide yet, and the record names the trigger that reopens it.
+**Resolved** — a deferral whose trigger fired and whose waiting is over. Distinct from superseded on
+purpose: nothing overruled it, its own condition was met, and the record is worth reading precisely
+because what it predicted can now be compared against what arrived.
 
 There are no *Proposed* records: this repository decides on paper before it builds, so a record is
 written when the decision is taken.
@@ -40,8 +43,9 @@ written when the decision is taken.
 | [0007](0007-published-language-only.md) | Modules speak only through published languages of primitives | Accepted |
 | [0008](0008-subscriber-dispatches-its-own-command.md) | A cross-module subscriber dispatches its own command | Accepted |
 | [0009](0009-inverted-balance-port.md) | Circulation declares the balance port; Charges implements it | Accepted |
-| [0010](0010-ensurecreated-before-migrations.md) | `EnsureCreated` now; migrations at the first host | Deferred |
+| [0010](0010-ensurecreated-before-migrations.md) | `EnsureCreated` now; migrations at the first host | Resolved |
 | [0011](0011-architecture-rules-are-tests.md) | Architectural rules are executable tests | Accepted |
 | [0012](0012-american-english-binding-glossary.md) | American English, and the glossary is binding | Accepted |
-| [0013](0013-composition-root-in-the-tests.md) | No runnable host; the composition root lives in the tests | Accepted |
+| [0013](0013-composition-root-in-the-tests.md) | No runnable host; the composition root lives in the tests | Superseded by 0015 |
 | [0014](0014-opening-calendar-in-circulation.md) | The opening calendar is Circulation's; a closed day is never billed | Accepted |
+| [0015](0015-the-first-host.md) | The first host: one process, a header for the employee, the schedule and the provider in one place | Accepted |

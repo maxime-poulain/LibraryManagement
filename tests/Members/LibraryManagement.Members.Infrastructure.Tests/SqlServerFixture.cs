@@ -1,5 +1,6 @@
 using LibraryManagement.Members.Infrastructure.Persistence;
 using Microsoft.Data.SqlClient;
+using LibraryManagement.Members.Migrations.SqlServer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Testcontainers.MsSql;
@@ -58,10 +59,12 @@ public sealed class SqlServerFixture : IAsyncLifetime
             _connectionString = WithOurOwnDatabase(_container.GetConnectionString());
         }
 
-        // Dropped and rebuilt, so a run never inherits the schema of an older model.
+        // Dropped and rebuilt, so a run never inherits the schema of an older model. Built by the
+        // migrations rather than from the model: the suite tests the schema a deployment would
+        // get, and a migration that drifted from the model fails here.
         await using var context = NewContext();
         await context.Database.EnsureDeletedAsync();
-        await context.Database.EnsureCreatedAsync();
+        await context.Database.MigrateAsync();
     }
 
     // A database of this suite's own, whichever server it is. A container hands back a connection
@@ -77,7 +80,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
     /// </summary>
     public MembersDbContext NewContext(params IInterceptor[] interceptors)
         => new(new DbContextOptionsBuilder<MembersDbContext>()
-            .UseSqlServer(_connectionString)
+            .UseMembersSqlServer(_connectionString)
             .AddInterceptors(interceptors)
             .Options);
 
