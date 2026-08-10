@@ -34,6 +34,19 @@ public sealed class Edition : AggregateRoot<EditionId>
     public Isbn? Isbn { get; private set; }
 
     /// <summary>
+    /// Gets the edition this record was merged into, or <see langword="null"/> while it is still a
+    /// record in its own right.
+    /// </summary>
+    /// <remarks>
+    /// Terminal, the way erasure is for a member: an absorbed edition acts no more, and every
+    /// operation on it refuses. The row stays and keeps its identifier, because downstream contexts
+    /// held that identifier and a deleted record would orphan them — the same reason Members keeps
+    /// an erased member's key. What changes is that the identifier now resolves to a pointer rather
+    /// than to a record: whoever still holds it can follow it exactly once, to the survivor.
+    /// </remarks>
+    public EditionId? AbsorbedInto { get; private set; }
+
+    /// <summary>
     /// Catalogs an edition of a work.
     /// </summary>
     /// <param name="id">The identifier the edition will keep for its whole life.</param>
@@ -60,5 +73,39 @@ public sealed class Edition : AggregateRoot<EditionId>
         edition.AddDomainEvent(new EditionRegistered(id, workId, isbn));
 
         return edition;
+    }
+
+    /// <summary>
+    /// Records that this edition was merged into another, and announces it.
+    /// </summary>
+    /// <param name="survivingEditionId">The edition that goes on answering.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="survivingEditionId"/> is null.</exception>
+    /// <remarks>
+    /// <para>
+    /// <strong>Deliberately unguarded, and deliberately <c>internal</c>.</strong> Whether two
+    /// records may be joined is decided by <see cref="EditionMergeDomainService"/>, which holds all
+    /// four rules together — a merge is one question, and rules that answer one question drift
+    /// apart when they are kept in two places. This method is what remains once the decision is
+    /// made: the state change and the fact.
+    /// </para>
+    /// <para>
+    /// <c>internal</c> is what makes that arrangement hold rather than merely describe it. The
+    /// application layer cannot see this method, so the service is not one path among two — it is
+    /// the only one. The module's own tests do see it, which is what lets the surface stay this
+    /// narrow instead of widening to become testable.
+    /// </para>
+    /// <para>
+    /// The direction is the caller's to choose and nothing here second-guesses it. Which of two
+    /// duplicate records deserves to survive is a cataloging judgement about which is better
+    /// described, and nothing in the model can tell.
+    /// </para>
+    /// </remarks>
+    internal void AbsorbInto(EditionId survivingEditionId)
+    {
+        ArgumentNullException.ThrowIfNull(survivingEditionId);
+
+        AbsorbedInto = survivingEditionId;
+
+        AddDomainEvent(new EditionsMerged(Id, survivingEditionId));
     }
 }

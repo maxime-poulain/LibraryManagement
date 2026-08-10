@@ -118,6 +118,23 @@ preferred name, adding variants, correcting life years; registering an edition. 
 solution's shape — refusals with named codes, cross-aggregate questions asked by handlers — and
 none needs a clock: bibliography has no deadlines.
 
+**Merging two editions** joins them, and it is the first moment here that is not simply a record
+being written. One record absorbs the other and the absorbed one becomes a pointer: `AbsorbedInto`
+is terminal the way a member's erasure is, and for the same reason — three contexts hold this
+identifier, so the row stays and stops being a record rather than being deleted.
+
+**Its four rules live together, in `EditionMergeDomainService`** — the first domain service in the
+solution. A record cannot absorb itself; a record already absorbed no longer acts; the survivor must
+itself be live; and both must print the same work. That last one is the guard against the one
+mistake nothing recovers: merging editions of different books tells Holdings to repoint copies onto
+another book, and nothing recorded which ones moved. `Edition.AbsorbInto` is `internal` behind the
+service and does only what remains once the decision is made — the state change and the event — so
+the rules cannot be reached around. What stays in the handler is the one question that needs the
+store: *do these identifiers resolve?*
+
+Merging two *authority records* is the other half and is not built — it stays inside this context,
+since no module outside it holds an `AuthorId`.
+
 ## 8. Events
 
 Facts about records, consumed today by the access-point projection and published all the same, for
@@ -130,6 +147,7 @@ the standing reason: an event not published when it happened cannot be recovered
 | `AuthorRegistered`, `AuthorRenamed(…, previous, new)`, `AuthorPreferredNameCorrected(…, previous, corrected)`, `AuthorVariantNameAdded` | access points |
 | `AuthorLifeYearsCorrected(…, previous, corrected)` | nothing yet |
 | `EditionRegistered(…, workId, isbn?)` | read model |
+| `EditionsMerged(absorbedEditionId, survivingEditionId)` | access points, **and the modules downstream** |
 
 The corrected/renamed pairs carry both forms because a projection keyed on the old one must
 retract it — the shape `CopyRelabelled` and `CardReplaced` later reused, and the shape
@@ -191,18 +209,42 @@ in passing — an ordering the outbox preserves and no consumer should have to r
 
 Open, each deferred for a stated reason rather than forgotten:
 
-* **Merging two records is the gap every client has already named — and it is now decided on paper,
-  in [ADR-0017](adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md).** Catalog has no
-  merge — of two editions, or of two authority records for one person — and the day it acquires
-  one, every downstream identifier for the absorbed record points at nothing. The record settles
-  what crosses (`EditionsMerged`, carrying the absorbed identifier and the surviving one, and
-  nothing else) and what each consumer owes. Two things it establishes are worth having here: the
-  **authority** merge does not cross at all, since no module outside this context holds an
-  `AuthorId`, so it is an internal change to `Work.AuthorIds` and the access-point index; and the
-  expensive consumer is **Circulation**, not the two this document used to name — `HoldQueue` is
-  keyed by `EditionId`, so a merge makes two aggregates into one. The import (§9) is what will
-  force the whole thing: matching incoming records against existing ones is where duplicates
+* **Merging two records was the gap every client had named. This context's half of it is now
+  built**, under [ADR-0017](adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md), which
+  decides the whole shape: `EditionsMerged` crosses, carrying the absorbed identifier and the
+  surviving one and nothing else, and each consumer dispatches a command of its own. What remains
+  open is the consuming half — **no module has subscribed yet**, so today the fact is announced and
+  nobody acts on it. That is deliberate and it is the honest state to record: the event had to
+  exist before a consumer could be written against it, and the record names the order.
+  Two things the record establishes are worth repeating here. The **authority** merge does not
+  cross at all, since no module outside this context holds an `AuthorId` — it is an internal change
+  to `Work.AuthorIds` and the access-point index, and it is not built either. And the expensive
+  consumer is **Circulation**, not the two this document used to name: `HoldQueue` is keyed by
+  `EditionId`, so a merge there makes two aggregates into one. The import (§9) is what will force
+  the whole thing, since matching incoming records against existing ones is where duplicates
   surface.
+* **Where a rule spanning two aggregates goes, settled here.** The first version of the merge split
+  its four rules between the aggregate and the command handler, and cited the precedent this
+  context already had: *crediting an author who does not exist spans two aggregates, so the handler
+  asks the question*. The citation was wrong, and seeing why produced the rule the solution now
+  follows. That precedent turns on a **lookup** — no aggregate can answer *does this identifier
+  exist?* without a store. A merge's remaining rules need no store at all once both records are
+  loaded; they are comparisons. So the boundary is not *how many aggregates* but **whether the store
+  must be asked**: a lookup is the handler's, a rule over aggregates in hand belongs to the domain,
+  and when it belongs to none of them alone it becomes a **domain service**.
+  `EditionMergeDomainService` is the first, `Edition.AbsorbInto` is `internal` behind it, and
+  `RegisterWork`/`RegisterEdition` stay handlers — correctly, since neither ever holds two
+  aggregates. CLAUDE.md carries the rule with that counter-example attached, because a rule read
+  without it turns two good handlers into two empty services.
+* **What building this half taught.** Two things the paper design had not reached. The forms of an
+  absorbed record **move** to the survivor rather than being deleted — an ISBN somebody used to
+  find the old record is still printed on the book in their hand, and deleting it would make a
+  correction of the catalog look, to the person searching, exactly like the record having been
+  lost. They arrive as variants and never as preferred, which is the distinction §2 already draws
+  between a preferred name and a variant, applied to what a merge produces. And
+  `IEditionCatalog.ExistsAsync` had to start answering **false** for an absorbed record: Holdings
+  asks it before attaching a copy, and attaching one to a record just merged away would
+  manufacture, one acquisition at a time, the very orphan the event exists to repair.
 * **Whether a hold may be placed on a work** — any edition will do — as well as on an edition.
   Members ask for both; the queue rules differ; the strategic design keeps the question.
 * **`EditionStatement`**, ISBD area 2, when the edition thickens (§9): a fact carried by an

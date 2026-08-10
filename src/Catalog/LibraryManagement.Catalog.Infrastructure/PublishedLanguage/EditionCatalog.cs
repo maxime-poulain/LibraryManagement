@@ -34,8 +34,12 @@ public sealed class EditionCatalog(CatalogDbContext context) : IEditionCatalog
         // so the provider sees a member access on a type it has no column for and gives up.
         var id = EditionId.Create(editionId);
 
+        // An absorbed record does not exist for this purpose, and that is the whole point of the
+        // question being asked. Holdings asks before attaching a copy; attaching one to a record a
+        // cataloger has just merged away would manufacture, one acquisition at a time, exactly the
+        // orphaned identifier the merge event exists to repair.
         return await context.Editions
-            .AnyAsync(edition => edition.Id == id, cancellationToken)
+            .AnyAsync(edition => edition.Id == id && edition.AbsorbedInto == null, cancellationToken)
             .ConfigureAwait(false);
     }
 }

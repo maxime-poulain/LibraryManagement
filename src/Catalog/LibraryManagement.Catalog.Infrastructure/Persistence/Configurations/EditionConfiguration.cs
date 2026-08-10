@@ -36,6 +36,15 @@ public sealed class EditionConfiguration : AggregateRootConfiguration<Edition, E
         // duplicate is a cataloging decision the domain has not made — an index is not where it
         // would be made.
         builder.HasIndex(edition => edition.Isbn);
+
+        // The survivor of a merge, and null while this record is one in its own right. An
+        // identifier column and not a foreign key, exactly as WorkId above is — and here the
+        // reason is sharper than consistency: the column points at another row of this same table,
+        // so a constraint would be possible, and it is still refused. A merged-away record must
+        // stay readable if the survivor is ever itself corrected, and a cascade is a mechanism for
+        // deleting things this context does not delete.
+        builder.Property(edition => edition.AbsorbedInto)
+            .HasConversion(id => id!.Value, value => EditionId.Create(value));
     }
 
     private static Isbn IsbnOf(string value)

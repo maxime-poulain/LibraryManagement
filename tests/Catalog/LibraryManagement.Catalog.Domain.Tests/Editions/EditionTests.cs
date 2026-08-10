@@ -54,4 +54,31 @@ public sealed class EditionTests
         Should.Throw<ArgumentNullException>(() => Edition.Register(null!, WorkId.Generate(), null));
         Should.Throw<ArgumentNullException>(() => Edition.Register(EditionId.Generate(), null!, null));
     }
+
+    private static Edition AnEdition() =>
+        Edition.Register(EditionId.Generate(), WorkId.Generate(), AnIsbn());
+
+    [Fact]
+    public void AbsorbInto_RecordsTheSurvivorAndAnnouncesIt_AndNothingElse()
+    {
+        // Reachable because the module shows its internals to its own tests, which is what lets
+        // this method stay internal. What is asserted is the whole of what it should now do: the
+        // guards are the domain service's, and this is the state change and the fact.
+        var absorbed = AnEdition();
+        var survivor = EditionId.Generate();
+
+        absorbed.AbsorbInto(survivor);
+
+        absorbed.AbsorbedInto.ShouldBe(survivor);
+
+        var merged = absorbed.DomainEvents.OfType<EditionsMerged>().Single();
+        merged.AbsorbedEditionId.ShouldBe(absorbed.Id);
+        merged.SurvivingEditionId.ShouldBe(survivor);
+    }
+
+    [Fact]
+    public void AbsorbInto_DemandsASurvivor()
+    {
+        Should.Throw<ArgumentNullException>(() => AnEdition().AbsorbInto(null!));
+    }
 }

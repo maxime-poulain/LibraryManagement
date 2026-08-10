@@ -118,6 +118,37 @@ public sealed class DeskApiTests(SqlServerFixture sqlServer) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task MergingTwoRecords_IsADeskActAndIsRouted()
+    {
+        // A cataloger is the one who notices a duplicate and the one entitled to say so, which is
+        // why this is routed where the seven the daily process owns are not.
+        var workId = Guid.CreateVersion7();
+        (await PostAsync("/catalog/works", new { WorkId = workId, PreferredTitle = "Les Années", AuthorIds = Array.Empty<Guid>() }))
+            .StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var surviving = Guid.CreateVersion7();
+        var absorbed = Guid.CreateVersion7();
+
+        foreach (var editionId in new[] { surviving, absorbed })
+        {
+            (await PostAsync("/catalog/editions", new { EditionId = editionId, WorkId = workId, Isbn = (string?)null }))
+                .StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        }
+
+        (await PostAsync("/catalog/editions/merge", new { AbsorbedEditionId = absorbed, SurvivingEditionId = surviving }))
+            .StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        // Refused, not 404: the route names an act that exists whether or not its referents do,
+        // and merging a record into itself is the domain saying no.
+        var refused = await PostAsync(
+            "/catalog/editions/merge",
+            new { AbsorbedEditionId = surviving, SurvivingEditionId = surviving });
+
+        refused.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        (await refused.Content.ReadAsStringAsync(Token)).ShouldContain("Catalog.EditionCannotAbsorbItself");
+    }
+
+    [Fact]
     public async Task TheEmployeeHeader_ReachesTheAuditColumns()
     {
         var authorId = Guid.CreateVersion7();
