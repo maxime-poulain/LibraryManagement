@@ -94,13 +94,14 @@ public sealed class HoldQueuePersistenceTests(SqlServerFixture sqlServer)
     {
         var queue = HoldQueue.For(EditionId.Generate());
         var borrower = BorrowerId.Generate();
-        queue.PlaceHold(HoldId.Generate(), borrower, ThisMorning);
+        var holdId = HoldId.Generate();
+        queue.PlaceHold(holdId, borrower, ThisMorning);
         await StoredAsync(queue);
 
         await using (var updating = sqlServer.NewContext())
         {
             var loaded = await new HoldQueueRepository(updating).GetByEditionAsync(queue.Id, Token);
-            loaded!.CancelFor(borrower);
+            loaded!.CancelFor(holdId, borrower);
             await updating.SaveChangesAsync(Token);
         }
 
@@ -212,6 +213,85 @@ public sealed class HoldQueuePersistenceTests(SqlServerFixture sqlServer)
             .WithHoldsAwaitingPickupThroughAsync(Today.AddYears(1), Token);
 
         found.Select(queue => queue.Id).ShouldNotContain(waiting.Id);
+    }
+
+    [Fact]
+    public async Task AMerge_MovesEveryClaimBetweenTwoQueues()
+    {
+        // A claim's key is the pair of edition and hold, so moving one is a DELETE and an INSERT in
+        // the same save. Nothing about that is provable by the compiler, which is why it is proved
+        // here.
+        var absorbed = HoldQueue.For(EditionId.Generate());
+        var surviving = HoldQueue.For(EditionId.Generate());
+        var moving = HoldId.Generate();
+        var staying = HoldId.Generate();
+        absorbed.PlaceHold(moving, BorrowerId.Generate(), ThisMorning);
+        surviving.PlaceHold(staying, BorrowerId.Generate(), ThisMorning.AddHours(1));
+        await StoredAsync(absorbed);
+        await StoredAsync(surviving);
+
+        await MergedAsync(absorbed.Id, surviving.Id);
+
+        (await ReadBackAsync(absorbed.Id)).Holds.ShouldBeEmpty();
+        (await ReadBackAsync(surviving.Id)).Holds
+            .Select(hold => hold.Id).ShouldBe([moving, staying], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task AMerge_MovesAClaimWithItsTrappedCopy_PastTheIndexThatSpansQueues()
+    {
+        // The one save this change could plausibly fail on, and the reason it is worth an
+        // integration test of its own. The trapped copy carries a unique index that is filtered and
+        // spans queues, so a move is a row leaving one queue and the same copy arriving in another
+        // — and if the insert reached the server before the delete, the index would refuse a state
+        // the model never holds.
+        var absorbed = HoldQueue.For(EditionId.Generate());
+        var surviving = HoldQueue.For(EditionId.Generate());
+        absorbed.PlaceHold(HoldId.Generate(), BorrowerId.Generate(), ThisMorning);
+        surviving.PlaceHold(HoldId.Generate(), BorrowerId.Generate(), ThisMorning.AddHours(1));
+        var setAside = CopyId.Generate();
+        absorbed.TrapOldestQueued(setAside, Today.AddDays(7), NobodyBlocked);
+        await StoredAsync(absorbed);
+        await StoredAsync(surviving);
+
+        await MergedAsync(absorbed.Id, surviving.Id);
+
+        var found = await ReadBackAsync(surviving.Id);
+        found.TrappedCopyIds().ShouldBe([setAside]);
+        found.Holds.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task AMerge_LeavingABorrowerWithTwoQueuedClaims_KeepsTheEarliest()
+    {
+        // The service's rule, proved once against a real store: what is written is what the merge
+        // decided, and not what a naive union would have left.
+        var borrowerId = BorrowerId.Generate();
+        var absorbed = HoldQueue.For(EditionId.Generate());
+        var surviving = HoldQueue.For(EditionId.Generate());
+        var earliest = HoldId.Generate();
+        surviving.PlaceHold(earliest, borrowerId, ThisMorning);
+        absorbed.PlaceHold(HoldId.Generate(), borrowerId, ThisMorning.AddHours(1));
+        await StoredAsync(absorbed);
+        await StoredAsync(surviving);
+
+        await MergedAsync(absorbed.Id, surviving.Id);
+
+        (await ReadBackAsync(surviving.Id)).Holds.ShouldHaveSingleItem().Id.ShouldBe(earliest);
+    }
+
+    /// <summary>Runs a merge through a context of its own, so the save is what is under test.</summary>
+    private async Task MergedAsync(EditionId absorbedId, EditionId survivingId)
+    {
+        await using var updating = sqlServer.NewContext();
+        var queues = new HoldQueueRepository(updating);
+
+        var absorbed = await queues.GetByEditionAsync(absorbedId, Token);
+        var surviving = await queues.GetByEditionAsync(survivingId, Token);
+
+        new HoldQueueMergeDomainService().Merge(absorbed!, surviving!).HasErrors().ShouldBeFalse();
+
+        await updating.SaveChangesAsync(Token);
     }
 
     [Fact]

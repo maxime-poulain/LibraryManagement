@@ -66,6 +66,40 @@ public sealed class CancelHoldsForDebtCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_TwoClaimsInOneMergedQueue_BothGo()
+    {
+        // What the queue merge made possible, and what the sweep had to learn: ending the first
+        // found would leave somebody who owes money still holding a place, which is the invariant
+        // this rule buys — nobody in a hold queue owes money, checkable at any instant.
+        var owing = BorrowerId.Generate();
+        var next = BorrowerId.Generate();
+        _balances.Owing(owing.Value, 12m);
+
+        var absorbed = HoldQueue.For(EditionId.Generate());
+        var surviving = HoldQueue.For(EditionId.Generate());
+        absorbed.PlaceHold(HoldId.Generate(), owing, ThisMorning);
+        surviving.PlaceHold(HoldId.Generate(), owing, ThisMorning.AddHours(1));
+        surviving.PlaceHold(HoldId.Generate(), next, ThisMorning.AddHours(2));
+        var setAside = CopyId.Generate();
+        surviving.TrapOldestQueued(setAside, Today.AddDays(7), new HashSet<BorrowerId>());
+        new HoldQueueMergeDomainService().Merge(absorbed, surviving);
+        surviving.ClearDomainEvents();
+        _queues.With(absorbed, surviving);
+
+        var outcome = await Handle(owing.Value);
+
+        outcome.HasErrors().ShouldBeFalse();
+        surviving.Holds.ShouldHaveSingleItem().BorrowerId.ShouldBe(next);
+        surviving.DomainEvents.OfType<HoldCancelledForDebt>().Count().ShouldBe(2);
+
+        // And the copy they were holding goes to the person behind them rather than back to a
+        // shelf nobody is watching.
+        var offered = surviving.DomainEvents.OfType<HoldReadyForPickup>().Single();
+        offered.BorrowerId.ShouldBe(next);
+        offered.CopyId.ShouldBe(setAside);
+    }
+
+    [Fact]
     public async Task Handle_ABorrowerWithNoPlaces_AnswersSuccess()
     {
         // The ordinary case, arriving from another module's drain: a refusal would make that

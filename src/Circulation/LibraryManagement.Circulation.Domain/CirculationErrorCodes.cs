@@ -56,7 +56,10 @@ public static class CirculationErrorCodes
     /// <summary>The borrower already has a copy of this edition on loan — a hold would claim what they hold.</summary>
     public static readonly ErrorCode AlreadyBorrowed = new("Circulation.AlreadyBorrowed");
 
-    /// <summary>The borrower already waits in this queue. A borrower appears at most once.</summary>
+    /// <summary>
+    /// The borrower already has a live claim in this queue. The desk refuses a second one, which is
+    /// stricter than the invariant a merge may reach — see <c>HoldQueue.PlaceHold</c>.
+    /// </summary>
     public static readonly ErrorCode HoldAlreadyPlaced = new("Circulation.HoldAlreadyPlaced");
 
     /// <summary>A copy is available on the shelf — that is a checkout, and allowing the hold would
@@ -65,4 +68,14 @@ public static class CirculationErrorCodes
 
     /// <summary>No hold of this borrower waits on that edition.</summary>
     public static readonly ErrorCode NoSuchHold = new("Circulation.NoSuchHold");
+
+    /// <summary>No edition is cataloged under that identifier, so nothing can be claimed on it.</summary>
+    /// <remarks>
+    /// Also the answer for a record a cataloger merged away: Catalog stops acknowledging an absorbed
+    /// identifier precisely so nothing new attaches to it.
+    /// </remarks>
+    public static readonly ErrorCode NoSuchEdition = new("Circulation.NoSuchEdition");
+
+    /// <summary>A hold queue was asked to absorb itself.</summary>
+    public static readonly ErrorCode QueueCannotAbsorbItself = new("Circulation.QueueCannotAbsorbItself");
 }

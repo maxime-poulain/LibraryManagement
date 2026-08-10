@@ -200,6 +200,35 @@ public sealed class DeskApiTests(SqlServerFixture sqlServer) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task CancellingAHold_NamesTheClaim()
+    {
+        // The body is the command record, so the route's shape is the command's. It grew a hold
+        // identifier the day two queues could become one, and a request that omits it is refused
+        // for its shape rather than reaching a queue and having one guessed.
+        var response = await PostAsync(
+            "/circulation/holds/cancel",
+            new { EditionId = Guid.CreateVersion7(), BorrowerId = Guid.CreateVersion7() });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task AMergeReaction_HasNoRoute()
+    {
+        // What Circulation does about a merge is dispatched by a subscriber, never asked for at a
+        // desk — the same rule the scheduled commands answer to.
+        var response = await PostAsync(
+            "/circulation/holds/merge",
+            new
+            {
+                AbsorbedEditionId = Guid.CreateVersion7(),
+                SurvivingEditionId = Guid.CreateVersion7(),
+            });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task AScheduledCommand_HasNoRoute()
     {
         // The seven the daily process owns are not desk acts, and neither are the reactions one

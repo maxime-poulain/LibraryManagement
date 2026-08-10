@@ -15,6 +15,7 @@ public sealed class PlaceHoldCommandHandlerTests
 
     private readonly InMemoryLoanRepository _loans = new();
     private readonly InMemoryHoldQueueRepository _queues = new();
+    private readonly StubEditionCatalog _catalog = new();
     private readonly StubShelf _shelf = new();
     private readonly StubRegistry _registry = new();
     private readonly StubBalances _balances = new();
@@ -29,7 +30,7 @@ public sealed class PlaceHoldCommandHandlerTests
 
     private ValueTask<Result> Handle(Guid? borrower = null, Guid? edition = null)
         => new PlaceHoldCommandHandler(
-                _loans, _queues, _shelf, _registry, _balances,
+                _loans, _queues, _catalog, _shelf, _registry, _balances,
                 CirculationPolicy.Current, FrozenClock.At(Today))
             .Handle(
                 new PlaceHoldCommand(
@@ -51,6 +52,19 @@ public sealed class PlaceHoldCommandHandlerTests
 
     private static List<ErrorCode> CodesOf(Result outcome)
         => outcome.Match(() => [], errors => errors.Select(error => error.ErrorCode).ToList());
+
+    [Fact]
+    public async Task Handle_AnEditionCatalogNoLongerAcknowledges_IsRefused()
+    {
+        // A record a cataloger merged away, claimed from a stale screen. Nothing else here can see
+        // it: Holdings refiled that record's copies under the survivor, so the shelf check below
+        // goes quiet, and the claim would open a queue no return ever feeds.
+        _catalog.MergedAway(_edition);
+
+        CodesOf(await Handle()).ShouldContain(CirculationErrorCodes.NoSuchEdition);
+
+        _queues.Added.ShouldBeEmpty();
+    }
 
     [Fact]
     public async Task Handle_OpensTheQueueWithTheFirstClaim()

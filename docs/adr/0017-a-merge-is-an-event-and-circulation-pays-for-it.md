@@ -133,10 +133,10 @@ tense long after the fact misleads whoever reads it next:
 | 1. Catalog's merge operation and its event | Built |
 | 2. Holdings' subscriber | Built — the passage is proved |
 | 3. Circulation's `Loan.EditionId` repointing | Built — live loans only |
-| 4. The queue merge, and `CancelFor` tightened | Open |
+| 4. The queue merge, and `CancelFor` tightened | Built |
 | 5. Members' merge and its own event | Open |
 
-Nothing in the decision above changed while steps 1 to 3 were built. What they did not anticipate is
+Nothing in the decision above changed while steps 1 to 4 were built. What they did not anticipate is
 recorded where it belongs rather than here: that all four merge rules want to live together in a
 domain service (`tactical-design-catalog.md` §10); that the consuming side's three tempting guards —
 the copy's status, the survivor's existence, a deduplication table — are all wrong
@@ -144,10 +144,20 @@ the copy's status, the survivor's existence, a deduplication table — are all w
 consumer, since a copy's edition is asked about forever while a finished loan's is asked about never
 (`tactical-design-circulation.md` §10).
 
-One thing this record did not foresee at all, and step 4 owes an answer: **nothing stops a hold being
+One thing this record did not foresee at all, and step 4 answered: **nothing stopped a hold being
 placed on an absorbed edition.** A consumer learns that two records merged, never that one is
-absorbed, so a fresh claim on the absorbed identifier would build a queue no return feeds once the
-loans name the survivor.
+absorbed, so a fresh claim on the absorbed identifier built a queue no return would feed once the
+loans named the survivor. Placing a hold now asks Catalog whether the identifier still names a
+record — the port already answers no for an absorbed one, which is why this needed no new state. What
+it still cannot do is name the survivor in the refusal, and that is Catalog's port to widen if anyone
+ever needs it (`tactical-design-circulation.md` §10).
+
+**The queue merge went in as decided**, both rules unchanged. What building it added is recorded in
+Circulation's §10 rather than here, and the piece worth reading from this record's perspective is
+that the loosened invariant did not loosen the desk: `PlaceHold` still refuses a borrower any second
+live claim, and only a merge reaches the state the invariant now permits. A guarantee and a refusal
+are different lines, and this record's *"the invariant is restated rather than abandoned"* was one
+sentence short of saying so.
 
 ## Alternatives rejected
 

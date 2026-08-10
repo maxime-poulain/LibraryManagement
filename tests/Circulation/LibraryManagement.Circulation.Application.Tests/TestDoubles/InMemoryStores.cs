@@ -1,3 +1,4 @@
+using LibraryManagement.Catalog.PublishedLanguage;
 using LibraryManagement.Circulation.Domain.Holds;
 using LibraryManagement.Circulation.Domain.Loans;
 using LibraryManagement.Circulation.PublishedLanguage;
@@ -158,6 +159,23 @@ internal sealed class InMemoryHoldQueueRepository : IHoldQueueRepository
             .ToList());
 
     public void Add(HoldQueue queue) => _queues[queue.Id] = queue;
+}
+
+// Stands in for Catalog across the boundary, and a stub this thin is the measure of the edge: an
+// identifier goes out and a yes or no comes back. Everything is cataloged unless a test says a
+// record was merged away — the ordinary case at a desk, and the one that must not need arranging.
+internal sealed class StubEditionCatalog : IEditionCatalog
+{
+    private readonly HashSet<Guid> _mergedAway = [];
+
+    public StubEditionCatalog MergedAway(Guid editionId)
+    {
+        _mergedAway.Add(editionId);
+        return this;
+    }
+
+    public ValueTask<bool> ExistsAsync(Guid editionId, CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(!_mergedAway.Contains(editionId));
 }
 
 // Stands in for Holdings across the boundary: which copies exist, whether each may be lent, and

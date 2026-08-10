@@ -32,11 +32,12 @@ composed at the edge from three modules' published queries, which is the one arr
 strategic design had decided in full and nothing had yet exercised.
 
 Catalog has begun the merge [ADR-0017](docs/adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md)
-decided: two editions join, the absorbed record becomes a pointer, and `EditionsMerged` is announced.
-**Two modules listen** — Holdings refiles every copy of the absorbed record under the survivor, and
-Circulation points every loan *still out* at it, while an ended loan keeps saying what was borrowed.
-That is three of the record's five steps, and the two consumers that hold the identifier in a field.
-What is left is the one that keys an aggregate by it: making two hold queues into one.
+decided, and it is built for editions: two records join, the absorbed one becomes a pointer, and
+`EditionsMerged` is announced. **Two modules listen** — Holdings refiles every copy of the absorbed
+record under the survivor, and Circulation both points every loan *still out* at it and makes the two
+hold queues into one, while an ended loan keeps saying what was borrowed. The queue merge is where it
+was expensive: an invariant had to be restated, and the desk act *cancel my hold* had to start naming
+which hold rather than guessing between two. What is left is the same question asked of **members**.
 
 **Deliberately absent, each for a recorded reason:**
 
@@ -44,7 +45,7 @@ What is left is the one that keys an aggregate by it: making two hold queues int
 |---|---|---|
 | Notifications, Staff access | Generic subdomains, out of the modeled domain | [strategic design §6](docs/strategic-design.md) |
 | MARC import | The Catalog's real feed; the manual commands are the fallback, not the design | [strategic design §6](docs/strategic-design.md) |
-| Merging two hold queues, and merging two members | A merge moves the fields that name an edition — copies and live loans — but `HoldQueue` is *keyed* by one, so two aggregates must become one against an invariant that has to be restated first. The member merge reaches the same wall from the other side | [ADR-0017](docs/adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) |
+| Merging two members | The other half of ADR-0017, reaching the hold queues from the other side: two borrowers' claims combine in the same queues, against the same invariant the edition merge restated. It reuses that machinery rather than needing its own | [ADR-0017](docs/adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) |
 | Merging two authority records | The other half of a merge, and the easy one: no module outside Catalog holds an `AuthorId`, so it never crosses a boundary | [ADR-0017](docs/adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) |
 
 ---
@@ -249,7 +250,7 @@ and that one travels as the 404 it is. [ADR-0016](docs/adr/0016-a-composed-page-
 records the decision and what it rejected;
 [strategic design §10](docs/strategic-design.md) decided the arrangement long before it was built.
 
-The unit filter runs **1152 tests across 20 projects**.
+The unit filter runs **1184 tests across 20 projects**.
 
 Integration tests start SQL Server 2022 through Testcontainers, or target the server named by the
 `LIBRARYMANAGEMENT_TEST_SQLSERVER` environment variable. Each drops its database and applies that

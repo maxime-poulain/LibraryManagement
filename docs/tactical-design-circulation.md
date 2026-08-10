@@ -230,14 +230,27 @@ HoldQueue
 
 **Invariants.**
 
-* A borrower appears at most once in a queue.
+* A borrower holds at most one **queued** claim in a queue.
 * Queued holds are ordered by `PlacedOn`, and positions are contiguous.
 * A trapped copy belongs to exactly one hold.
 * Holds are promoted in placement order — the oldest queued hold is trapped first.
 
 Note that several holds may be `AwaitingPickup` at once: three copies returning on the same morning
-trap for the first three in the queue. What must never happen is the same copy being promised twice,
-or the same borrower occupying two places.
+trap for the first three in the queue. What must never happen is the same copy being promised twice.
+
+**The first invariant used to say *at most once* and was overstated, which the merge revealed.** It
+never had to speak about a claim a copy is already set aside for: when two records turn out to
+describe one edition, a borrower who was queued for one and had a copy waiting on the other keeps
+both — dropping the second would strand a copy on the hold shelf with somebody's name on it (§10).
+Two *different* trapped copies in one queue violate nothing, and the store agrees: the unique index
+on the trapped copy is filtered and spans queues.
+
+**What the aggregate guarantees and what the desk refuses are two different lines**, and the desk's
+is stricter. `PlaceHold` still refuses a borrower who holds *any* live claim in the queue, because a
+person with a copy waiting for them who queues for the same edition again has made a mistake rather
+than a request. Only a merge reaches the looser state, and it reaches it from a fact about the
+catalog rather than from anything anyone asked for. A desk act may refuse more than the invariant
+demands; it may never allow less.
 
 **The queue is the aggregate, not the individual hold.** If each hold were its own root carrying a
 position, "who is first" would be enforced by nothing: two returns on the same edition could promote
@@ -270,6 +283,11 @@ history belongs, in a read model fed by the events.
 
 * Not by someone the registry does not know, or whose membership has lapsed — the same entitlement
   question the checkout opens with.
+* Not on an identifier Catalog no longer acknowledges — a mistyped one, or a record a cataloger
+  merged away. Asked first, because it is the cheapest question and the one that invalidates every
+  other, and it is the same question Holdings asks before accessioning a copy. It matters most for
+  the merged record, which nothing else here can see: that record's copies were refiled under its
+  survivor, so the shelf refusal below goes quiet and the claim would open a queue no return feeds.
 * Not on an edition the borrower already has on loan.
 * Not twice in the same queue.
 * Not while a copy is available on the shelf — that is a checkout, and allowing it would make the
@@ -373,6 +391,13 @@ A borrower changes their mind, at the desk. It is the ordinary exit from a queue
 a hold occupies one of the five places the cap counts, so a borrower who cannot free a place is
 punished for having reserved at all.
 
+**The act names the claim.** It used to name the edition and the borrower, which identified a claim
+for exactly as long as a borrower could appear only once in a queue. A merged queue ends that, and
+the aggregate would have had to pick one of two — which it did, with `FirstOrDefault`, announcing the
+cancellation and returning success while the borrower stayed in the queue. The desk sends a `HoldId`
+now, and the aggregate refuses rather than guesses. The borrower travels with it and is checked: an
+identifier alone would let a desk end somebody else's claim.
+
 1. A queued hold is removed, and the gap behind it closes — the same contiguity the debt rule
    exercises constantly.
 2. A hold awaiting pickup is removed, and its trapped copy is released back to the queue, offered to
@@ -447,13 +472,24 @@ a present-tense fact about an object the library still has on its books, so an i
 stopped naming a record leaves it orphaned. A loan is the account of something that happened. One
 catches up; the other stays true.
 
-**Half of what a merge costs this context**, and the smaller half. `HoldQueue` is keyed by
-`EditionId`, so making two queues into one is the other half, with rules of its own (§10). Until
-that lands the model is halfway converged: a returning copy consults the survivor's queue and not
-the absorbed one's, where before it consulted the absorbed one and not the survivor's. Nothing
-breaks and nothing is fully right, which is the cost of building this in the order
-[ADR-0017](adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) chose — the cheap consumer
-first, so the passage is proved before the expensive one is attempted.
+**And the two queues become one**, which is the other and expensive half. `HoldQueue` is keyed by
+`EditionId`, so nothing here is repointed: every live claim of the absorbed queue moves into the
+survivor's, and the union is resolved by two rules.
+
+1. **A claim awaiting pickup always survives.** A copy is physically on the hold shelf with
+   somebody's name on it, and dropping the claim strands the copy and breaks a promise the library
+   already made in the world.
+2. **Among a borrower's queued claims, only the earliest survives.** Their claim on the work is as
+   old as the first time they asked for it, so nothing is lost — and `HoldCancelledAsDuplicate`
+   names the claim that remains, so a reader can see that rather than infer it.
+
+Order needs no rule at all: a queue is served by placement instant, and the union carries every
+instant with its claim, so two queues interleave by construction.
+
+**Two subscribers and two commands**, not one of each. The loans and the queues are separate units
+of consistency; each reaction saves its own transaction, and a failure in the harder one replays
+both — which the loan sweep survives by being idempotent, as this one is: a replay finds the
+absorbed queue already empty.
 
 ## 6. The scheduled process
 
@@ -540,6 +576,8 @@ moves.
 | `LoanRecovered(…, daysLate)` | Charges, read model |
 | `CopyReturnedDamaged` | Charges, read model |
 | `LoanRepointed(…, previousEditionId, newEditionId)` | read model |
+| `HoldMovedToMergedQueue(…, previousEditionId)` | read model |
+| `HoldCancelledAsDuplicate(…, survivingHoldId)` | read model |
 
 This table once listed `LoanRenewed` beside `RenewalGranted`. They were one fact under two names —
 a renewal succeeded and the due date moved — and a reader had no way to tell which to subscribe to.
@@ -592,7 +630,7 @@ does the work a refusal notice would only ever have done too late.
 | `MemberBalanceChanged(…, previousBalance, currentBalance)` | Charges | Cancel the borrower's holds, when the pair crosses `BlockingDebt` upwards and the live balance confirms it. A movement that crosses nothing, and a return to good standing, both change nothing in the model — the borrower is simply able to act again |
 | `CopyLeftService` | Holdings | Release the promise, if a claim had the copy set aside: the claim returns to the head of its queue and the withdrawal of the pickup is announced (§4) |
 | `CopyRecovered` | Holdings | Settle the written-off loan the copy concerns: the lateness frozen at `DeclaredLostOn` is announced at last, through the same contract an ordinary return uses |
-| `EditionsMerged` | Catalog | Every loan **still out** on the absorbed record answers to the survivor. An ended loan keeps the identifier it was made under (§5) |
+| `EditionsMerged` | Catalog | Two reactions, two commands: every loan **still out** on the absorbed record answers to the survivor, and the absorbed record's queue is merged into the survivor's (§5). An ended loan keeps the identifier it was made under |
 
 The column says *contract* for the reason Charges' own table gives: what crosses is a record of
 primitives in the publisher's published language, and the domain events behind them are types this
@@ -602,6 +640,13 @@ context may not name.
 reports what Circulation did in answer to something Catalog said. It carries both identifiers for
 the reason `CopyRelabelled` carries both labels in Holdings — a projection counting what is out per
 edition has to subtract before it adds.
+
+`HoldMovedToMergedQueue` is the same shape one level stranger: the *aggregate's own key* changed
+under the claim, which no other moment in this context does, so a projection keyed on the pair of
+edition and hold has to retract a row it will otherwise keep forever. Both events are informational
+in §8's terms and neither becomes a message: a borrower whose claim moved lost nothing, and one
+whose two requests turned out to be one keeps the older — telling either of them would report a
+cataloger's work as though it were a change in their standing.
 
 `LoanRecovered` is what closes the arithmetic the write-off left open. Without it, a copy brought
 back on day forty-five cost less than one brought back on day twenty-nine — the replacement charge
@@ -831,12 +876,50 @@ most one queued claim per borrower** — and it was always overstated, having ne
 about claims a copy is already set aside for. `CancelFor` stops guessing in the same change: the
 desk act names which hold it ends.
 
-**The cheap half is built and the expensive half is not**, which is the order that record chose.
-Catalog announces the merge, Holdings refiles its copies, and this context now points every loan
-*still out* at the survivor (§5). The queues are untouched, and the honest description of where that
-leaves the model is *halfway converged*: a returning copy consults the survivor's queue and not the
-absorbed one's, where before the loan moved it consulted the absorbed one and not the survivor's.
-No invariant breaks and nothing is fully right.
+**It is built, both halves.** Catalog announces the merge, Holdings refiles its copies, this
+context points every loan *still out* at the survivor, and the two queues become one under the rules
+above. The silent `FirstOrDefault` is gone with them: the desk act names the claim it ends.
+
+**What building it taught, and none of it was about the union itself.** Combining two ordered
+collections is the easy part — placement instants carry through and the two interleave by
+construction. Three other things were not.
+
+**A rule can be right and overstated at once.** *A borrower appears at most once in a queue* was
+enforced, tested and believed for as long as the only way into a queue was asking at a desk. The
+merge did not break it; it revealed that it had always claimed more than it needed, since it never
+had to speak about a claim a copy is already set aside for. Loosening it to *at most one queued
+claim* cost nothing that was ever true, which is the mark of an invariant that was overstated rather
+than one being weakened.
+
+**A guarantee and a refusal are different lines, and conflating them would have widened the desk.**
+Restating the invariant did not mean `PlaceHold` should permit what it now permits: nobody should
+reach the looser state by asking for it. The refusal stayed strict, the invariant loosened, and the
+distinction is worth keeping in mind wherever an aggregate's rule and a use case's rule wear the
+same words.
+
+**The dangerous edit was the one three lines long.** `CancelForDebt` swept one claim per queue,
+which was correct until a queue could hold two of one borrower's — and its failure would have been
+a person who owes money still holding a place, quietly, against the invariant the whole rule exists
+to buy. A signature change is loud and gets reviewed; a `Find` that is now a `Where` is neither.
+
+**And the store had a rule nobody had asked it about, which the first run found.** A claim's key is
+the pair of edition and hold, so the foreign key to its queue is *identifying* — the child's identity
+contains its parent's — and EF refuses outright to move an owned entity between owners. Not a
+constraint violation to work around: a modeling statement, and a correct one. A hold really is
+identified by the queue it is in.
+
+So a claim moves as a copy: the surviving queue takes a new object carrying every field, the
+identifier included, and the row travels as a deletion and an insertion. Nothing the domain can
+observe changed — the same identifier, the same placement instant, the same copy set aside — and the
+one thing that did is the row, which is the store's business.
+
+**Two lessons, and the second is about where a test belongs.** The refusal comes from the change
+tracker and not from SQL Server, so it is provable with a context that never opens a connection —
+attach two queues, merge, call `DetectChanges`. It took a Docker run to find and needs none to
+guard, and it now lives in the fast suite where a mistake of this kind will be caught in seconds.
+What still needs a real server is the question that follows: whether the deletion and the insertion
+reach it in an order the filtered unique index on the trapped copy tolerates. That ordering is the
+provider's answer rather than the model's, so it is proved rather than argued.
 
 **What building the loan half taught, and it was mostly about scope.** The tempting reading of
 *repoint the loans* is *repoint every loan*, and it is wrong for a reason worth stating once: this
@@ -853,12 +936,14 @@ rule is not a `WHERE` clause the next caller fails to notice.
 
 Open:
 
-* **Nothing here refuses a hold placed on an absorbed edition**, and the queue merge will have to
-  answer it. This context learns that two records *merged*; it never learns that one is *absorbed*,
-  and a fresh claim on the absorbed identifier would build a queue no return feeds, since the loans
-  now name the survivor. Either the desk asks Catalog's port before queuing, or the merged queue is
-  marked and refuses. It is not urgent while the queues are unmerged, and it must not be forgotten
-  when they are.
+* **How a refusal on a merged record could name its survivor.** Placing a hold now asks Catalog
+  whether the identifier still names a record, which closes the hole this section opened one change
+  ago — a claim on a record merged away would have built a queue no return feeds. What the refusal
+  cannot do is say *and here is the record that answers now*: `IEditionCatalog` answers yes or no,
+  and teaching it to answer with the survivor is a change in Catalog rather than here. The desk gets
+  the same refusal a typo gets and searches again, which is tolerable because the screen the
+  identifier came from is stale anyway — and worth revisiting the day a librarian complains, which
+  is the honest trigger.
 
 * Does loan history stay in `Loan` forever, or is it archived? It is the only thing in the system
   that grows without bound. The borrower's file now has a stake in the answer: it excludes returned

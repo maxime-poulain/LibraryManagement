@@ -1,6 +1,7 @@
 using LibraryManagement.Circulation.Domain;
 using LibraryManagement.Circulation.Domain.Holds;
 using LibraryManagement.Circulation.Domain.Loans;
+using LibraryManagement.Catalog.PublishedLanguage;
 using LibraryManagement.Circulation.PublishedLanguage;
 using LibraryManagement.Holdings.PublishedLanguage;
 using LibraryManagement.Members.PublishedLanguage;
@@ -14,6 +15,7 @@ namespace LibraryManagement.Circulation.Application.Holds.PlaceHold;
 /// </summary>
 /// <param name="loans">This context's loans — for the cap, and for the copies already out.</param>
 /// <param name="queues">The queue the claim joins, opened by its first claim if need be.</param>
+/// <param name="editions">Catalog's published language: does this identifier still name a record.</param>
 /// <param name="copies">Holdings' published language: which copies of the edition could be lent.</param>
 /// <param name="members">Members' published language: is this person entitled to borrow.</param>
 /// <param name="balances">The port Circulation declared for Charges.</param>
@@ -29,6 +31,7 @@ namespace LibraryManagement.Circulation.Application.Holds.PlaceHold;
 public sealed class PlaceHoldCommandHandler(
     ILoanRepository loans,
     IHoldQueueRepository queues,
+    IEditionCatalog editions,
     ICopyLendability copies,
     IMemberEntitlement members,
     IMemberBalance balances,
@@ -44,6 +47,19 @@ public sealed class PlaceHoldCommandHandler(
 
         var borrowerId = BorrowerId.Create(command.BorrowerId);
         var editionId = EditionId.Create(command.EditionId);
+
+        // Asked first, because it is the cheapest question and the one that invalidates every
+        // other. It is also the answer to a mistake nothing else here can see: Catalog stops
+        // acknowledging an identifier it has merged away, so a claim placed on a stale screen would
+        // otherwise open a queue no return ever feeds — the copies of that record were refiled
+        // under its survivor, so even the shelf check below goes quiet.
+        if (!await editions.ExistsAsync(command.EditionId, cancellationToken).ConfigureAwait(false))
+        {
+            return Result.Failure(
+                CirculationErrorCodes.NoSuchEdition,
+                $"No edition answers to '{editionId}' — a mistyped identifier, or a record a "
+                + "cataloger has merged away. Search again and claim the record that answers.");
+        }
 
         var entitlement = await members.OfAsync(command.BorrowerId, cancellationToken)
             .ConfigureAwait(false);

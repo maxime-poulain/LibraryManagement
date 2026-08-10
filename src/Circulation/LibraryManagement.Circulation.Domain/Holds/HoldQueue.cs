@@ -79,9 +79,20 @@ public sealed class HoldQueue : AggregateRoot<EditionId>
     /// <returns>Success, or the reason the claim was refused.</returns>
     /// <exception cref="ArgumentNullException">Thrown when a reference argument is null.</exception>
     /// <remarks>
-    /// This aggregate refuses the one condition it can see: a borrower appears at most once in a
-    /// queue. The other refusals of the design — a copy on the shelf, an edition already borrowed,
+    /// <para>
+    /// This aggregate refuses the one condition it can see: a borrower already holding a live claim
+    /// here. The other refusals of the design — a copy on the shelf, an edition already borrowed,
     /// a debt, the cap — span other aggregates and other contexts, and the handler asks them.
+    /// </para>
+    /// <para>
+    /// <strong>This refusal is stricter than the invariant, deliberately.</strong> What the queue
+    /// guarantees is <em>at most one queued claim per borrower</em>; a merge may legitimately leave
+    /// somebody with a queued claim and a copy already set aside for them (§10 of the tactical
+    /// design, and <see cref="IHoldQueueMergeDomainService"/>). Nobody should reach that state by
+    /// asking for it at a desk — a borrower with a copy waiting on the hold shelf who queues for the
+    /// same edition again has made a mistake, not a request. A desk act may refuse more than the
+    /// invariant demands; it may never allow less.
+    /// </para>
     /// </remarks>
     public Result PlaceHold(HoldId holdId, BorrowerId borrowerId, DateTimeOffset placedOn)
     {
@@ -92,7 +103,7 @@ public sealed class HoldQueue : AggregateRoot<EditionId>
         {
             return Result.Failure(
                 CirculationErrorCodes.HoldAlreadyPlaced,
-                "This borrower already waits in this queue; a borrower appears at most once.");
+                "This borrower already has a live claim in this queue; one place each.");
         }
 
         _holds.Add(Hold.PlacedBy(holdId, borrowerId, placedOn));
@@ -349,14 +360,21 @@ public sealed class HoldQueue : AggregateRoot<EditionId>
     /// <summary>
     /// Ends a borrower's claim because they owe money.
     /// </summary>
-    /// <param name="borrowerId">Whose claim to end.</param>
+    /// <param name="borrowerId">Whose claims to end.</param>
     /// <returns>
-    /// The cancellation when this queue held a claim of theirs, or <see langword="null"/> when it
-    /// held none. Absence is not a failure here: the caller sweeps every queue a borrower appears
-    /// in and cannot know in advance which of them still holds a live claim.
+    /// One cancellation per claim of theirs this queue held, empty when it held none. Absence is
+    /// not a failure here: the caller sweeps every queue a borrower appears in and cannot know in
+    /// advance which of them still holds a live claim.
     /// </returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="borrowerId"/> is null.</exception>
     /// <remarks>
+    /// <para>
+    /// <strong>Every claim of theirs, and the plural is load-bearing.</strong> A merged queue may
+    /// hold two claims of one borrower — one queued and one awaiting pickup — so ending the first
+    /// found would leave the other behind, and with it a person who owes money still occupying a
+    /// place. That invariant is exactly what this rule buys: <em>nobody in a hold queue owes
+    /// money</em>, checkable at any instant.
+    /// </para>
     /// <para>
     /// The same removal as <see cref="CancelFor"/> and a different announcement, which is the whole
     /// difference: one confirms a choice, the other reports a consequence nobody chose. Merging them
@@ -369,22 +387,24 @@ public sealed class HoldQueue : AggregateRoot<EditionId>
     /// at any instant rather than only when someone reaches the front.
     /// </para>
     /// </remarks>
-    public Cancellation? CancelForDebt(BorrowerId borrowerId)
+    public IReadOnlyList<Cancellation> CancelForDebt(BorrowerId borrowerId)
     {
         ArgumentNullException.ThrowIfNull(borrowerId);
 
-        var hold = _holds.Find(held => held.BorrowerId == borrowerId);
+        var theirs = _holds.Where(held => held.BorrowerId == borrowerId).ToList();
 
-        if (hold is null)
+        var cancellations = new List<Cancellation>(theirs.Count);
+
+        foreach (var hold in theirs)
         {
-            return null;
+            _holds.Remove(hold);
+
+            AddDomainEvent(new HoldCancelledForDebt(Id, hold.Id, borrowerId));
+
+            cancellations.Add(new Cancellation(hold.TrappedCopyId));
         }
 
-        _holds.Remove(hold);
-
-        AddDomainEvent(new HoldCancelledForDebt(Id, hold.Id, borrowerId));
-
-        return new Cancellation(hold.TrappedCopyId);
+        return cancellations;
     }
 
     /// <summary>
@@ -392,25 +412,46 @@ public sealed class HoldQueue : AggregateRoot<EditionId>
     /// and it must exist: a hold occupies one of the five places the cap counts, and a borrower
     /// who cannot free a place is punished for having reserved at all.
     /// </summary>
-    /// <param name="borrowerId">Whose claim to end.</param>
+    /// <param name="holdId">Which claim to end.</param>
+    /// <param name="borrowerId">Whose claim it must be.</param>
     /// <returns>The cancellation, or the reason there was nothing to cancel.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="borrowerId"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when a reference argument is null.</exception>
     /// <remarks>
+    /// <para>
+    /// <strong>The claim is named, and the aggregate refuses rather than guesses.</strong> This once
+    /// took the borrower alone and found their claim with a first match, which was correct exactly
+    /// as long as a borrower could appear only once in a queue. A merge ends that: given two claims
+    /// it would remove an arbitrary one, announce the cancellation and return success — the desk
+    /// tells the borrower it is done and the borrower is still in the queue, with nothing thrown and
+    /// nothing logged. The identifier crossing the desk is the price of that silence being
+    /// impossible.
+    /// </para>
+    /// <para>
+    /// The borrower is still required, and checked. It is not redundant: a hold identifier alone
+    /// would let a desk end somebody else's claim by naming it, and the desk act is <em>cancel my
+    /// hold</em>.
+    /// </para>
+    /// <para>
     /// The gap behind a removed claim closes by itself — order is the placement instant, and
     /// positions are wherever the live claims stand. No penalty attaches, for the reasons the
     /// design declines to punish the no-show.
+    /// </para>
     /// </remarks>
-    public Result<Cancellation> CancelFor(BorrowerId borrowerId)
+    public Result<Cancellation> CancelFor(HoldId holdId, BorrowerId borrowerId)
     {
+        ArgumentNullException.ThrowIfNull(holdId);
         ArgumentNullException.ThrowIfNull(borrowerId);
 
-        var hold = _holds.FirstOrDefault(hold => hold.BorrowerId == borrowerId);
+        var hold = _holds.FirstOrDefault(held => held.Id == holdId);
 
-        if (hold is null)
+        if (hold is null || hold.BorrowerId != borrowerId)
         {
+            // One refusal for both, deliberately: naming a claim that is not yours and naming one
+            // that does not exist must be indistinguishable from outside, or the refusal becomes a
+            // way to ask whether a given hold identifier belongs to somebody.
             return Result<Cancellation>.Failure(
                 CirculationErrorCodes.NoSuchHold,
-                "No hold of this borrower waits on this edition.");
+                "No hold of this borrower waits on this edition under that identifier.");
         }
 
         _holds.Remove(hold);
@@ -419,4 +460,76 @@ public sealed class HoldQueue : AggregateRoot<EditionId>
 
         return Result<Cancellation>.Success(new Cancellation(hold.TrappedCopyId));
     }
+
+    /// <summary>
+    /// Takes every live claim of another queue into this one.
+    /// </summary>
+    /// <param name="absorbed">The queue whose edition stopped being a record of its own.</param>
+    /// <remarks>
+    /// <para>
+    /// <strong>Deliberately unguarded, and deliberately <c>internal</c>.</strong> Which claims may
+    /// survive a union is decided by <see cref="IHoldQueueMergeDomainService"/>, which holds the
+    /// rules together — a merge is one question, and rules that answer one question drift apart when
+    /// they are kept in two places. This method is what remains once the decision is made.
+    /// </para>
+    /// <para>
+    /// Order needs no rule and gets none: a queue is served by placement instant, and the union
+    /// carries every instant with its claim. Two queues interleave correctly by construction, which
+    /// is the one part of a merge that costs nothing.
+    /// </para>
+    /// </remarks>
+    internal void AbsorbHoldsFrom(HoldQueue absorbed)
+    {
+        ArgumentNullException.ThrowIfNull(absorbed);
+
+        foreach (var hold in absorbed.Surrender())
+        {
+            _holds.Add(hold);
+
+            AddDomainEvent(new HoldMovedToMergedQueue(Id, hold.Id, hold.BorrowerId, absorbed.Id));
+        }
+    }
+
+    /// <summary>
+    /// Ends a claim the union made redundant, and says which of the borrower's claims remains.
+    /// </summary>
+    /// <param name="hold">The claim to end.</param>
+    /// <param name="survivingHoldId">Their claim that stays — the older of the two.</param>
+    /// <remarks>
+    /// <c>internal</c> for the reason <see cref="AbsorbHoldsFrom"/> is: choosing which of two claims
+    /// is redundant is the service's judgement, and this is the removal that follows it.
+    /// </remarks>
+    internal void CancelAsDuplicate(Hold hold, HoldId survivingHoldId)
+    {
+        ArgumentNullException.ThrowIfNull(hold);
+        ArgumentNullException.ThrowIfNull(survivingHoldId);
+
+        _holds.Remove(hold);
+
+        AddDomainEvent(
+            new HoldCancelledAsDuplicate(Id, hold.Id, hold.BorrowerId, survivingHoldId));
+    }
+
+    /// <summary>Empties this queue, handing copies of its live claims to the caller.</summary>
+    /// <remarks>
+    /// <para>
+    /// No event: the claims are not ending, they are moving, and the queue they arrive in announces
+    /// that. An announcement here would report the same fact twice from two aggregates, and a
+    /// consumer would have to work out that they are one.
+    /// </para>
+    /// <para>
+    /// Copies rather than the objects themselves, because a hold is owned by its queue and an owned
+    /// entity cannot change owners — see <see cref="Hold.SameClaimInAnotherQueue"/>. Every field
+    /// travels, the identifier included, so it is the same claim by every measure the domain has.
+    /// </para>
+    /// </remarks>
+    private List<Hold> Surrender()
+    {
+        var surrendered = _holds.ConvertAll(hold => hold.SameClaimInAnotherQueue());
+
+        _holds.Clear();
+
+        return surrendered;
+    }
+
 }

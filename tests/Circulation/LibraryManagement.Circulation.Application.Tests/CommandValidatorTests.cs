@@ -11,6 +11,10 @@ namespace LibraryManagement.Circulation.Application.Tests;
 /// Five commands whose whole shape is identifiers, tested together rather than in five files
 /// saying the same three things — the arrangement the Holdings identifier-only commands settled.
 /// Everything else a desk moment refuses is state, not shape, and the handler tests own it.
+///
+/// Cancelling a hold names three of them since a merged queue may hold two claims of one borrower:
+/// the pair of edition and borrower stopped identifying a claim the day two queues could become
+/// one.
 /// </summary>
 public sealed class CommandValidatorTests
 {
@@ -34,7 +38,7 @@ public sealed class CommandValidatorTests
         nameof(PlaceHoldCommand)
             => new PlaceHoldCommandValidator().Validate(new PlaceHoldCommand(Id, Id, Id)),
         nameof(CancelHoldCommand)
-            => new CancelHoldCommandValidator().Validate(new CancelHoldCommand(Id, Id)),
+            => new CancelHoldCommandValidator().Validate(new CancelHoldCommand(Id, Id, Id)),
         _ => throw new ArgumentOutOfRangeException(nameof(command), command, null),
     };
 
@@ -52,14 +56,13 @@ public sealed class CommandValidatorTests
                 .Validate(new PlaceHoldCommand(Guid.Empty, Guid.Empty, Guid.Empty)),
         nameof(CancelHoldCommand)
             => new CancelHoldCommandValidator()
-                .Validate(new CancelHoldCommand(Guid.Empty, Guid.Empty)),
+                .Validate(new CancelHoldCommand(Guid.Empty, Guid.Empty, Guid.Empty)),
         _ => throw new ArgumentOutOfRangeException(nameof(command), command, null),
     };
 
     private static int IdentifiersOf(string command) => command switch
     {
-        nameof(CheckOutCopyCommand) or nameof(PlaceHoldCommand) => 3,
-        nameof(CancelHoldCommand) => 2,
+        nameof(CheckOutCopyCommand) or nameof(PlaceHoldCommand) or nameof(CancelHoldCommand) => 3,
         _ => 1,
     };
 
