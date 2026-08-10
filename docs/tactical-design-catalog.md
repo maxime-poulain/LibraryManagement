@@ -191,14 +191,18 @@ in passing — an ordering the outbox preserves and no consumer should have to r
 
 Open, each deferred for a stated reason rather than forgotten:
 
-* **Merging two records is the gap every client has already named.** Catalog has no merge — of two
-  editions, or of two authority records for one person — and the day it acquires one, every
-  downstream identifier for the absorbed record points at nothing: Holdings §10 records the
-  orphaned `EditionId`, Members §10 the same shape for duplicate members. Whatever merge this
-  context one day publishes must be an **event its downstream consumes** — the absorbed
-  identifier, the surviving one — never an update, because no database constraint crosses a schema
-  and nothing else can carry the news. The import (§9) is what will force it: matching incoming
-  records against existing ones is where duplicates surface.
+* **Merging two records is the gap every client has already named — and it is now decided on paper,
+  in [ADR-0017](adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md).** Catalog has no
+  merge — of two editions, or of two authority records for one person — and the day it acquires
+  one, every downstream identifier for the absorbed record points at nothing. The record settles
+  what crosses (`EditionsMerged`, carrying the absorbed identifier and the surviving one, and
+  nothing else) and what each consumer owes. Two things it establishes are worth having here: the
+  **authority** merge does not cross at all, since no module outside this context holds an
+  `AuthorId`, so it is an internal change to `Work.AuthorIds` and the access-point index; and the
+  expensive consumer is **Circulation**, not the two this document used to name — `HoldQueue` is
+  keyed by `EditionId`, so a merge makes two aggregates into one. The import (§9) is what will
+  force the whole thing: matching incoming records against existing ones is where duplicates
+  surface.
 * **Whether a hold may be placed on a work** — any edition will do — as well as on an edition.
   Members ask for both; the queue rules differ; the strategic design keeps the question.
 * **`EditionStatement`**, ISBD area 2, when the edition thickens (§9): a fact carried by an

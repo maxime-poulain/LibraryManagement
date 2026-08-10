@@ -10,7 +10,7 @@ each `tactical-design-*.md` decides one context's aggregates, `outbox.md` and `m
 two technical mechanisms. They are long because the argument is the point.
 
 An ADR is not a summary of one of those. It is the **decision record**: what was decided, when, what
-it costs, and what was rejected — in a form that a reader scanning sixteen titles can navigate. Where
+it costs, and what was rejected — in a form that a reader scanning seventeen titles can navigate. Where
 a decision is argued at length elsewhere, the record says so and points there rather than restating
 it. When a record and its authority disagree, the authority wins and the record is the bug.
 
@@ -50,3 +50,4 @@ written when the decision is taken.
 | [0014](0014-opening-calendar-in-circulation.md) | The opening calendar is Circulation's; a closed day is never billed | Accepted |
 | [0015](0015-the-first-host.md) | The first host: one process, a header for the employee, the schedule and the provider in one place | Accepted |
 | [0016](0016-a-composed-page-degrades-in-parts.md) | A composed page degrades in parts, and names what is missing | Accepted |
+| [0017](0017-a-merge-is-an-event-and-circulation-pays-for-it.md) | A merge is an event, and Circulation is what it costs | Accepted |

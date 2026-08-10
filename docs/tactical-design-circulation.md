@@ -772,6 +772,31 @@ does not translate. Pairing the queue with its holds first, then filtering, prod
 borrower index was built for. Query shape is not provable by the compiler, and this is the argument
 for the integration tests over each published query.
 
+**A merged edition costs this context more than any other, and nothing said so until now.** Catalog
+has no merge operation yet, and the strategic design's list of contexts waiting on that event named
+Holdings and Members. It did not name this one, which is the expensive case: Holdings holds an
+`EditionId` in a column and Charges holds a `MemberId` as an account key, but **`HoldQueue` is an
+aggregate keyed by `EditionId`**. A merge here does not repoint a field — two queues must become
+one.
+
+That collides with the one condition this aggregate refuses on its own: a borrower appears at most
+once in a queue (§5). Two queues combined can hold the same borrower twice, so a merge performed
+naively manufactures a state `PlaceHold` would have refused. And the damage is silent rather than
+loud: `CancelFor` finds a claim with `FirstOrDefault`, so given two it removes an arbitrary one,
+announces `HoldCancelled` for it and returns success — the desk tells a borrower their hold is
+cancelled while they are still queued.
+
+Merging two *members* reaches the same wall from the other side, since it combines two
+`BorrowerId`s' claims into the same queues.
+
+[ADR-0017](adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) decides it: a claim already
+awaiting pickup always survives, because a copy is physically on the shelf under somebody's name;
+among a borrower's *queued* claims only the earliest survives, since their claim on the work is as
+old as the first time they asked. The invariant is therefore restated rather than dropped — **at
+most one queued claim per borrower** — and it was always overstated, having never needed to speak
+about claims a copy is already set aside for. `CancelFor` stops guessing in the same change: the
+desk act names which hold it ends.
+
 Open:
 
 * Does loan history stay in `Loan` forever, or is it archived? It is the only thing in the system

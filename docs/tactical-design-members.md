@@ -367,6 +367,12 @@ Open, and each deferred for a stated reason rather than forgotten:
   Circulation's history — the exact shape of the merged-edition problem Holdings §10 records
   against Catalog — so whatever merge this context one day publishes has to be an event its
   downstream consumes, not an update.
+  [ADR-0017](adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) settles the shape:
+  this context publishes its own `MembersMerged` rather than sharing Catalog's contract, since the
+  two are announced by different modules and mean different things. It also records the part this
+  document had not seen — combining two borrowers' claims runs into the same Circulation invariant
+  a merged edition does, from the other side, so the member merge inherits that work rather than
+  being the small one it looks like.
 * **Households.** One adult, three children, one visit, one payment someday. Today that is four
   members and a guardian repeated; a `Household` grouping earns its place the day the library
   wants family cards or a single renewal for all four.

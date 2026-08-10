@@ -31,14 +31,14 @@ is a bug: fix the pair in the same change.
 | Document | Decides |
 |---|---|
 | `docs/strategic-design.md` | Boundaries, subdomains, context map. §4 is the **glossary — the binding ubiquitous language**. §10 is the codebase rules. |
-| `docs/tactical-design-catalog.md` | Catalog's aggregates and moments: the two ways a name changes, the thin edition, the access-point index, and the merge question its clients have already named. |
-| `docs/tactical-design-circulation.md` | Circulation's aggregates, invariants and moments. Desk moments, the daily process and both directions of the Charges cycle implemented; §10 records what building each taught. |
+| `docs/tactical-design-catalog.md` | Catalog's aggregates and moments: the two ways a name changes, the thin edition, the access-point index, and the merge its clients had named — decided on paper in ADR-0017, still unbuilt. |
+| `docs/tactical-design-circulation.md` | Circulation's aggregates, invariants and moments. Desk moments, the daily process and both directions of the Charges cycle implemented; §10 records what building each taught, and why a merged edition costs this context more than any other. |
 | `docs/tactical-design-holdings.md` | Holdings' aggregate and moments. Implemented; §10 records what building it taught. |
 | `docs/tactical-design-members.md` | Members' aggregate and moments. Implemented; §10 records what building it taught. |
 | `docs/tactical-design-charges.md` | Charges' aggregate, invariants and moments. Implemented; §10 records what building it taught, including the one place the mapping had to depart from the rest of the solution. |
 | `docs/outbox.md` | Domain events: same-save storage, drain, failure semantics, the cross-module passage (§9), and what renames break. |
 | `docs/migrations.md` | One migrations project per module, the history table per schema that makes five contexts share one database, and how to add a migration. |
-| `docs/adr/` | Sixteen decision records — what was decided, when, what it costs, what was rejected. Navigation, not argument: where a decision is argued at length above, the record points there rather than restating it. Start at `docs/adr/README.md`. |
+| `docs/adr/` | Seventeen decision records — what was decided, when, what it costs, what was rejected. Navigation, not argument: where a decision is argued at length above, the record points there rather than restating it. Start at `docs/adr/README.md`. |
 | `README.md` | The public face: state, context map, build and test, the rules, and the index to all of the above. It summarizes and never decides — when it disagrees with a document here, the document wins. |
 
 ## Build, test and run
