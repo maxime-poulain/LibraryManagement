@@ -555,6 +555,18 @@ an identifier in hand composes published queries at the edge; a criterion that c
 search, statistics — goes through the views above. And the day the modules become services, the
 composition point is the backend-for-frontend, already standing where it belongs.
 
+**Built, and one thing this section left open had to be closed.** The member's file exists: Members,
+Circulation and Charges each publish a query, and the host composes `GET /members/{id}/file` from
+the three. What this section decided held without amendment — the composer references the
+application contracts alone, the modules stayed unaware of each other, and `Standing` is displayed
+exactly as Circulation judged it. What it deliberately did not decide is what the page *does* with a
+refusal, having only said that a `Result` lets it choose. It now chooses:
+[ADR-0016](adr/0016-a-composed-page-degrades-in-parts.md) — the file answers with the parts it has
+and names the parts it does not, and only Members' refusal empties it, because a file is a file *of*
+somebody. The cost this section predicted is real and paid: judging the standing needs the balance,
+so the amount is read twice per page rather than derived once at the edge, which is what keeps the
+rule inside the module that owns it.
+
 ## 11. Open questions
 
 * Where a translation's contributors live, and the rest of the edition's eventual thickness.

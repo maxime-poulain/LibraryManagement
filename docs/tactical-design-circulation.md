@@ -742,7 +742,38 @@ queue needed the port to answer about the future, not the present: *lendable now
 in repair as no, and a queue waiting on a rebinding waits on something real, so the port grew
 *expected to serve* rather than this context growing an opinion about repair.
 
+**What publishing the borrower's file added.** `GetBorrowerFileQuery` answers the circulation half
+of the desk's member file — the loans, the claims and the standing — and it is one question rather
+than two on purpose: loans and holds are in the same context precisely because a copy shelved that
+was promised must be visible at the desk in the same breath as the return that freed it, and two
+queries would let a page show one without the other. Three things it settled.
+
+* **`Standing` is exported, and stays a single judgement.** The read side lives in this module's
+  infrastructure, a second assembly, so the file's handler could not reach the internal helper. The
+  alternative was two lines in the handler — fetch the amount, apply `DebtForbids` — and the reason
+  that is worse than a widened surface is the direction the copies would drift: the day a debt stops
+  being the only thing that blocks a borrower, the desk paths and the screen would disagree about
+  the same person, and only one of them would be tested. `Standing.IsBlockedAsync` is public;
+  judging a whole queue stays internal, because that is desk machinery and not something a file
+  displays.
+* **The balance is read twice while the page is built** — here to judge, and by Charges to display.
+  Deliberate, and the strategic design's §10 is why: the composer holds the amount already, and
+  deriving the verdict there would put a rule where no module's invariants cover it. Two reads of a
+  handful of rows is what the glossary's seam costs.
+* **A returned loan stays off the file.** It answers what a borrower must still answer for — on
+  loan, or declared lost and unresolved. The whole history is the open question below, and putting
+  it behind a desk screen would have answered that question by accident, in the direction hardest
+  to undo.
+
+One mechanical lesson, recorded because it cost a rewrite and nothing would have caught it before
+production: a borrower's claims live in as many queues as there are editions, and the natural way
+to read them — filtering the holds *inside* the collection selector — compiles, reads better, and
+does not translate. Pairing the queue with its holds first, then filtering, produces the join the
+borrower index was built for. Query shape is not provable by the compiler, and this is the argument
+for the integration tests over each published query.
+
 Open:
 
 * Does loan history stay in `Loan` forever, or is it archived? It is the only thing in the system
-  that grows without bound.
+  that grows without bound. The borrower's file now has a stake in the answer: it excludes returned
+  loans, so the day history is asked for at the desk it is a second question and not a wider one.

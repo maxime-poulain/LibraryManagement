@@ -1,8 +1,6 @@
 using LibraryManagement.Charges.Domain.Accounts;
 using LibraryManagement.Charges.Infrastructure.Persistence;
-using LibraryManagement.Charges.Infrastructure.Persistence.Configurations;
 using LibraryManagement.Circulation.PublishedLanguage;
-using Microsoft.EntityFrameworkCore;
 
 namespace LibraryManagement.Charges.Infrastructure.PublishedLanguage;
 
@@ -24,30 +22,17 @@ namespace LibraryManagement.Charges.Infrastructure.PublishedLanguage;
 /// context, and the vocabulary would have followed it.
 /// </para>
 /// <para>
-/// <strong>No aggregate is materialized.</strong> This sits on the most frequent write path in the
-/// system — every checkout and every hold — so it reads the charge rows directly. The netting is
-/// done here rather than by the database because the amounts are value objects and a converted
-/// property does not compose with a SQL aggregate; what comes back is two decimals per outstanding
-/// charge, and what one person owes is a handful of rows by construction, since a charge that ends
-/// leaves the account.
+/// <strong>No aggregate is materialized</strong>, and the read itself lives in
+/// <see cref="OutstandingCharges"/> rather than here: this module's own query answers the same
+/// figure for a different audience, and one netting spelled twice is the mistake the migrations
+/// projects already taught this repository to see coming.
 /// </para>
 /// </remarks>
 public sealed class MemberBalance(ChargesDbContext context) : IMemberBalance
 {
     /// <inheritdoc/>
-    public async ValueTask<decimal> OwedByAsync(
+    public ValueTask<decimal> OwedByAsync(
         Guid memberId,
         CancellationToken cancellationToken = default)
-    {
-        var account = MemberId.Create(memberId);
-
-        var outstanding = await context.Charges
-            .Where(charge =>
-                EF.Property<MemberId>(charge, MemberAccountConfiguration.AccountForeignKey) == account)
-            .Select(charge => new { charge.Amount, charge.Paid })
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        return outstanding.Sum(charge => charge.Amount.Amount - charge.Paid.Amount);
-    }
+        => OutstandingCharges.OwedByAsync(context, MemberId.Create(memberId), cancellationToken);
 }
