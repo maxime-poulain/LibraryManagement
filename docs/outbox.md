@@ -244,6 +244,12 @@ made, arriving where it was always going to bite, and **the subscriber owes idem
 kind: `Copy.DeclareLost` answers success for a copy already lost, which the aggregate decided for
 its own reasons long before this mechanism existed.
 
+There is a third kind, cheaper than either, and it is worth looking for before reaching for a table:
+**a command whose question empties**. Holdings reacts to a merge in Catalog by sweeping every copy
+filed under the absorbed identifier — which, after the first delivery, is on no copy at all. A replay
+finds nothing, writes nothing and raises nothing, and no mark is kept anywhere. Where the effect can
+be expressed as *make this set empty* rather than *apply this change*, redelivery costs a query.
+
 ### Two mechanisms that were refused
 
 **An inbox per consumer** — a relay copying the contract into a table in the consumer's schema, in

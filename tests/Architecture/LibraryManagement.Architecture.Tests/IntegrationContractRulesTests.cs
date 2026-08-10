@@ -33,6 +33,11 @@ public sealed class IntegrationContractRulesTests
             .ToList();
 
         subscribers.ShouldContain(typeof(DeclareCopyLostOnCopyReportedLost).FullName);
+
+        // A second module announcing to the same consumer, pinned separately: the two edges are
+        // Circulation's and Catalog's, and a scan that lost one of them would still pass on the
+        // other.
+        subscribers.ShouldContain(typeof(RepointCopiesOnEditionsMerged).FullName);
     }
 
     // --- The rule itself, exercised against deliberate violations --------------------------------

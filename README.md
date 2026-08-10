@@ -31,13 +31,19 @@ And it **reads**: the member's file — who the person is, what they have out, w
 composed at the edge from three modules' published queries, which is the one arrangement the
 strategic design had decided in full and nothing had yet exercised.
 
+Catalog has begun the merge [ADR-0017](docs/adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md)
+decided: two editions join, the absorbed record becomes a pointer, and `EditionsMerged` is announced.
+**Holdings listens** and refiles every copy of the absorbed record under the survivor — the second of
+the record's five steps, and the one that proves the passage. Circulation and Members are the
+remaining consumers, and Circulation is where it gets expensive.
+
 **Deliberately absent, each for a recorded reason:**
 
 | Missing | Why | Record |
 |---|---|---|
 | Notifications, Staff access | Generic subdomains, out of the modeled domain | [strategic design §6](docs/strategic-design.md) |
 | MARC import | The Catalog's real feed; the manual commands are the fallback, not the design | [strategic design §6](docs/strategic-design.md) |
-| Consuming a merge | Catalog now merges two editions and announces it; **no module subscribes yet**, so the fact is stated and nobody acts on it. The event had to exist before a consumer could be written against it, and Circulation — which keys an aggregate by the merged identifier — is the expensive one | [ADR-0017](docs/adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) |
+| Consuming a merge, in Circulation and Members | Catalog merges two editions and Holdings refiles its copies; the remaining consumers are not built. Circulation is the expensive one — it keys an aggregate by the merged identifier, so two queues have to become one | [ADR-0017](docs/adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) |
 | Merging two authority records | The other half of a merge, and the easy one: no module outside Catalog holds an `AuthorId`, so it never crosses a boundary | [ADR-0017](docs/adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) |
 
 ---
@@ -82,6 +88,7 @@ flowchart TD
 
     SUP -->|"Conformist + ACL<br/>MARC records in"| CAT
     CAT -->|"Published Language<br/>EditionId"| HLD
+    CAT -->|"event<br/>two records became one"| HLD
     HLD -->|"Customer / Supplier<br/>may this copy be lent?"| CIR
     MEM -->|"Customer / Supplier + ACL<br/>Member → Borrower"| CIR
     CIR -->|"events<br/>returned, given up on"| CHG
@@ -160,6 +167,12 @@ LoanDeclaredLost  ──translator──▶  CopyReportedLost (copy)            
                   └─translator──▶  LoanEndedUnreturned (copy + borrower) ──▶  Charges
 ```
 
+One with a single audience still gets its own contract, for the same reason:
+
+```
+EditionsMerged    ──translator──▶  EditionsMerged (two edition ids)     ──▶  Holdings
+```
+
 **And a subscriber does not write — it dispatches a command of its own module**
 ([ADR-0008](docs/adr/0008-subscriber-dispatches-its-own-command.md)). The drain's save is on the
 *publisher's* context, so a subscriber touching its own aggregates would leave them tracked in a
@@ -234,7 +247,7 @@ and that one travels as the 404 it is. [ADR-0016](docs/adr/0016-a-composed-page-
 records the decision and what it rejected;
 [strategic design §10](docs/strategic-design.md) decided the arrangement long before it was built.
 
-The unit filter runs **1099 tests across 20 projects**.
+The unit filter runs **1136 tests across 20 projects**.
 
 Integration tests start SQL Server 2022 through Testcontainers, or target the server named by the
 `LIBRARYMANAGEMENT_TEST_SQLSERVER` environment variable. Each drops its database and applies that
@@ -334,7 +347,7 @@ The design documents are the source of truth. Read the relevant one before model
 | [`strategic-design.md`](docs/strategic-design.md) | Boundaries, subdomains, context map. §4 is the **binding glossary**; §10 is the codebase rules. |
 | [`tactical-design-catalog.md`](docs/tactical-design-catalog.md) | Catalog's aggregates, the two ways a name changes, and the merge question every client has named. |
 | [`tactical-design-circulation.md`](docs/tactical-design-circulation.md) | Circulation's aggregates, invariants, desk moments and daily process. |
-| [`tactical-design-holdings.md`](docs/tactical-design-holdings.md) | Holdings' aggregate and moments. |
+| [`tactical-design-holdings.md`](docs/tactical-design-holdings.md) | Holdings' aggregate and moments, including what it owes a merge in Catalog. |
 | [`tactical-design-members.md`](docs/tactical-design-members.md) | Members' aggregate and moments. |
 | [`tactical-design-charges.md`](docs/tactical-design-charges.md) | Charges' aggregate, invariants and moments. |
 | [`outbox.md`](docs/outbox.md) | Domain events: same-save storage, drain, failure semantics, the cross-module passage (§9). |

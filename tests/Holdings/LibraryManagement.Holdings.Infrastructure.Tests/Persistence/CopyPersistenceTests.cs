@@ -23,10 +23,10 @@ public sealed class CopyPersistenceTests(SqlServerFixture sqlServer)
     // they would.
     private static string Unique() => Guid.NewGuid().ToString("N")[..12];
 
-    private static Copy ACopy(string barcode, bool referenceOnly = false)
+    private static Copy ACopy(string barcode, EditionId? editionId = null, bool referenceOnly = false)
         => Copy.Acquire(
             CopyId.Generate(),
-            EditionId.Generate(),
+            editionId ?? EditionId.Generate(),
             ABarcode(barcode),
             AShelfmark(),
             CopyCondition.Worn,
@@ -123,6 +123,62 @@ public sealed class CopyPersistenceTests(SqlServerFixture sqlServer)
         await using var reading = sqlServer.NewContext();
         var held = await reading.Set<Copy>().CountAsync(copy => copy.EditionId == editionId, Token);
         held.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task OfEdition_CollectsEveryCopyOfTheRecord_WhateverStateEachIsIn()
+    {
+        // The breadth is the rule, not an oversight. The one caller is a merge in Catalog, and a
+        // withdrawn or lost copy still records which edition it was a copy of — filtering here would
+        // leave exactly those rows pointing at a record that stopped answering.
+        var editionId = EditionId.Generate();
+        var inService = ACopy(Unique(), editionId);
+        var weeded = ACopy(Unique(), editionId);
+        var mislaid = ACopy(Unique(), editionId);
+        weeded.Withdraw();
+        mislaid.DeclareLost();
+
+        await using var writing = sqlServer.NewContext();
+        writing.AddRange(inService, weeded, mislaid, ACopy(Unique()));
+        await writing.SaveChangesAsync(Token);
+
+        await using var reading = sqlServer.NewContext();
+        var held = await new CopyRepository(reading).OfEditionAsync(editionId, Token);
+
+        held.Select(copy => copy.Id).ShouldBe([inService.Id, weeded.Id, mislaid.Id], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task OfEdition_ARecordTheLibraryHoldsNoCopyOf_IsEmpty()
+    {
+        // A cataloger merges records, not shelves, so this is the ordinary answer rather than the
+        // edge case.
+        await using var reading = sqlServer.NewContext();
+
+        var held = await new CopyRepository(reading).OfEditionAsync(EditionId.Generate(), Token);
+
+        held.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ARepointedCopy_NamesTheSurvivingRecordInTheStore()
+    {
+        // The property gained a private setter for this one caller, and only a round trip proves the
+        // store writes the new value rather than the change tracker holding it.
+        var copy = await StoredAsync(ACopy(Unique()));
+        var surviving = EditionId.Generate();
+
+        await using (var updating = sqlServer.NewContext())
+        {
+            var repointing = await new CopyRepository(updating).OfEditionAsync(copy.EditionId, Token);
+            repointing.ShouldHaveSingleItem().RepointTo(surviving);
+            await updating.SaveChangesAsync(Token);
+        }
+
+        await using var reading = sqlServer.NewContext();
+        var found = await reading.Set<Copy>().SingleAsync(stored => stored.Id == copy.Id, Token);
+
+        found.EditionId.ShouldBe(surviving);
     }
 
     [Fact]

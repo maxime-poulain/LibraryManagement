@@ -349,6 +349,77 @@ public sealed class CopyTests
         copy.DomainEvents.ShouldBeEmpty();
     }
 
+    // --- Repointing after a merge ------------------------------------------------------------------
+
+    [Fact]
+    public void RepointTo_FilesTheCopyUnderTheSurvivingRecordAndCarriesBoth()
+    {
+        var copy = ACopy().Settled();
+        var absorbed = copy.EditionId;
+        var surviving = EditionId.Generate();
+
+        copy.RepointTo(surviving);
+
+        copy.EditionId.ShouldBe(surviving);
+
+        // Both, for the reason a relabelling carries both labels: a ledger counting copies per
+        // edition has to subtract before it adds.
+        var repointed = copy.Event<CopyRepointed>();
+        repointed.CopyId.ShouldBe(copy.Id);
+        repointed.PreviousEditionId.ShouldBe(absorbed);
+        repointed.NewEditionId.ShouldBe(surviving);
+    }
+
+    [Fact]
+    public void RepointTo_TheRecordItAlreadyNames_RecordsNothing()
+    {
+        // The ordinary shape of a redelivered announcement, and it must not raise an event telling a
+        // projection to replace an entry with itself.
+        var copy = ACopy().Settled();
+
+        copy.RepointTo(copy.EditionId);
+
+        copy.DomainEvents.ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData("withdrawn")]
+    [InlineData("lost")]
+    public void RepointTo_ACopyThatLeftTheShelf_MovesAllTheSame(string state)
+    {
+        // The one mutator that ignores the status, deliberately. The others are acts upon the
+        // object's disposition, which a copy out of the collection no longer has; this is not an act
+        // upon the object at all, and a copy left pointing at a record that stopped answering is
+        // exactly the orphan the merge is announced to repair.
+        var copy = ACopy(referenceOnly: true);
+
+        if (state == "withdrawn")
+        {
+            copy.Withdraw();
+        }
+        else
+        {
+            copy.DeclareLost();
+        }
+
+        var wasReturningTo = copy.ReturnsTo;
+        var surviving = EditionId.Generate();
+        copy.Settled();
+
+        copy.RepointTo(surviving);
+
+        copy.EditionId.ShouldBe(surviving);
+        copy.Event<CopyRepointed>().NewEditionId.ShouldBe(surviving);
+
+        // And it touches nothing else: where the copy stands in its own life is not what changed.
+        copy.Status.ShouldBe(state == "withdrawn" ? CopyStatus.Withdrawn : CopyStatus.Lost);
+        copy.ReturnsTo.ShouldBe(wasReturningTo);
+    }
+
+    [Fact]
+    public void RepointTo_DemandsARecordToPointAt()
+        => Should.Throw<ArgumentNullException>(() => ACopy().RepointTo(null!));
+
     // --- Lendability ------------------------------------------------------------------------------
 
     [Fact]

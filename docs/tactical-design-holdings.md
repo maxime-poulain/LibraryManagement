@@ -236,6 +236,36 @@ the loan — the object re-enters service through `Find`, and what its reappeara
 is settled by the contexts that price things, never by reviving a loan. A *copy* that is `Lost` is a state of the world, and the world changes.
 One is a decision, the other an observation, which is why they are two words.
 
+### Repoint, when Catalog merges two records
+
+The second way this context reacts to another, and the only moment here that is not a fact about the
+object. Catalog announces `EditionsMerged`; every `Copy` filed under the absorbed identifier is
+filed under the survivor instead.
+
+**It is not a correction, and the distinction is the one Catalog already draws.** Correcting a
+mis-cataloged copy — the operation §10 still leaves open — says the object was attached to the wrong
+record, exactly as `CorrectPreferredName` says a record was wrong. This says nothing about the object
+at all: it did not move, and what it is a copy of did not change. Two records that described one
+edition became one, and the shelf list is catching up. The two moments will coexist, and neither
+serves for the other.
+
+**It ignores the status**, where reshelving, relabelling and reconditioning all refuse a withdrawn
+copy. Those act on the copy's disposition, which a copy out of the collection no longer has. This
+does not, and a withdrawn or lost copy still records which edition it was a copy of — leaving that
+identifier pointing at a record that stopped answering is precisely the orphan §10 named and the
+announcement repairs. A refusal would also be contagious: one weeded copy would fail the command
+that carries the whole shelf.
+
+**Nothing is asked of Catalog on the way.** The obvious guard — check that the survivor exists —
+would open a race rather than close one, since a record that was itself absorbed answers *no* to
+that question, and a survivor merged again between the announcement and the drain would fail the
+reaction for good. Ordering already resolves the chain: copies of A join B, then everything filed
+under B joins C.
+
+**It refuses nothing at all**, so it returns no result. Every rule that could refuse a merge was
+enforced in Catalog by the service that decided it, and repointing a copy to where it already points
+records nothing — which is what makes a redelivered announcement cost nothing here.
+
 ## 8. Stocktake, deliberately deferred
 
 *Récolement*: the physical sweep of the shelves against the records, which a library runs section by
@@ -267,6 +297,7 @@ Circulation needs from it is a question, not an announcement (§6).
 | `CopyRestrictedToReference`, `CopyReleasedForLending` | read model; the first leaves as `CopyLeftService` |
 | `CopyDeclaredLost`, `CopyFound` | read model; they leave as `CopyLeftService` and `CopyRecovered` |
 | `CopyWithdrawn` | read model; leaves as `CopyLeftService` |
+| `CopyRepointed(…, previousEditionId, newEditionId)` | read model |
 
 Four departures flatten into one contract that names no status, and the find into its own. The
 rest feed a projection and nothing else, today. That is not a reason to withhold them:
@@ -275,7 +306,10 @@ read model fed by exactly this stream, and an event not published when it happen
 recovered afterwards.
 
 `CopyRelabelled` carries the previous barcode because a projection keyed on the label has to retract
-the old one, the same shape as a corrected preferred name in Catalog.
+the old one, the same shape as a corrected preferred name in Catalog. `CopyRepointed` carries the
+previous edition for the same reason, one level up: a stock ledger counting copies per edition has to
+subtract before it adds. It is also the one event here that is not this context's own observation —
+it reports what Holdings did in answer to something Catalog said.
 
 **Consumed.**
 
@@ -283,6 +317,7 @@ the old one, the same shape as a corrected preferred name in Catalog.
 |---|---|---|
 | `CopyReportedLost` | Circulation | The copy becomes `Lost` |
 | `CopyReturned` | Circulation | A copy held as `Lost` is found — the record made to agree with the shelf. Every other status notes nothing |
+| `EditionsMerged` | Catalog | Every copy of the absorbed record is filed under the survivor (§7) |
 
 **What arrives is the contract, never the domain event.** Circulation raises `LoanDeclaredLost`
 internally; what crosses the boundary is `CopyReportedLost`, a record of primitives in Circulation's
@@ -296,6 +331,17 @@ Handled the way every event is handled here: later, in a transaction of its own,
 by `EventId`. Marking a copy lost twice is marking it lost once, so idempotence costs nothing — and
 the subscriber does not write, it dispatches this module's own `DeclareCopyLostCommand`, so the
 change lands in this module's transaction rather than in the drain's ([outbox.md](outbox.md) §9).
+
+`EditionsMerged` is handled the same way, through `RepointCopiesOfMergedEditionCommand`, and it is
+idempotent for a reason worth naming because it is not the usual one: not an operation that converges
+when repeated, but a *question* whose answer empties. The command sweeps by the absorbed identifier,
+which after the first delivery is on no copy at all — so a replay finds nothing, writes nothing and
+raises nothing, with no deduplication table anywhere.
+
+**Catalog is now upstream in two senses**, and this is where they meet. It answers a question when
+asked — does this edition exist? — and it states exactly one thing unprompted. The first is a port
+this module calls; the second is a contract this module subscribes to, and only the second could
+carry the news that an identifier already stored here has stopped naming a record.
 
 **A return changes almost nothing in Holdings, and the almost took an audit to find.** When a
 returned copy is set aside for the first hold, it is the *hold* that records the trapped copy, in
@@ -327,19 +373,45 @@ tables unbuilt — the relational creator had to be asked for them directly. Cal
 then and a host's problem later, and the answer both times was migrations: each module now applies
 its own, tracked in a history table inside its own schema (`migrations.md` §3).
 
-**A merged edition orphans this context's identifiers.** Catalog has no merge operation, and the day
-it acquires one, every `Copy` holding the absorbed `EditionId` points at a record that no longer
-answers. No database will report it: referencing across schemas by identifier is the right call and
-it is precisely what removes that net. Whatever merge Catalog eventually publishes has to be an
-event this context consumes, and Holdings is the first module that made the gap concrete rather
-than theoretical.
+**A merged edition orphaned this context's identifiers, and no longer does.** The gap this document
+named first — every `Copy` holding an absorbed `EditionId` pointing at a record that no longer
+answers, with no database able to report it, because referencing across schemas by identifier is the
+right call and is precisely what removes that net — is closed.
+[ADR-0017](adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) decided the shape and this
+context built it: Catalog publishes `EditionsMerged`, `RepointCopiesOnEditionsMerged` dispatches
+`RepointCopiesOfMergedEditionCommand`, and every affected copy is refiled in Holdings' own
+transaction (§7).
 
-It is now decided, in
-[ADR-0017](adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md): Catalog publishes
-`EditionsMerged`, and this context's subscriber dispatches a command of its own that repoints every
-affected `Copy`. Holdings turns out to be the *simple* consumer — it holds the identifier in a
-column, where Circulation keys an aggregate by it — which is why the record puts this subscriber
-second in the build order, as the one that proves the passage before the hard case is attempted.
+Holdings is the *simple* consumer — it holds the identifier in a column, where Circulation keys an
+aggregate by it — which is why the record put this subscriber second in the build order, as the one
+that proves the passage before the hard case is attempted. **It did prove it, and the proof is a
+composition test rather than a unit one**: the subscriber runs inside *Catalog's* drain, whose save
+is on Catalog's context, so one that wrote to `HoldingsDbContext` directly would leave the change
+tracked where nobody saves — and every unit test of it would still pass. Only two real stores can
+tell the difference.
+
+**What building it added, and it was mostly about what *not* to check.** Three guards suggested
+themselves and all three were wrong.
+
+The status was the first. Every other mutator here refuses a withdrawn copy, so this one looked like
+an oversight — until the case that decides it: a copy weeded last year still records which edition it
+was a copy of, and refusing to move it leaves exactly the orphan the merge is announced to repair.
+Worse, a refusal is contagious, since one weeded copy would fail the command carrying the whole
+shelf. **The rule that makes the others right is not "check the status" but "acts upon the object's
+disposition check the status"**, and this is not one of those.
+
+Asking Catalog whether the survivor exists was the second, and it is the more instructive mistake
+because `AcquireCopyCommandHandler` asks exactly that question, correctly. There, a librarian typed
+an identifier and it may name nothing. Here the identifier came from the module that owns the
+answer, and asking again would open a race rather than close one: `ExistsAsync` answers *no* for a
+record that was itself absorbed, so a survivor merged again between the announcement and the drain
+would dead-letter a fact that ordering already resolves. **A check earns its place by the question
+it can answer better than the sender**, not by resembling one nearby.
+
+A deduplication table was the third, and it was never needed: the command sweeps by the absorbed
+identifier, which after the first delivery is on no copy. Idempotence by a question whose answer
+empties, rather than by a mark kept somewhere — the cheapest kind there is, and worth looking for
+before reaching for the table.
 
 Open, and each deferred for a stated reason rather than forgotten:
 
@@ -347,7 +419,10 @@ Open, and each deferred for a stated reason rather than forgotten:
   distinction is the model — `Rename` records a fact about the person, `CorrectPreferredName` a fact
   about the record — and a copy attached to the wrong edition is squarely the second kind. Leaning
   towards a `CorrectEdition` operation that keeps the barcode and the loan history, since the object
-  on the shelf never changed.
+  on the shelf never changed. **Repointing is not it**, and the two must not be collapsed the day
+  this is built: repointing says two records were one all along and moves everything filed under the
+  loser, while a correction says one copy was filed under the wrong record and moves that copy alone.
+  One is a desk act about an object; the other is a reaction to something another context decided.
 * Whether `Condition` ever blocks a loan (§2).
 * Whether a section is part of the shelfmark string or a field of its own. It is a prefix today; it
   becomes a field the day someone wants to count the children's collection, and that is a report
