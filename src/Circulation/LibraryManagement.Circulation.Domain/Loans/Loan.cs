@@ -19,6 +19,12 @@ namespace LibraryManagement.Circulation.Domain.Loans;
 /// again. It is the edition <em>as it stood when the loan started</em>, which is exactly the queue
 /// this copy played in.
 /// </para>
+/// <para>
+/// That last sentence holds until Catalog reports two of its records were one. A loan still out has
+/// to name the queue people are actually waiting in, so it follows the merge; a loan that has ended
+/// keeps the identifier it was made under, because it is the record of something that happened.
+/// <see cref="RepointTo"/> is where the two part company.
+/// </para>
 /// </remarks>
 public sealed class Loan : AggregateRoot<LoanId>
 {
@@ -43,7 +49,11 @@ public sealed class Loan : AggregateRoot<LoanId>
     public CopyId CopyId { get; }
 
     /// <summary>Gets the edition the copy belongs to — the hold queue this loan answers to.</summary>
-    public EditionId EditionId { get; }
+    /// <remarks>
+    /// Settable only from inside, and only by <see cref="RepointTo"/>: nothing at the desk changes
+    /// what a loan was a loan of. It moves when Catalog reports that two of its records were one.
+    /// </remarks>
+    public EditionId EditionId { get; private set; }
 
     /// <summary>Gets who has it. Identity only, never the member.</summary>
     public BorrowerId BorrowerId { get; }
@@ -436,6 +446,58 @@ public sealed class Loan : AggregateRoot<LoanId>
         var daysLate = policy.BillableDaysLate(DueDate, DeclaredLostOn!.Value);
 
         AddDomainEvent(new LoanRecovered(Id, CopyId, BorrowerId, daysLate));
+
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Points a loan still out at the edition that survived a merge of two catalog records.
+    /// </summary>
+    /// <param name="survivingEditionId">The record that goes on answering.</param>
+    /// <returns>Success, or the reason there was nothing to repoint.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="survivingEditionId"/> is null.</exception>
+    /// <remarks>
+    /// <para>
+    /// <strong>Only a live loan moves, and this is where a merge stops short of the past.</strong>
+    /// What this identifier is for is naming the queue the copy feeds at its return and at every
+    /// renewal — a question only an active loan will ask again. A returned or written-off loan asks
+    /// nothing, and rewriting it would change no answer anyone can act on while making the record of
+    /// a completed act disagree with the act.
+    /// </para>
+    /// <para>
+    /// <strong>It refuses where <c>Copy.RepointTo</c> in Holdings does not, and the asymmetry is the
+    /// point rather than an oversight.</strong> A copy record is a present-tense fact about an object
+    /// the library still holds — even a weeded one — so leaving it on an identifier that stopped
+    /// naming a record is the orphan a merge exists to repair. A loan is the account of something
+    /// that happened. One catches up; the other stays true.
+    /// </para>
+    /// <para>
+    /// The refusal is unreachable from the one caller there is, which loads active loans only. It is
+    /// here because a rule that lives in a <c>WHERE</c> clause is a rule the next caller will not
+    /// find.
+    /// </para>
+    /// </remarks>
+    public Result RepointTo(EditionId survivingEditionId)
+    {
+        ArgumentNullException.ThrowIfNull(survivingEditionId);
+
+        if (Status != LoanStatus.Active)
+        {
+            return Result.Failure(
+                CirculationErrorCodes.LoanNotActive,
+                $"A loan that is {Describe(Status)} records what was borrowed, and a merge in the "
+                + "catalog does not change what happened.");
+        }
+
+        if (survivingEditionId == EditionId)
+        {
+            return Result.Success();
+        }
+
+        var previous = EditionId;
+        EditionId = survivingEditionId;
+
+        AddDomainEvent(new LoanRepointed(Id, previous, survivingEditionId));
 
         return Result.Success();
     }

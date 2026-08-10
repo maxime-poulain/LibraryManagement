@@ -102,6 +102,23 @@ public sealed class LoanRepository(CirculationDbContext context) : ILoanReposito
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Tracked, unlike a read model's query: the caller repoints every loan it gets back, and the
+    /// module's unit of work writes them once the command has succeeded.
+    /// </remarks>
+    public async ValueTask<IReadOnlyList<Loan>> ActiveOfEditionAsync(
+        EditionId editionId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(editionId);
+
+        return await context.Loans
+            .Where(loan => loan.EditionId == editionId && loan.Status == LoanStatus.Active)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
     public async ValueTask<IReadOnlyList<CopyId>> OnActiveLoanAmongAsync(
         IReadOnlyCollection<CopyId> copyIds,
         CancellationToken cancellationToken = default)

@@ -276,6 +276,71 @@ public sealed class LoanTests
         loan.RecoveredOn.ShouldBe(Today.AddDays(60));
     }
 
+    // --- Repointing after a merge in Catalog --------------------------------------------------------
+
+    [Fact]
+    public void RepointTo_MovesALiveLoanAndCarriesBothRecords()
+    {
+        var loan = ALoan().Settled();
+        var absorbed = loan.EditionId;
+        var surviving = EditionId.Generate();
+
+        loan.RepointTo(surviving).HasErrors().ShouldBeFalse();
+
+        loan.EditionId.ShouldBe(surviving);
+
+        var repointed = loan.Event<LoanRepointed>();
+        repointed.LoanId.ShouldBe(loan.Id);
+        repointed.PreviousEditionId.ShouldBe(absorbed);
+        repointed.NewEditionId.ShouldBe(surviving);
+    }
+
+    [Fact]
+    public void RepointTo_TheRecordItAlreadyNames_RecordsNothing()
+    {
+        // The ordinary shape of a redelivered announcement. It must not tell a projection to
+        // replace an entry with itself.
+        var loan = ALoan().Settled();
+
+        loan.RepointTo(loan.EditionId).HasErrors().ShouldBeFalse();
+
+        loan.DomainEvents.ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData("returned")]
+    [InlineData("lost")]
+    public void RepointTo_ALoanThatHasEnded_IsRefused(string ending)
+    {
+        // A merge moves live state and leaves the past alone. What this identifier is for is naming
+        // the queue a copy feeds at its return and at every renewal, and an ended loan asks neither
+        // question again — rewriting it would change no answer while making the record of a
+        // completed act disagree with the act.
+        var loan = ALoan().Settled();
+
+        if (ending == "returned")
+        {
+            loan.Return(Today, Policy);
+        }
+        else
+        {
+            loan.DeclareLost(Today);
+        }
+
+        var absorbed = loan.EditionId;
+        loan.Settled();
+
+        CodesOf(loan.RepointTo(EditionId.Generate()))
+            .ShouldContain(CirculationErrorCodes.LoanNotActive);
+
+        loan.EditionId.ShouldBe(absorbed);
+        loan.DomainEvents.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void RepointTo_DemandsARecordToPointAt()
+        => Should.Throw<ArgumentNullException>(() => ALoan().RepointTo(null!));
+
     [Fact]
     public void RecordRecovery_ALoanNeverGivenUpOn_IsRefused()
     {

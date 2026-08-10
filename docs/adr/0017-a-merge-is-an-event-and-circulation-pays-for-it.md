@@ -132,15 +132,22 @@ tense long after the fact misleads whoever reads it next:
 |---|---|
 | 1. Catalog's merge operation and its event | Built |
 | 2. Holdings' subscriber | Built — the passage is proved |
-| 3. Circulation's `Loan.EditionId` repointing | Open |
+| 3. Circulation's `Loan.EditionId` repointing | Built — live loans only |
 | 4. The queue merge, and `CancelFor` tightened | Open |
 | 5. Members' merge and its own event | Open |
 
-Nothing in the decision above changed while steps 1 and 2 were built. Two things it did not
-anticipate are recorded where they belong rather than here: that all four merge rules want to live
-together in a domain service (`tactical-design-catalog.md` §10), and that the consuming side's three
-tempting guards — the copy's status, the survivor's existence, a deduplication table — are all wrong
-(`tactical-design-holdings.md` §10).
+Nothing in the decision above changed while steps 1 to 3 were built. What they did not anticipate is
+recorded where it belongs rather than here: that all four merge rules want to live together in a
+domain service (`tactical-design-catalog.md` §10); that the consuming side's three tempting guards —
+the copy's status, the survivor's existence, a deduplication table — are all wrong
+(`tactical-design-holdings.md` §10); and that *"only live state moves"* cuts differently in each
+consumer, since a copy's edition is asked about forever while a finished loan's is asked about never
+(`tactical-design-circulation.md` §10).
+
+One thing this record did not foresee at all, and step 4 owes an answer: **nothing stops a hold being
+placed on an absorbed edition.** A consumer learns that two records merged, never that one is
+absorbed, so a fresh claim on the absorbed identifier would build a queue no return feeds once the
+loans name the survivor.
 
 ## Alternatives rejected
 

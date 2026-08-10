@@ -141,3 +141,21 @@ public sealed record LoanRecovered(
     CopyId CopyId,
     BorrowerId BorrowerId,
     int DaysLate) : DomainEvent;
+
+/// <summary>
+/// A loan still out now names a different edition, because Catalog merged two records into one.
+/// </summary>
+/// <param name="LoanId">The loan. Nothing about the loan itself changed, which is the point.</param>
+/// <param name="PreviousEditionId">
+/// The record that stopped answering. A projection keyed on the edition has to retract this one.
+/// </param>
+/// <param name="NewEditionId">The record the loan answers to from now on — and the queue with it.</param>
+/// <remarks>
+/// The one event here that is not this context's own observation: it reports what Circulation did in
+/// answer to a fact Catalog announced. Only live loans produce it, because only a live loan will ask
+/// the queue question again; an ended loan keeps the identifier it was made under.
+/// </remarks>
+public sealed record LoanRepointed(
+    LoanId LoanId,
+    EditionId PreviousEditionId,
+    EditionId NewEditionId) : DomainEvent;
