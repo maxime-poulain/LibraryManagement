@@ -27,6 +27,10 @@ It **runs**: `src/Host/LibraryManagement.Host` composes the five modules, applie
 startup, and puts the five outbox drains, the daily process and the outbox purge on a clock
 ([ADR-0015](docs/adr/0015-the-first-host.md)).
 
+And it **reads**: the member's file — who the person is, what they have out, what they owe — is
+composed at the edge from three modules' published queries, which is the one arrangement the
+strategic design had decided in full and nothing had yet exercised.
+
 **Deliberately absent, each for a recorded reason:**
 
 | Missing | Why | Record |
@@ -201,6 +205,7 @@ POST /circulation/returns      { "copyId": "...", "returnedDamaged": false }
 POST /members/erase            { "memberId": "..." }
 GET  /catalog/works/{workId}
 GET  /catalog/search?formPrefix=Ern
+GET  /members/{memberId}/file
 ```
 
 **Only what a librarian does is routed** — 37 of the 52 commands. Seven belong to the daily process,
@@ -212,7 +217,22 @@ the domain said no — with **400** for validation and **409** for a concurrency
 answers **404**, because a command's route names an act that exists whether or not its referent
 does. Every refusal carries a problem document listing *all* its errors with the module's own codes.
 
-The unit filter runs **1085 tests across 20 projects**.
+### The one page that is composed rather than routed
+
+`GET /members/{memberId}/file` belongs to no module, and that is the point. Members publishes who
+the person is, Circulation the loans, the holds and the `Standing`, Charges the balance; the host
+dispatches the three and puts the answers side by side. It **assembles and decides nothing** —
+whether a member may still borrow is judged by Circulation and displayed as given, because a rule
+that slips into a composer is a rule no module's invariants cover.
+
+Each module answers with a `Result`, so the page chooses its own degradation: it returns the parts
+it has and **names the parts it does not**, since a blank balance panel is indistinguishable from a
+member who owes nothing. Only Members' refusal empties the page — a file is a file *of* somebody —
+and that one travels as the 404 it is. [ADR-0016](docs/adr/0016-a-composed-page-degrades-in-parts.md)
+records the decision and what it rejected;
+[strategic design §10](docs/strategic-design.md) decided the arrangement long before it was built.
+
+The unit filter runs **1099 tests across 20 projects**.
 
 Integration tests start SQL Server 2022 through Testcontainers, or target the server named by the
 `LIBRARYMANAGEMENT_TEST_SQLSERVER` environment variable. Each drops its database and applies that
@@ -295,9 +315,11 @@ body carries the narrative, and it should read as one.
 
 **History.** A branch under review carries exactly one commit. Every further push re-squashes the
 whole branch onto its base and force-pushes with `--force-with-lease`, so what a reviewer reads is
-the change rather than the steps that reached it. Neither a commit message nor a pull request body
-carries a session URL — a link nobody outside the conversation can open dates the moment instead of
-explaining the change. The `Co-authored-by` trailer stays; it is a fact about authorship.
+the change rather than the steps that reached it. The pull request is opened with the first push of
+a branch and updated from then on — never a second one for the same work. Neither a commit message
+nor a pull request body carries a session URL — a link nobody outside the conversation can open
+dates the moment instead of explaining the change. The `Co-authored-by` trailer stays; it is a fact
+about authorship.
 
 ---
 
@@ -315,7 +337,7 @@ The design documents are the source of truth. Read the relevant one before model
 | [`tactical-design-charges.md`](docs/tactical-design-charges.md) | Charges' aggregate, invariants and moments. |
 | [`outbox.md`](docs/outbox.md) | Domain events: same-save storage, drain, failure semantics, the cross-module passage (§9). |
 | [`migrations.md`](docs/migrations.md) | One migrations project per module, a history table per schema, and why it took until the first host. |
-| [`adr/`](docs/adr/README.md) | Fifteen decision records — what was decided, when, and what it costs. |
+| [`adr/`](docs/adr/README.md) | Sixteen decision records — what was decided, when, and what it costs. |
 
 Each tactical design's **§10 records what building the module taught** — including the places the
 code corrected the design, which are usually the most useful paragraphs in the document.

@@ -130,7 +130,10 @@ app.MapCatalog()
    .MapHoldings()
    .MapMembers()
    .MapCirculation()
-   .MapCharges();
+   .MapCharges()
+   // Last, and on its own line, because it is the one route that belongs to no module: the
+   // member's file is composed here from three published queries (strategic design §10).
+   .MapMemberFile();
 
 // The schedule belongs to the process that runs it. A host that only enqueues would otherwise
 // rewrite the recurring definitions of a worker that is running them.

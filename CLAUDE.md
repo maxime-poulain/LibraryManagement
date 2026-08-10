@@ -19,7 +19,9 @@ ways: Circulation announces a return or a loss, Charges prices it, Charges annou
 Circulation judges it against its own threshold and cancels the borrower's holds. Every module's
 schema comes from its own migrations, in a project beside the host (`docs/migrations.md`), and the
 host itself exists: `src/Host/LibraryManagement.Host` composes the five modules, migrates at startup
-and owns the schedule (ADR-0015).
+and owns the schedule (ADR-0015). The read side has begun: Members, Circulation and Charges each
+publish a query, and the host composes the member's file at the edge from the three — the first
+page, and the decision about what it does when a module cannot answer is ADR-0016.
 
 ## The documents are the authority
 
@@ -36,7 +38,7 @@ is a bug: fix the pair in the same change.
 | `docs/tactical-design-charges.md` | Charges' aggregate, invariants and moments. Implemented; §10 records what building it taught, including the one place the mapping had to depart from the rest of the solution. |
 | `docs/outbox.md` | Domain events: same-save storage, drain, failure semantics, the cross-module passage (§9), and what renames break. |
 | `docs/migrations.md` | One migrations project per module, the history table per schema that makes five contexts share one database, and how to add a migration. |
-| `docs/adr/` | Fifteen decision records — what was decided, when, what it costs, what was rejected. Navigation, not argument: where a decision is argued at length above, the record points there rather than restating it. Start at `docs/adr/README.md`. |
+| `docs/adr/` | Sixteen decision records — what was decided, when, what it costs, what was rejected. Navigation, not argument: where a decision is argued at length above, the record points there rather than restating it. Start at `docs/adr/README.md`. |
 | `README.md` | The public face: state, context map, build and test, the rules, and the index to all of the above. It summarizes and never decides — when it disagrees with a document here, the document wins. |
 
 ## Build, test and run
@@ -58,6 +60,10 @@ dotnet run   --project src/Host/LibraryManagement.Host                   # the h
   dispatches for another. 204 for a command, 200 for a query, 422 for a refusal, 400 validation,
   409 concurrency; **404 only from a query**, since a command's route names an act that exists
   whether or not its referent does (ADR-0015).
+- **The one composed route**, `GET /members/{id}/file`, lives in `MemberFileEndpoints` and belongs
+  to no module: it dispatches Members', Circulation's and Charges' own queries and arranges the
+  answers. It never derives anything — `Standing` is Circulation's verdict, shown as given — and it
+  returns the parts it has while naming the parts it could not read (ADR-0016).
 - `dotnet ef` comes from `dotnet tool restore`; adding a migration is `docs/migrations.md` §3.
 
 - Integration tests start SQL Server 2022 through Testcontainers, or target the server named by
@@ -164,6 +170,12 @@ Item), `Shelfmark` (never call number), `InService` (never OnShelf), `Balance` i
 - **A use case**: one folder holding `{Command, CommandHandler, CommandValidator}` — copy an
   existing one. Validators are discovered per module; an unregistered validator silently never
   runs, which is why registration is part of `Add<Module>Module`.
+- **A query**: `{Query, QueryValidator, *Dto}` in a folder of the module's **Application**, and the
+  handler in its **Infrastructure** under `Queries/` — the read side has no domain to protect, so
+  it has no application layer beyond the contract. Nothing to register: the validator comes with
+  the assembly scan and the handler with the mediator's. Write the integration test at the same
+  time — **a query's shape is not provable by the compiler**, and a projection that reads perfectly
+  and does not translate is the ordinary failure here (Circulation §10 records one).
 - **A module**: copy the Catalog/Holdings shape, then wire *all* of — `LibraryManagement.slnx`;
   a `ProjectReference` in Architecture.Tests **and** one pinned handler in
   `CommandHandlerRulesTests` (the scan only sees referenced assemblies, and green over nothing
@@ -193,6 +205,8 @@ Item), `Shelfmark` (never call number), `InService` (never OnShelf), `Balance` i
   of review, so it is the unit of history too. The narrative is not lost — it moves from the log
   into the body, which is where someone reconstructing the decision years later already looks. The
   two rules above bind that rewritten message exactly as they bound the ones it replaces.
+  **Pull Requests** below carries the workflow this implies — when the pull request is opened, and
+  what to do on every push after the first.
 
 ## Repository philosophy
 
@@ -282,7 +296,90 @@ Blind implementation is not.
 
 ## Pull Requests
 
-Before considering a Pull Request complete, verify:
+### The pull request is opened without being asked for
+
+Work that needs a push needs a pull request, and the two are one act rather than two. **Do not ask
+whether to open it.** On any change that reaches a working branch:
+
+1. create the working branch if it does not exist, from the current target branch;
+2. make the changes;
+3. commit them — one commit, under the conventions below;
+4. push the branch;
+5. **open the pull request against the appropriate target branch, immediately and unprompted.**
+
+Asking first buys nothing. The work is already pushed by then, the answer is always yes, and the
+question costs a round trip at exactly the moment the branch is most likely to be forgotten. A
+branch pushed without a pull request is invisible: it is not in anyone's review queue, no CI gate
+reports on it, and the only record that it exists is a line in someone's terminal.
+
+### One pull request per branch, and it is updated rather than replaced
+
+The rule above fires **once per working branch**, when that branch is first pushed. It is not a
+rule about pushes: a force-push, a correction, a review fix, a fifth revision of the same work all
+go to the pull request that is already open.
+
+**Before pushing, look for an existing pull request for the current branch.** If one is open,
+update it — push, and revise its description if the change moved. Only when none exists is a new
+one opened. Two pull requests for one set of changes split the review across places that each look
+complete, and the second one silently discards whatever discussion had already happened on the
+first.
+
+### Every pull request is exactly one commit
+
+The convention holds unchanged, and the argument for it is in **Adding things** above. What it
+means in this workflow, on every subsequent push to a branch that already has a pull request:
+
+1. fetch the branch's current history;
+2. integrate the new changes;
+3. **re-squash the whole branch onto its base** — one commit, never an accumulation;
+4. rewrite the subject and body so they describe everything the branch now does;
+5. keep the single `Co-authored-by: Claude <noreply@anthropic.com>` trailer;
+6. `git push --force-with-lease` — never a bare `--force`, which discards whatever reached the
+   remote while you were working;
+7. update the existing pull request rather than opening another.
+
+What the target branch must always see is one clean commit under the pull request branch, and never
+a stack of four. A branch that has picked up a second commit is not finished — it is a branch
+waiting to be squashed.
+
+### The commit message
+
+Every convention already established, restated here because this is where they are checked:
+ASP.NET Core / Linux kernel style; **no conventional-commit prefixes** (`feat:`, `fix:`, `refactor:`,
+`chore:`); a concise imperative subject; a blank line; an explanatory body long enough to justify
+the change to someone reading it years later; American English; the `Co-authored-by` trailer kept;
+and **no cloud session URL**, for the reason stated at length in **Adding things**.
+
+### The pull request description
+
+Held to the same standard as the commit message, because it outlives the conversation that produced
+it. It explains what changed and — where it is not obvious — why; it reflects what the commit
+actually contains rather than what was planned; it is written in American English; and it carries
+**no cloud session URL**. When the single commit is re-squashed, the description is brought back
+into line with it in the same round.
+
+### Changelog
+
+If a change deserves a changelog entry, it is written **in the same commit** — never in a follow-up
+commit, which would put the branch back at two.
+
+Note the precondition, because it is easy to read this rule as an instruction: **this repository has
+no `Changelog.md` today**, so there is nothing to update and nothing to invent. The rule binds the
+day one is added; until then, "deserves an entry" is never true. Do not create the file merely to
+satisfy the rule.
+
+### Before every push, verify
+
+- a pull request exists for this branch — and if not, one is opened right after the first push;
+- the branch carries **exactly one** commit;
+- that commit follows every convention above;
+- the `Co-authored-by` trailer is present, exactly once;
+- no cloud session URL appears in the commit or in the pull request description;
+- `CLAUDE.md` still describes the workflow actually being followed;
+- `Changelog.md` is current, if and when the repository has one;
+- an existing pull request was updated rather than a second one opened.
+
+### Before considering a pull request complete, verify
 
 - the implementation respects the Strategic Design;
 - the README remains accurate;

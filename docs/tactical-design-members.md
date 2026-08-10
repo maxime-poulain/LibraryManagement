@@ -340,6 +340,22 @@ eligibility: the model records who was enrolled, not the paperwork that satisfie
 Asking Charges before erasing would add a synchronous edge the context map does not carry, on a path
 walked a few times a year.
 
+**What publishing the module's first query settled: an erased record answers.** `GetMemberByIdQuery`
+exists so the desk's member file can ask who the person is, and building it forced a question the
+erasure work had not reached. Every *command* refuses an erased member, and the obvious symmetry
+would have had the read refuse too — `MemberErased` is already a code this module owns. It is the
+wrong symmetry. A command refuses because acting on a record that is no longer a person is what
+erasure forbids; a read changes nothing, so it can break nothing, and the desk has a real question:
+the loans and charges keyed to that identifier stay countable after the person is gone, and a
+librarian holding one of them has to be told *why* the name is missing. So the query succeeds and
+carries `ErasedOn`, with the personal fields null because they are genuinely gone. Putting that
+fact in an error would have made history read as a fault.
+
+Two smaller things the answer's shape decided. The date of birth is not on it — it exists to hold
+one invariant, a child has a guardian, and a screen that displayed it every time a file opened
+would spread the most sensitive field on the row further than the rule that needs it. And the
+category travels as its name, for the reason the column already stores it that way.
+
 Open, and each deferred for a stated reason rather than forgotten:
 
 * **Erasure**, whose modeling half is settled above and whose remainder is legal: how long a lapsed

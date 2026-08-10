@@ -7,7 +7,15 @@ namespace LibraryManagement.Circulation.Application;
 /// The judgement the glossary reserves the word for: whether what a borrower owes forbids the act.
 /// Charges states an amount; this is where the amount becomes a verdict.
 /// </summary>
-internal static class Standing
+/// <remarks>
+/// Public rather than internal since the borrower's file began displaying the verdict. The read
+/// side lives in this module's infrastructure, a second assembly, and the alternative was for its
+/// handler to fetch the amount and apply <c>DebtForbids</c> itself — two lines, and the judgement
+/// in two places. What makes that worse than the widened surface is the direction the copies would
+/// drift: the day a debt stops being the only thing that blocks a borrower, the desk paths and the
+/// screen would disagree about the same borrower, and only one of them would be tested.
+/// </remarks>
+public static class Standing
 {
     /// <summary>
     /// Judges one borrower at the desk.
@@ -17,7 +25,11 @@ internal static class Standing
     /// <param name="policy">The policy holding what a debt forbids.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns><see langword="true"/> when a debt blocks borrowing, renewing and placing holds.</returns>
-    internal static async ValueTask<bool> IsBlockedAsync(
+    /// <remarks>
+    /// The only member the module exports. Judging a whole queue is desk machinery and stays
+    /// internal; judging one borrower is what a file displays.
+    /// </remarks>
+    public static async ValueTask<bool> IsBlockedAsync(
         BorrowerId borrowerId,
         IMemberBalance balances,
         CirculationPolicy policy,

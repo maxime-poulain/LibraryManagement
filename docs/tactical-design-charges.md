@@ -426,6 +426,20 @@ borrower's claims live in as many queues as there are editions, an event is rais
 whose state changed, and none of them spans the others. It is one event per claim, and grouping them
 into a single message is Notifications' work — which is where a fact about messages belongs.
 
+**What publishing the balance to a second audience settled.** `GetMemberBalanceQuery` answers the
+desk's member file, and it answers the same figure `IMemberBalance` answers Circulation. They are
+properly separate contracts — one is a port another module declared so a checkout can be refused,
+the other is this module's own query so a screen can show a number — and collapsing them would put
+a page's needs inside a contract Circulation wrote, where the next field a screen wanted would
+arrive as a change to somebody else's port. But separate contracts do not have to mean two reads:
+both now go through one `OutstandingCharges`, and the netting is written once. The mistake was
+nearly made and is worth recording as the same shape the migrations projects already taught — a
+shared thing recognized one level too late.
+
+The query cannot answer 404, and that is the model rather than an omission: an account opens with
+the first charge, so most of a membership has no row at all, and a member with no account owes
+nothing. Failing would make the ordinary case an error.
+
 Open, each deferred for a stated reason rather than forgotten:
 
 * **A copy found after it was *paid* for.** §3 settles the ordinary case — a charge still owed is
