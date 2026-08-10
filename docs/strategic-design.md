@@ -367,6 +367,7 @@ flowchart TD
     SUP -->|"Conformist + ACL<br/>MARC records in"| CAT
     CAT -->|"Published Language<br/>EditionId + summary"| HLD
     CAT -->|"event<br/>two records became one"| HLD
+    CAT -->|"event<br/>two records became one"| CIR
     HLD -->|"Customer / Supplier<br/>may this copy be lent?"| CIR
     MEM -->|"Customer / Supplier + ACL<br/>Member → Borrower"| CIR
     CIR -->|"events<br/>returned, given up on"| CHG
@@ -581,9 +582,10 @@ rule inside the module that owns it.
   appears at most once in a queue.
   [ADR-0017](adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) decides the shape: what
   crosses, what each consumer owes, and which of the queue's rules bends. Catalog now announces
-  `EditionsMerged` and Holdings refiles its copies under the survivor — the cheap consumer, built
-  first because it proves the passage. What stays open is the expensive one and the member merge
-  behind it.
+  `EditionsMerged`; Holdings refiles its copies under the survivor, and Circulation points every loan
+  *still out* at it — the two field-shaped consumers, built first because they prove the passage.
+  What stays open is the queue merge, which is the aggregate-shaped one, and the member merge behind
+  it.
 * Whether a hold may be placed on a *work* — any edition will do — as well as on an edition. Members
   ask for both, and the queue rules differ.
 * Whether a copy's loan history stays in Circulation forever or is archived. It is the only thing in

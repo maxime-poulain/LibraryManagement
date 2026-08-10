@@ -22,6 +22,12 @@
              and nothing else — what that amount forbids is judged here, which is the whole reason
              the contract carries no verdict. -->
         <ProjectReference Include="..\..\Charges\LibraryManagement.Charges.PublishedLanguage\LibraryManagement.Charges.PublishedLanguage.csproj" />
+        <!-- And to one fact of Catalog's: two of its records were one. The first edge between these
+             two contexts — an edition reaches this module through Holdings, at checkout — and it
+             exists because no constraint crosses a schema, so nothing but an event can report that
+             an identifier stored here has stopped naming a record. A published language and nothing
+             else, so this buys no dependency on Catalog's model. -->
+        <ProjectReference Include="..\..\Catalog\LibraryManagement.Catalog.PublishedLanguage\LibraryManagement.Catalog.PublishedLanguage.csproj" />
     </ItemGroup>
 
 </Project>

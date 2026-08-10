@@ -174,7 +174,9 @@ One copy, one borrower, one period. The root of everything that happens to a cop
 Loan
   LoanId          identity
   CopyId          from Holdings — an identifier, never the copy itself
-  EditionId       from Catalog  — the queue this copy answers to, recorded at checkout
+  EditionId       from Catalog  — the queue this copy answers to, recorded at checkout, and
+                  followed to the survivor if Catalog later merges that record away — while the
+                  loan is still out
   BorrowerId      from Members  — an identifier, never the member
   CheckedOutOn
   DueDate
@@ -191,6 +193,8 @@ Loan
 * `RenewalCount` never exceeds `MaxRenewals`.
 * A returned loan cannot be returned again, renewed, or declared lost.
 * A loan declared lost is terminal.
+* Only a loan still out follows a merge of its edition. An ended loan keeps the identifier it was
+  made under.
 
 `RemindersSent` is on the aggregate rather than in the notification layer for one reason: the nightly
 scan must be able to run twice without sending anything twice, and only the loan knows what it has
@@ -427,6 +431,30 @@ the drain's strict order genuinely protects is `MemberBalanceChanged` itself: th
 the amount before and after, and two movements delivered out of order would make this context
 compute a crossing that never happened.
 
+### Two catalog records became one
+
+Circulation reacts to `EditionsMerged` from Catalog by pointing every loan **still out** on the
+absorbed record at the survivor. The first edge between these two contexts: an edition has always
+reached this one through Holdings, at checkout, and nothing here ever asked Catalog anything.
+
+**Only live loans move**, and this is where a merge stops short of the past. What the identifier is
+for is naming the queue a copy feeds — at its return and at every renewal — and only a loan still
+out will ask that question again. A returned or written-off loan asks nothing, so rewriting it would
+change no answer anyone can act on while making the record of a completed act disagree with the act.
+
+**Holdings moves even a weeded copy, and the difference is not an inconsistency.** A copy record is
+a present-tense fact about an object the library still has on its books, so an identifier that
+stopped naming a record leaves it orphaned. A loan is the account of something that happened. One
+catches up; the other stays true.
+
+**Half of what a merge costs this context**, and the smaller half. `HoldQueue` is keyed by
+`EditionId`, so making two queues into one is the other half, with rules of its own (§10). Until
+that lands the model is halfway converged: a returning copy consults the survivor's queue and not
+the absorbed one's, where before it consulted the absorbed one and not the survivor's. Nothing
+breaks and nothing is fully right, which is the cost of building this in the order
+[ADR-0017](adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) chose — the cheap consumer
+first, so the passage is proved before the expensive one is attempted.
+
 ## 6. The scheduled process
 
 Nothing above triggers an overdue.
@@ -511,6 +539,7 @@ moves.
 | `HoldCancelledUnfulfillable` | Notifications, read model |
 | `LoanRecovered(…, daysLate)` | Charges, read model |
 | `CopyReturnedDamaged` | Charges, read model |
+| `LoanRepointed(…, previousEditionId, newEditionId)` | read model |
 
 This table once listed `LoanRenewed` beside `RenewalGranted`. They were one fact under two names —
 a renewal succeeded and the due date moved — and a reader had no way to tell which to subscribe to.
@@ -563,10 +592,16 @@ does the work a refusal notice would only ever have done too late.
 | `MemberBalanceChanged(…, previousBalance, currentBalance)` | Charges | Cancel the borrower's holds, when the pair crosses `BlockingDebt` upwards and the live balance confirms it. A movement that crosses nothing, and a return to good standing, both change nothing in the model — the borrower is simply able to act again |
 | `CopyLeftService` | Holdings | Release the promise, if a claim had the copy set aside: the claim returns to the head of its queue and the withdrawal of the pickup is announced (§4) |
 | `CopyRecovered` | Holdings | Settle the written-off loan the copy concerns: the lateness frozen at `DeclaredLostOn` is announced at last, through the same contract an ordinary return uses |
+| `EditionsMerged` | Catalog | Every loan **still out** on the absorbed record answers to the survivor. An ended loan keeps the identifier it was made under (§5) |
 
 The column says *contract* for the reason Charges' own table gives: what crosses is a record of
 primitives in the publisher's published language, and the domain events behind them are types this
 context may not name.
+
+`LoanRepointed` is the one published event here that is not this context's own observation: it
+reports what Circulation did in answer to something Catalog said. It carries both identifiers for
+the reason `CopyRelabelled` carries both labels in Holdings — a projection counting what is out per
+edition has to subtract before it adds.
 
 `LoanRecovered` is what closes the arithmetic the write-off left open. Without it, a copy brought
 back on day forty-five cost less than one brought back on day twenty-nine — the replacement charge
@@ -772,12 +807,11 @@ does not translate. Pairing the queue with its holds first, then filtering, prod
 borrower index was built for. Query shape is not provable by the compiler, and this is the argument
 for the integration tests over each published query.
 
-**A merged edition costs this context more than any other, and nothing said so until now.** Catalog
-has no merge operation yet, and the strategic design's list of contexts waiting on that event named
-Holdings and Members. It did not name this one, which is the expensive case: Holdings holds an
-`EditionId` in a column and Charges holds a `MemberId` as an account key, but **`HoldQueue` is an
-aggregate keyed by `EditionId`**. A merge here does not repoint a field — two queues must become
-one.
+**A merged edition costs this context more than any other, and nothing said so until now.** The
+strategic design's list of contexts waiting on that event named Holdings and Members. It did not
+name this one, which is the expensive case: Holdings holds an `EditionId` in a column and Charges
+holds a `MemberId` as an account key, but **`HoldQueue` is an aggregate keyed by `EditionId`**. A
+merge here does not repoint a field — two queues must become one.
 
 That collides with the one condition this aggregate refuses on its own: a borrower appears at most
 once in a queue (§5). Two queues combined can hold the same borrower twice, so a merge performed
@@ -797,7 +831,34 @@ most one queued claim per borrower** — and it was always overstated, having ne
 about claims a copy is already set aside for. `CancelFor` stops guessing in the same change: the
 desk act names which hold it ends.
 
+**The cheap half is built and the expensive half is not**, which is the order that record chose.
+Catalog announces the merge, Holdings refiles its copies, and this context now points every loan
+*still out* at the survivor (§5). The queues are untouched, and the honest description of where that
+leaves the model is *halfway converged*: a returning copy consults the survivor's queue and not the
+absorbed one's, where before the loan moved it consulted the absorbed one and not the survivor's.
+No invariant breaks and nothing is fully right.
+
+**What building the loan half taught, and it was mostly about scope.** The tempting reading of
+*repoint the loans* is *repoint every loan*, and it is wrong for a reason worth stating once: this
+identifier exists to name the queue a copy feeds at its return and at every renewal, so only a live
+loan will ask again. Rewriting an ended one changes no answer anyone can act on and makes the record
+of a completed act disagree with the act. **Holdings reached the opposite conclusion about its own
+mutator on the same day, and both are right** — a copy record is a present-tense fact about an
+object still on the books, so an identifier that stopped naming a record leaves it orphaned, while a
+loan is the account of something that happened. The pair is the useful lesson: *what does this field
+still get asked?* decides the scope, not the word *live*.
+
+The guard lives on the aggregate even though the repository loads active loans only, so that the
+rule is not a `WHERE` clause the next caller fails to notice.
+
 Open:
+
+* **Nothing here refuses a hold placed on an absorbed edition**, and the queue merge will have to
+  answer it. This context learns that two records *merged*; it never learns that one is *absorbed*,
+  and a fresh claim on the absorbed identifier would build a queue no return feeds, since the loans
+  now name the survivor. Either the desk asks Catalog's port before queuing, or the merged queue is
+  marked and refuses. It is not urgent while the queues are unmerged, and it must not be forgotten
+  when they are.
 
 * Does loan history stay in `Loan` forever, or is it archived? It is the only thing in the system
   that grows without bound. The borrower's file now has a stake in the answer: it excludes returned

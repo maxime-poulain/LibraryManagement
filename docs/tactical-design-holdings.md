@@ -400,6 +400,13 @@ Worse, a refusal is contagious, since one weeded copy would fail the command car
 shelf. **The rule that makes the others right is not "check the status" but "acts upon the object's
 disposition check the status"**, and this is not one of those.
 
+**Circulation reached the opposite conclusion about the same event, and both are right.** Its
+`Loan.RepointTo` refuses an ended loan, because a loan is the account of something that happened and
+a returned one will never ask the queue question again. The pair is the lesson rather than either
+half of it: what decides the scope is *what does this field still get asked?* — a copy's edition is
+asked forever, a finished loan's is asked never. Read as a rule about liveness alone, one of the two
+modules would look wrong.
+
 Asking Catalog whether the survivor exists was the second, and it is the more instructive mistake
 because `AcquireCopyCommandHandler` asks exactly that question, correctly. There, a librarian typed
 an identifier and it may name nothing. Here the identifier came from the module that owns the

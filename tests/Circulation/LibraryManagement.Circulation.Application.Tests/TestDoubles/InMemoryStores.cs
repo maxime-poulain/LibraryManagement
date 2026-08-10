@@ -49,6 +49,15 @@ internal sealed class InMemoryLoanRepository : ILoanRepository
                 && loan.EditionId == editionId
                 && loan.Status == LoanStatus.Active));
 
+    // Active only, exactly as the real query is: the scope is the rule — a merge in Catalog moves
+    // live state and leaves ended loans saying what was borrowed.
+    public ValueTask<IReadOnlyList<Loan>> ActiveOfEditionAsync(
+        EditionId editionId,
+        CancellationToken cancellationToken = default)
+        => ValueTask.FromResult<IReadOnlyList<Loan>>(
+            [.. _loans.Values.Where(
+                loan => loan.EditionId == editionId && loan.Status == LoanStatus.Active)]);
+
     public ValueTask<IReadOnlyList<CopyId>> OnActiveLoanAmongAsync(
         IReadOnlyCollection<CopyId> copyIds,
         CancellationToken cancellationToken = default)

@@ -1,4 +1,5 @@
 using LibraryManagement.Circulation.Domain.Loans;
+using LibraryManagement.Circulation.Infrastructure.IntegrationEvents;
 using LibraryManagement.Circulation.PublishedLanguage;
 using LibraryManagement.Holdings.Infrastructure.IntegrationEvents;
 using LibraryManagement.Shared.Application.IntegrationEvents;
@@ -38,6 +39,10 @@ public sealed class IntegrationContractRulesTests
         // Circulation's and Catalog's, and a scan that lost one of them would still pass on the
         // other.
         subscribers.ShouldContain(typeof(RepointCopiesOnEditionsMerged).FullName);
+
+        // And the same fact reaching a second consumer, in another module: one contract with two
+        // subscribers is the shape a scan pinned to a single type would stop noticing.
+        subscribers.ShouldContain(typeof(RepointLoansOnEditionsMerged).FullName);
     }
 
     // --- The rule itself, exercised against deliberate violations --------------------------------

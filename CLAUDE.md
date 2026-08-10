@@ -23,9 +23,11 @@ and owns the schedule (ADR-0015). The read side has begun: Members, Circulation 
 publish a query, and the host composes the member's file at the edge from the three — the first
 page, and the decision about what it does when a module cannot answer is ADR-0016. Catalog has
 begun the merge ADR-0017 decides: two editions join, the absorbed record becomes a pointer, and
-`EditionsMerged` is announced — and **Holdings listens**, refiling every copy of the absorbed record
-under the survivor. Two of the record's five steps, and the passage from Catalog to a consumer is
-proved; Circulation and Members remain, Circulation being the expensive one.
+`EditionsMerged` is announced — and **two modules listen**: Holdings refiles every copy of the
+absorbed record under the survivor, and Circulation points every loan still out at it, leaving ended
+loans saying what was borrowed. Three of the record's five steps, and both field-shaped consumers;
+what remains is the aggregate-shaped one — `HoldQueue` is *keyed* by `EditionId`, so two queues must
+become one — and the member merge behind it.
 
 ## The documents are the authority
 
@@ -36,7 +38,7 @@ is a bug: fix the pair in the same change.
 |---|---|
 | `docs/strategic-design.md` | Boundaries, subdomains, context map. §4 is the **glossary — the binding ubiquitous language**. §10 is the codebase rules. |
 | `docs/tactical-design-catalog.md` | Catalog's aggregates and moments: the two ways a name changes, the thin edition, the access-point index, and the merge its clients had named — decided in ADR-0017, and this context's half of it built. |
-| `docs/tactical-design-circulation.md` | Circulation's aggregates, invariants and moments. Desk moments, the daily process and both directions of the Charges cycle implemented; §10 records what building each taught, and why a merged edition costs this context more than any other. |
+| `docs/tactical-design-circulation.md` | Circulation's aggregates, invariants and moments. Desk moments, the daily process, both directions of the Charges cycle and the loan half of a merge implemented; §10 records what building each taught, and why a merged edition costs this context more than any other. |
 | `docs/tactical-design-holdings.md` | Holdings' aggregate and moments, including what it owes a merge in Catalog. Implemented; §10 records what building it taught, and which three guards it taught not to write. |
 | `docs/tactical-design-members.md` | Members' aggregate and moments. Implemented; §10 records what building it taught. |
 | `docs/tactical-design-charges.md` | Charges' aggregate, invariants and moments. Implemented; §10 records what building it taught, including the one place the mapping had to depart from the rest of the solution. |

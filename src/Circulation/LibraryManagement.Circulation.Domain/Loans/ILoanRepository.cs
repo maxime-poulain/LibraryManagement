@@ -66,6 +66,22 @@ public interface ILoanRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the loans still out on an edition.
+    /// </summary>
+    /// <param name="editionId">The edition to collect the live loans of.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The loans, empty when nothing of that edition is out.</returns>
+    /// <remarks>
+    /// <em>Active</em> is in the name rather than only in the filter, because it is the whole scope
+    /// of the one caller there is: a merge in Catalog moves live state and leaves the past alone.
+    /// An ended loan records what was borrowed, and no later correction of the catalog changes what
+    /// happened.
+    /// </remarks>
+    ValueTask<IReadOnlyList<Loan>> ActiveOfEditionAsync(
+        EditionId editionId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Of the given copies, returns the ones currently out on an active loan.
     /// </summary>
     /// <param name="copyIds">Candidate copies — in practice, the lendable copies of an edition.</param>

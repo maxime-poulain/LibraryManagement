@@ -84,6 +84,12 @@ public static class ServiceCollectionExtensions
             IIntegrationEventSubscriber<Holdings.PublishedLanguage.CopyRecovered>,
             IntegrationEvents.RecordRecoveryOnCopyRecovered>();
 
+        // And to the one fact Catalog states on its own initiative. This module had no edge to
+        // that one at all until now: an edition reaches it through Holdings, at checkout.
+        services.AddScoped<
+            IIntegrationEventSubscriber<Catalog.PublishedLanguage.EditionsMerged>,
+            IntegrationEvents.RepointLoansOnEditionsMerged>();
+
         // No JSON converters: this module's events carry identifiers, dates and enums, all of
         // which the shared serializer already speaks. No published-language adapter either — the
         // one port this module declares is implemented on the other side of its edge.

@@ -12,11 +12,14 @@ public sealed class LoanPersistenceTests(SqlServerFixture sqlServer)
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
-    private static Loan ALoan(CopyId? copyId = null, DateOnly? checkedOutOn = null)
+    private static Loan ALoan(
+        CopyId? copyId = null,
+        DateOnly? checkedOutOn = null,
+        EditionId? editionId = null)
         => Loan.CheckOut(
             LoanId.Generate(),
             copyId ?? CopyId.Generate(),
-            EditionId.Generate(),
+            editionId ?? EditionId.Generate(),
             BorrowerId.Generate(),
             checkedOutOn ?? Today,
             CirculationPolicy.Current);
@@ -161,6 +164,64 @@ public sealed class LoanPersistenceTests(SqlServerFixture sqlServer)
         var identifiers = found.Select(loan => loan.Id).ToList();
         identifiers.ShouldContain(inside.Id);
         identifiers.ShouldNotContain(beyond.Id);
+    }
+
+    [Fact]
+    public async Task ActiveOfEdition_FindsWhatIsOutAndNothingThatEnded()
+    {
+        // The scope is the rule and not a convenience: a merge in Catalog moves live state, and an
+        // ended loan records what was borrowed under the identifier it was borrowed under.
+        var editionId = EditionId.Generate();
+        var outOnLoan = ALoan(editionId: editionId);
+        var returned = ALoan(editionId: editionId);
+        var writtenOff = ALoan(editionId: editionId);
+        returned.Return(Today, CirculationPolicy.Current);
+        writtenOff.DeclareLost(Today);
+
+        await using (var writing = sqlServer.NewContext())
+        {
+            writing.AddRange(outOnLoan, returned, writtenOff, ALoan());
+            await writing.SaveChangesAsync(Token);
+        }
+
+        await using var reading = sqlServer.NewContext();
+        var found = await new LoanRepository(reading).ActiveOfEditionAsync(editionId, Token);
+
+        found.Select(loan => loan.Id).ShouldBe([outOnLoan.Id]);
+    }
+
+    [Fact]
+    public async Task ActiveOfEdition_ARecordWithNothingOut_IsEmpty()
+    {
+        await using var reading = sqlServer.NewContext();
+
+        var found = await new LoanRepository(reading)
+            .ActiveOfEditionAsync(EditionId.Generate(), Token);
+
+        found.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ARepointedLoan_NamesTheSurvivingRecordInTheStore()
+    {
+        // The property gained a private setter for this one caller, and only a round trip proves
+        // the store writes the new value rather than the change tracker holding it.
+        var loan = await StoredAsync(ALoan());
+        var surviving = EditionId.Generate();
+
+        await using (var updating = sqlServer.NewContext())
+        {
+            var repointing = await new LoanRepository(updating)
+                .ActiveOfEditionAsync(loan.EditionId, Token);
+
+            repointing.ShouldHaveSingleItem().RepointTo(surviving).HasErrors().ShouldBeFalse();
+            await updating.SaveChangesAsync(Token);
+        }
+
+        await using var reading = sqlServer.NewContext();
+        var found = await reading.Set<Loan>().SingleAsync(stored => stored.Id == loan.Id, Token);
+
+        found.EditionId.ShouldBe(surviving);
     }
 
     [Fact]
