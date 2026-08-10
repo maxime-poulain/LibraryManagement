@@ -53,6 +53,11 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IMemberRepository, MemberRepository>();
 
+        // The rules of a merge, which belong to neither record alone and need no store once both
+        // are loaded. Scoped like every other seam; the service is stateless, so the lifetime
+        // carries nothing.
+        services.AddScoped<IMemberMergeDomainService, MemberMergeDomainService>();
+
         // The module's validators, from the assembly that declares its commands. The shared
         // validation behavior resolves them by the message's concrete type, so a validator nobody
         // registered is a validator that silently never runs.

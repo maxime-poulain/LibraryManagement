@@ -25,9 +25,11 @@ page, and the decision about what it does when a module cannot answer is ADR-001
 begun the merge ADR-0017 decides: two editions join, the absorbed record becomes a pointer, and
 `EditionsMerged` is announced — and **two modules listen**: Holdings refiles every copy of the
 absorbed record under the survivor, and Circulation both points every loan still out at it and makes
-the two hold queues into one, leaving ended loans saying what was borrowed. Four of the record's five
-steps; what remains is the same question asked of **members**, which reaches the queues from the
-other side and reuses this machinery.
+the two hold queues into one, leaving ended loans saying what was borrowed. **Members announces the
+same fact about people** — `MembersMerged`, with the absorbed record kept intact behind a pointer
+and the entitlement port answering *unknown* for it — and nothing subscribes to that one yet. What
+remains is what Circulation and Charges owe a merged member: live loans repointed, a borrower's
+claims combined across queues, and the surviving account absorbing the other's outstanding charges.
 
 ## The documents are the authority
 
@@ -40,7 +42,7 @@ is a bug: fix the pair in the same change.
 | `docs/tactical-design-catalog.md` | Catalog's aggregates and moments: the two ways a name changes, the thin edition, the access-point index, and the merge its clients had named — decided in ADR-0017, and this context's half of it built. |
 | `docs/tactical-design-circulation.md` | Circulation's aggregates, invariants and moments. Desk moments, the daily process, both directions of the Charges cycle and both halves of an edition merge implemented; §10 records what building each taught, including why an invariant can be right and overstated at once. |
 | `docs/tactical-design-holdings.md` | Holdings' aggregate and moments, including what it owes a merge in Catalog. Implemented; §10 records what building it taught, and which three guards it taught not to write. |
-| `docs/tactical-design-members.md` | Members' aggregate and moments. Implemented; §10 records what building it taught. |
+| `docs/tactical-design-members.md` | Members' aggregate and moments, including the merge of two records for one person. Implemented; §10 records what building it taught, including why two terminal states are not interchangeable. |
 | `docs/tactical-design-charges.md` | Charges' aggregate, invariants and moments. Implemented; §10 records what building it taught, including the one place the mapping had to depart from the rest of the solution. |
 | `docs/outbox.md` | Domain events: same-save storage, drain, failure semantics, the cross-module passage (§9), and what renames break. |
 | `docs/migrations.md` | One migrations project per module, the history table per schema that makes five contexts share one database, and how to add a migration. |
@@ -327,6 +329,10 @@ about the pair, and that is the whole test. It also shows the shape at its fulle
 mutators on the aggregate (`AbsorbHoldsFrom` and `CancelAsDuplicate`), the service holding every
 decision about which claims survive, and the handler holding only the questions the store must
 answer — do these queues exist, and does the survivor need one opened.
+
+`MemberMergeDomainService` is the third and is not described here on purpose: it is the same shape
+again, and a convention section that grows an entry per instance stops being a convention and
+becomes a catalogue. Two examples that differ from each other are what a reader needs.
 
 `Standing` in Circulation is the same kind of object — a stateless judgement — and predates this
 convention: `public static`, in the Application layer, unsuffixed. Known, not yet reconciled.

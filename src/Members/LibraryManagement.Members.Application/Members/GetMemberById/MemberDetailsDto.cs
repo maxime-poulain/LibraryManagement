@@ -17,6 +17,10 @@ namespace LibraryManagement.Members.Application.Members.GetMemberById;
 /// <param name="Guardian">Who the member is reached through, when they are not reached directly.</param>
 /// <param name="ErasedOn">The day this record stopped being a person, or <see langword="null"/>
 /// while it still is one.</param>
+/// <param name="MergedInto">The record this one was merged into, or <see langword="null"/> while it
+/// is a record in its own right. Carried for the same reason <paramref name="ErasedOn"/> is: a
+/// member of staff opening a merged file needs to be sent to the surviving one, and a refusal would
+/// tell them the file is broken rather than where the person went.</param>
 /// <remarks>
 /// <para>
 /// Carries primitives and not the domain's own types, for the reason every answer here does: this
@@ -54,7 +58,8 @@ public sealed record MemberDetailsDto(
     string? Phone,
     string? PostalAddress,
     GuardianDetailsDto? Guardian,
-    DateOnly? ErasedOn);
+    DateOnly? ErasedOn,
+    Guid? MergedInto);
 
 /// <summary>
 /// The adult a child member is reached through.

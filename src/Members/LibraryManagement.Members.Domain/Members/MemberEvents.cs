@@ -90,3 +90,27 @@ public sealed record MemberRenamed(
 /// own copies.
 /// </remarks>
 public sealed record MemberErased(MemberId MemberId) : DomainEvent;
+
+/// <summary>
+/// Two records for one person became one. Whoever holds the absorbed identifier should now hold the
+/// surviving one.
+/// </summary>
+/// <param name="AbsorbedMemberId">The identifier that stops naming a person of its own.</param>
+/// <param name="SurvivingMemberId">The identifier to hold instead.</param>
+/// <remarks>
+/// <para>
+/// <strong>The first thing this context announces to another.</strong> Members has been asked
+/// questions and has answered them — is this person entitled to borrow — and has stated nothing on
+/// its own initiative until now. This is the fact that had to become an announcement, because no
+/// database constraint crosses a schema: nothing else can carry the news that an identifier
+/// Circulation and Charges are holding has stopped meaning what it meant.
+/// </para>
+/// <para>
+/// <strong>Two identifiers and nothing else.</strong> Which record a member of staff judged the
+/// better one, and why, is no consumer's business — and a contract that offered a name would put a
+/// person's name into two more schemas, which is exactly what the boundary bought by refusing it.
+/// </para>
+/// </remarks>
+public sealed record MembersMerged(
+    MemberId AbsorbedMemberId,
+    MemberId SurvivingMemberId) : DomainEvent;

@@ -1,6 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <ItemGroup>
+        <!-- The grant Catalog.Domain and Circulation.Domain both make, for the same reason:
+             Member.MergeInto is internal so the domain service is the only way in, and without this
+             the choice would be between widening it back to public "for the tests" and never
+             exercising it alone. One project wide; everything else tests through the public seams. -->
+        <InternalsVisibleTo Include="LibraryManagement.Members.Domain.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\..\Shared\LibraryManagement.Shared.Domain\LibraryManagement.Shared.Domain.csproj" />
     </ItemGroup>
 

@@ -51,6 +51,7 @@ public sealed class GetMemberByIdQueryHandler(MembersDbContext context)
                 candidate.ContactDetails,
                 candidate.Guardian,
                 candidate.ErasedOn,
+                candidate.MergedInto,
             })
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -83,7 +84,8 @@ public sealed class GetMemberByIdQueryHandler(MembersDbContext context)
                 member.ContactDetails.Phone,
                 member.ContactDetails.PostalAddress,
                 guardian,
-                member.ErasedOn));
+                member.ErasedOn,
+                member.MergedInto?.Value));
     }
 
     // A member who was never enrolled is a failure and not an empty answer, exactly as an

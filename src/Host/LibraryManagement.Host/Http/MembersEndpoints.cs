@@ -2,6 +2,7 @@ using LibraryManagement.Members.Application.Members.ChangeMemberCategory;
 using LibraryManagement.Members.Application.Members.ChangeMemberGuardian;
 using LibraryManagement.Members.Application.Members.EnrollMember;
 using LibraryManagement.Members.Application.Members.EraseMember;
+using LibraryManagement.Members.Application.Members.MergeMembers;
 using LibraryManagement.Members.Application.Members.RenameMember;
 using LibraryManagement.Members.Application.Members.RenewMembership;
 using LibraryManagement.Members.Application.Members.ReplaceMemberCard;
@@ -31,7 +32,8 @@ internal static class MembersEndpoints
             .Command<ChangeMemberCategoryCommand>("/change-category")
             .Command<ChangeMemberGuardianCommand>("/change-guardian")
             .Command<ReplaceMemberCardCommand>("/replace-card")
-            .Command<EraseMemberCommand>("/erase");
+            .Command<EraseMemberCommand>("/erase")
+            .Command<MergeMembersCommand>("/merge");
 
         return routes;
     }

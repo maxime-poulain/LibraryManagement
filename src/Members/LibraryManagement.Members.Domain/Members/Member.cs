@@ -114,6 +114,27 @@ public sealed class Member : AggregateRoot<MemberId>
     public DateOnly? ErasedOn { get; private set; }
 
     /// <summary>
+    /// Gets the record this one was merged into, or <see langword="null"/> while it is a record in
+    /// its own right.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Terminal, exactly as <see cref="ErasedOn"/> is, and for the same reason: three contexts hold
+    /// this identifier, so the row stays and stops being a person rather than being deleted. What
+    /// changes is that the identifier now resolves to a pointer — whoever still holds it can follow
+    /// it once, to the survivor.
+    /// </para>
+    /// <para>
+    /// <strong>A merge does not anonymize.</strong> The name, the card and the contact details stay
+    /// where they are: an audit has to be able to read which two records were judged one person, and
+    /// by which name. The card stops opening anything without being freed — the entitlement answers
+    /// <em>unknown</em> for a merged record exactly as for an erased one, and the unique index keeps
+    /// the number reserved so nobody is issued it afresh.
+    /// </para>
+    /// </remarks>
+    public MemberId? MergedInto { get; private set; }
+
+    /// <summary>
     /// Enrolls a member: identity recorded, category decided, card issued, and the first
     /// membership period started that day.
     /// </summary>
@@ -213,9 +234,9 @@ public sealed class Member : AggregateRoot<MemberId>
     /// </remarks>
     public Result Renew(DateOnly today)
     {
-        if (ErasedOn is not null)
+        if (NoLongerActs() is { } refusal)
         {
-            return Erased();
+            return refusal;
         }
 
         if (today <= MembershipEnd)
@@ -246,9 +267,9 @@ public sealed class Member : AggregateRoot<MemberId>
     /// </remarks>
     public Result ChangeCategory(MemberCategory category)
     {
-        if (ErasedOn is not null)
+        if (NoLongerActs() is { } refusal)
         {
-            return Erased();
+            return refusal;
         }
 
         if (category == Category)
@@ -285,9 +306,9 @@ public sealed class Member : AggregateRoot<MemberId>
     {
         ArgumentNullException.ThrowIfNull(cardNumber);
 
-        if (ErasedOn is not null)
+        if (NoLongerActs() is { } refusal)
         {
-            return Erased();
+            return refusal;
         }
 
         if (cardNumber == CardNumber)
@@ -313,9 +334,9 @@ public sealed class Member : AggregateRoot<MemberId>
     {
         ArgumentNullException.ThrowIfNull(contactDetails);
 
-        if (ErasedOn is not null)
+        if (NoLongerActs() is { } refusal)
         {
-            return Erased();
+            return refusal;
         }
 
         if (contactDetails == ContactDetails)
@@ -341,9 +362,9 @@ public sealed class Member : AggregateRoot<MemberId>
     /// </remarks>
     public Result ChangeGuardian(Guardian? guardian)
     {
-        if (ErasedOn is not null)
+        if (NoLongerActs() is { } refusal)
         {
-            return Erased();
+            return refusal;
         }
 
         if (guardian is null && Category == MemberCategory.Child)
@@ -380,9 +401,9 @@ public sealed class Member : AggregateRoot<MemberId>
     {
         ArgumentNullException.ThrowIfNull(name);
 
-        if (ErasedOn is not null)
+        if (NoLongerActs() is { } refusal)
         {
-            return Erased();
+            return refusal;
         }
 
         if (name == Name)
@@ -425,6 +446,14 @@ public sealed class Member : AggregateRoot<MemberId>
     /// the librarian's screen, and the law — not an aggregate — says whether a claim for money is
     /// grounds to keep a person's record against their request.
     /// </para>
+    /// <para>
+    /// <strong>The one act a merged record still accepts, and the exception is the point.</strong>
+    /// Every other operation refuses on <see cref="MergedInto"/> — the person is over there now, so
+    /// act there. This one does not, because a merge does not anonymize: the absorbed record still
+    /// holds a name, a card and an address, and a person's right to be forgotten does not stop at
+    /// the record a member of staff judged the secondary one. Refusing here would leave exactly the
+    /// data somebody asked to have removed, in the row nobody is allowed to touch.
+    /// </para>
     /// </remarks>
     public Result Erase(DateOnly on)
     {
@@ -445,6 +474,57 @@ public sealed class Member : AggregateRoot<MemberId>
         AddDomainEvent(new MemberErased(Id));
 
         return Result.Success();
+    }
+
+    /// <summary>
+    /// Records that this record was merged into another, and announces it.
+    /// </summary>
+    /// <param name="survivingMemberId">The record that goes on being the person.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="survivingMemberId"/> is null.</exception>
+    /// <remarks>
+    /// <para>
+    /// <strong>Deliberately unguarded, and deliberately <c>internal</c>.</strong> Whether two records
+    /// may be joined is decided by <see cref="IMemberMergeDomainService"/>, which holds the rules
+    /// together — a merge is one question, and rules that answer one question drift apart when they
+    /// are kept in two places. This is what remains once the decision is made: the state and the
+    /// fact.
+    /// </para>
+    /// <para>
+    /// Which of two records survives is the librarian's judgement — the one with the current address,
+    /// the longer history, the card the person is holding — and nothing in the model can tell.
+    /// </para>
+    /// </remarks>
+    internal void MergeInto(MemberId survivingMemberId)
+    {
+        ArgumentNullException.ThrowIfNull(survivingMemberId);
+
+        MergedInto = survivingMemberId;
+
+        AddDomainEvent(new MembersMerged(Id, survivingMemberId));
+    }
+
+    /// <summary>
+    /// The refusal a record in a terminal state owes, or <see langword="null"/> while it still acts.
+    /// </summary>
+    /// <remarks>
+    /// Two states and two refusals, because the librarian in front of the screen does different
+    /// things with them: an erased record is the end of a person's relationship with the library and
+    /// there is nowhere to go, while a merged one means <em>the person is here, under the other
+    /// record</em>. Folding them into one code would throw away the only part a member of staff can
+    /// act on.
+    /// </remarks>
+    private Result? NoLongerActs()
+    {
+        if (ErasedOn is not null)
+        {
+            return Erased();
+        }
+
+        return MergedInto is not null
+            ? Result.Failure(
+                MembersErrorCodes.MemberMerged,
+                $"This record was merged into '{MergedInto}'; act on that one.")
+            : null;
     }
 
     private static Result Erased() => Result.Failure(

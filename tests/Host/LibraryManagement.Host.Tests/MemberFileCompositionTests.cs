@@ -37,7 +37,8 @@ public sealed class MemberFileCompositionTests
         Phone: null,
         PostalAddress: null,
         Guardian: null,
-        ErasedOn: null);
+        ErasedOn: null,
+        MergedInto: null);
 
     private static BorrowerFileDto Circulation => new(TheMember, [], [], DebtBlocksBorrowing: false);
 

@@ -358,4 +358,70 @@ public sealed class MemberTests
         }
     }
 
+    // --- Merged away ------------------------------------------------------------------------------
+
+    [Fact]
+    public void AMergedMember_ActsNoMore_AndTheRefusalSaysSoInItsOwnWords()
+    {
+        // Two refusals and not one, because a member of staff does different things with them: an
+        // erasure is the end of a relationship and there is nowhere to go, while a merge means the
+        // person is here, under the other record.
+        var member = AMember().Settled();
+        new MemberMergeDomainService().Merge(member, AMember());
+
+        List<Result> refused =
+        [
+            member.Renew(Today),
+            member.ChangeCategory(MemberCategory.Student),
+            member.ReplaceCard(ACardNumber("20260000999")),
+            member.UpdateContactDetails(AContact()),
+            member.ChangeGuardian(AGuardian()),
+            member.Rename(AName("Colette", "Tazzi")),
+        ];
+
+        foreach (var outcome in refused)
+        {
+            outcome.Match(() => [], errors => errors.Select(error => error.ErrorCode).ToList())
+                .ShouldContain(MembersErrorCodes.MemberMerged);
+        }
+    }
+
+    [Fact]
+    public void AMergedMember_KeepsEveryFieldItHad()
+    {
+        // A merge does not anonymize. An audit has to be able to read which two records were judged
+        // one person, and by which name — and the card stops opening anything by the entitlement
+        // answering "unknown", not by being wiped.
+        var member = AMember().Settled();
+
+        new MemberMergeDomainService().Merge(member, AMember());
+
+        member.Name.ShouldBe(AName());
+        member.CardNumber.ShouldBe(ACardNumber());
+        member.ContactDetails.ShouldBe(AContact());
+        member.DateOfBirth.ShouldBe(ABirthDate);
+    }
+
+    [Fact]
+    public void AMergedMember_CanStillBeErased()
+    {
+        // The one act a merged record accepts, and the exception is the point: the merge left a
+        // name, a card and an address in place, and a person's right to be forgotten does not stop
+        // at the record somebody judged the secondary one.
+        var member = AMember().Settled();
+        new MemberMergeDomainService().Merge(member, AMember());
+        member.ClearDomainEvents();
+
+        member.Erase(Today).HasErrors().ShouldBeFalse();
+
+        member.ErasedOn.ShouldBe(Today);
+        member.Name.ShouldBeNull();
+        member.CardNumber.ShouldBeNull();
+        member.ContactDetails.ShouldBe(ContactDetails.None);
+        member.Event<MemberErased>().MemberId.ShouldBe(member.Id);
+
+        // And it is still a pointer: the erasure took the person, not the fact that two files were
+        // one.
+        member.MergedInto.ShouldNotBeNull();
+    }
 }
