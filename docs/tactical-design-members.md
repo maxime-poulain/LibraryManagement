@@ -232,6 +232,40 @@ the entitlement port answers `NoSuchMember`: the identifier resolves to nobody, 
 that never resolved at all — which keeps a found card or a stale screen from acting in a ghost's
 name.
 
+### Merge
+
+*Fusion.* Two records turn out to be one person, and one of them becomes a pointer at the other.
+Somebody enrolls twice under a maiden name, a card is reissued as a new record, a form is typed
+twice on a busy afternoon — §10 has called this the data quality problem of every membership system
+since before there was a moment for it.
+
+**A desk act, and routed like one.** The person who notices is the member of staff with both files
+open, and which record survives is their judgement — the one with the current address, the longer
+history, the card in the person's hand. Nothing in the model can tell, so nothing here tries.
+
+**A merge does not anonymize, and that is the difference from an erasure.** The absorbed record
+keeps its name, its card and its channels: an audit has to be able to read which two records were
+judged one person, and by which name. The card stops opening anything without being freed — the
+entitlement port answers `NoSuchMember` for a merged record exactly as for an erased one, so every
+checkout and every hold refuses it from the day of the merge, and the unique index keeps the number
+reserved so nobody is issued it afresh.
+
+**So erasure remains the one act a merged record still accepts.** Every other operation refuses:
+the person is over there now, act there. This one does not, because the merge left personal data
+where it was, and a person's right to be forgotten does not stop at the record somebody judged the
+secondary one. Refusing would leave exactly the data that was asked to be removed, in the row
+nobody is allowed to touch.
+
+**And two refusals, not one.** A record that no longer acts says *why* — `MemberErased` is the end
+of a relationship and there is nowhere to go, `MemberMerged` means the person is here under the
+other record. Folding them into one code would throw away the only part a member of staff can act
+on.
+
+The rules of the pair — a record cannot absorb itself, neither side may already be merged, and
+neither may be erased, since an anonymized record leaves nothing by which anyone could have judged
+it a duplicate — live together in `MemberMergeDomainService`, and `MergeInto` is internal behind it.
+That is the arrangement Catalog's merge settled and Circulation's queues repeated.
+
 ### Rename
 
 One operation, not two. Catalog needs `Rename` and `CorrectPreferredName` because a variant name
@@ -257,6 +291,19 @@ is a read model fed by exactly this history.
 | `GuardianChanged(…)` | read model |
 | `MemberRenamed(…, previousName, newName)` | read model |
 | `MemberErased(memberId)` | read model — which owes its own copies the same emptying |
+| `MembersMerged(absorbedMemberId, survivingMemberId)` | read model, **and the modules downstream** |
+
+`MembersMerged` is **the first thing this context announces to another**, and it took a merge to
+produce one: Members has been asked questions and has answered them through `IMemberEntitlement`,
+and has stated nothing on its own initiative until now. It had to become an announcement because no
+database constraint crosses a schema — nothing else can carry the news that an identifier
+Circulation and Charges are holding has stopped meaning what it meant.
+
+The contract is this context's own and not Catalog's, though `EditionsMerged` carries the same two
+shapes: they are published by different modules, consumed by different subscribers, and mean
+different things, and one shared record would make the two change together forever. It carries two
+identifiers and nothing else — a contract offering a name would put a person's name into two more
+schemas, which is precisely what this boundary bought by refusing it.
 
 **Consumed: nothing.** No context in the map is upstream of Members, so there is no table of
 consumed events to write — a first. Notifications reaches a member's address by query, the dashed
@@ -284,6 +331,23 @@ input to that judgement. Adding a `Suspended` here would put the verdict in the 
 the facts.
 
 ## 10. Consequences and open questions
+
+**What building the merge added, and it was one question this document had answered the other way.**
+The two terminal states look interchangeable — a record that stops acting, an identifier that stops
+resolving — and treating them so was the natural mistake. Erasure and a merge differ in what they
+leave behind: an erasure empties the row, a merge does not. Everything else follows from that one
+asymmetry. The refusal codes have to differ, because the member of staff reading them acts
+differently. The rules of the merge itself have to refuse an erased record on either side, because
+an anonymized row leaves nothing by which anyone could have judged it a duplicate. And erasure has
+to remain reachable *through* the merge, because the absorbed record still holds a person's name
+and address and a right does not stop at the file somebody judged secondary.
+
+**The port that had to learn nothing is the part worth noticing.** Keeping new loans and holds off
+an absorbed identifier cost one clause in `MemberEntitlement` — a merged record answers
+`NoSuchMember` exactly as an erased one does — because Circulation already asks this question
+before every checkout and every hold. Catalog's merge needed the same guard on its own side and got
+it the same way. A port that answers *is this thing still a thing* pays for itself the second time
+a terminal state is added, and this was the second time.
 
 **What building it added.** Three things the design did not anticipate and the code settled, all
 in the same corner: this is the first module whose values have parts — a name of two, a guardian
@@ -363,16 +427,24 @@ Open, and each deferred for a stated reason rather than forgotten:
   record past a request to erase it. Neither is a question about aggregates, and neither is
   answerable until someone who knows the law is in the room.
 * **Duplicates.** The same person enrolled twice under slightly different names is the ordinary
-  data quality problem of every membership system. A merge would orphan one `MemberId` in
-  Circulation's history — the exact shape of the merged-edition problem Holdings §10 records
-  against Catalog — so whatever merge this context one day publishes has to be an event its
-  downstream consumes, not an update.
-  [ADR-0017](adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) settles the shape:
-  this context publishes its own `MembersMerged` rather than sharing Catalog's contract, since the
-  two are announced by different modules and mean different things. It also records the part this
-  document had not seen — combining two borrowers' claims runs into the same Circulation invariant
-  a merged edition does, from the other side, so the member merge inherits that work rather than
-  being the small one it looks like.
+  data quality problem of every membership system, and **this context's half of it is now built**
+  (§7). A merge orphans one `MemberId` downstream — the exact shape of the merged-edition problem
+  Holdings §10 recorded against Catalog — so what this context publishes is an event its downstream
+  consumes rather than an update, as
+  [ADR-0017](adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) settles. What stays open
+  is the consuming half: **Circulation** will repoint the live loans of the absorbed record and
+  combine that borrower's claims in every queue — the same wall a merged edition hits, reached from
+  the other side, and the machinery is already there — and **Charges** will have the surviving
+  account absorb the other's outstanding charges, which that context decides rather than this
+  record. One consequence falls out for free and is worth naming: the survivor's balance moves,
+  Charges announces it, and Circulation already judges that pair against its threshold.
+
+  Two questions Circulation's half will have to answer, recorded here so they are not discovered
+  in the middle. **The cap of five** can be exceeded by a merge — two files of three items each
+  make one of six — and the principle is already written where it belongs: the cap constrains the
+  *act*, and a stored count would be an invariant on state, so the survivor simply borrows nothing
+  more until it drains. **And one queue may end up holding two claims of what turns out to be one
+  person**, which is the edition merge's rule read with the words swapped.
 * **Households.** One adult, three children, one visit, one payment someday. Today that is four
   members and a guardian repeated; a `Household` grouping earns its place the day the library
   wants family cards or a single renewal for all four.

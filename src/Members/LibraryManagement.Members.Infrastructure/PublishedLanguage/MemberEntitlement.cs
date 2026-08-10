@@ -40,14 +40,20 @@ public sealed class MemberEntitlement(MembersDbContext context, TimeProvider clo
                 member.MembershipStart,
                 member.MembershipEnd,
                 member.ErasedOn,
+                member.MergedInto,
             })
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        if (membership is null || membership.ErasedOn is not null)
+        if (membership is null || membership.ErasedOn is not null || membership.MergedInto is not null)
         {
             // An erased record answers exactly as an absent one: the identifier no longer
             // resolves to a person, and that is what the erasure promised.
+            //
+            // A merged one joins them, and this single clause is what keeps new loans and holds off
+            // an absorbed identifier: Circulation asks this question before every checkout and every
+            // hold, so a card from the record a member of staff merged away stops working the
+            // moment they say so. No consumer had to learn anything.
             return new EntitlementAnswer(Entitlement.NoSuchMember, Category: null);
         }
 

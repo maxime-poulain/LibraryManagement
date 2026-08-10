@@ -137,6 +137,27 @@ public sealed class MemberEntitlementTests(SqlServerFixture sqlServer)
         answer.Entitlement.ShouldBe(Entitlement.NoSuchMember);
         answer.Category.ShouldBeNull();
     }
+
+    [Fact]
+    public async Task AMergedMember_AnswersAsAnUnknownOneToo()
+    {
+        // This one clause is what keeps a new loan or a new hold off an absorbed identifier: every
+        // checkout and every hold asks this port first, so the card on the record somebody merged
+        // away stops working the moment they say so. No consumer had to learn anything.
+        var absorbed = AMember();
+        var surviving = AMember();
+        new MemberMergeDomainService().Merge(absorbed, surviving);
+        await StoredAsync(absorbed);
+        await StoredAsync(surviving);
+
+        var answer = await AskedOn(EnrolledOn, absorbed.Id.Value);
+
+        answer.Entitlement.ShouldBe(Entitlement.NoSuchMember);
+        answer.Category.ShouldBeNull();
+
+        // And the survivor is untouched, which is the half a one-sided assertion would miss.
+        (await AskedOn(EnrolledOn, surviving.Id.Value)).Entitlement.ShouldBe(Entitlement.Entitled);
+    }
 }
 
 /// <summary>

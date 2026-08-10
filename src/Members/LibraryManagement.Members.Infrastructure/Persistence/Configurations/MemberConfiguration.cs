@@ -69,6 +69,13 @@ public sealed class MemberConfiguration : AggregateRootConfiguration<Member, Mem
         builder.Property(member => member.MembershipEnd).IsRequired();
         builder.Property(member => member.ErasedOn);
 
+        // The record this one points at once two files turn out to be one person. Nullable, and an
+        // identifier column rather than a foreign key to this same table: a merge is followed once
+        // by whoever reads it, and a self-referencing constraint would buy nothing the aggregate
+        // does not already refuse.
+        builder.Property(member => member.MergedInto)
+            .HasConversion(id => id!.Value, value => MemberId.Create(value));
+
         builder.ComplexProperty(member => member.ContactDetails, contact =>
         {
             contact.Property(channels => channels.Email)

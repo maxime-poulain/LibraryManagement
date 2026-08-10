@@ -37,7 +37,14 @@ decided, and it is built for editions: two records join, the absorbed one become
 record under the survivor, and Circulation both points every loan *still out* at it and makes the two
 hold queues into one, while an ended loan keeps saying what was borrowed. The queue merge is where it
 was expensive: an invariant had to be restated, and the desk act *cancel my hold* had to start naming
-which hold rather than guessing between two. What is left is the same question asked of **members**.
+which hold rather than guessing between two.
+
+**Members now says the same thing about people.** Two files for one person join, the absorbed record
+becomes a pointer without being emptied — an audit has to read which two were judged one, and by
+which name — and `MembersMerged` is announced. Nobody subscribes yet, deliberately: the fact had to
+exist before a consumer could be written against it, which is how each of the edition consumers came
+to be written against something real. A merged card stops working all the same, and it cost one
+clause: the entitlement port answers *unknown*, and Circulation was already asking.
 
 **Deliberately absent, each for a recorded reason:**
 
@@ -45,7 +52,7 @@ which hold rather than guessing between two. What is left is the same question a
 |---|---|---|
 | Notifications, Staff access | Generic subdomains, out of the modeled domain | [strategic design §6](docs/strategic-design.md) |
 | MARC import | The Catalog's real feed; the manual commands are the fallback, not the design | [strategic design §6](docs/strategic-design.md) |
-| Merging two members | The other half of ADR-0017, reaching the hold queues from the other side: two borrowers' claims combine in the same queues, against the same invariant the edition merge restated. It reuses that machinery rather than needing its own | [ADR-0017](docs/adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) |
+| Consuming a member merge | Members announces it; Circulation must repoint the live loans and combine that borrower's claims in every queue, and Charges must have the surviving account absorb the other's outstanding charges. Both reuse machinery the edition merge built, which is why this step was placed last | [ADR-0017](docs/adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) |
 | Merging two authority records | The other half of a merge, and the easy one: no module outside Catalog holds an `AuthorId`, so it never crosses a boundary | [ADR-0017](docs/adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) |
 
 ---
@@ -92,6 +99,7 @@ flowchart TD
     CAT -->|"Published Language<br/>EditionId"| HLD
     CAT -->|"event<br/>two records became one"| HLD
     CAT -->|"event<br/>two records became one"| CIR
+    MEM -->|"event<br/>two records became one"| CIR
     HLD -->|"Customer / Supplier<br/>may this copy be lent?"| CIR
     MEM -->|"Customer / Supplier + ACL<br/>Member → Borrower"| CIR
     CIR -->|"events<br/>returned, given up on"| CHG
@@ -250,7 +258,7 @@ and that one travels as the 404 it is. [ADR-0016](docs/adr/0016-a-composed-page-
 records the decision and what it rejected;
 [strategic design §10](docs/strategic-design.md) decided the arrangement long before it was built.
 
-The unit filter runs **1184 tests across 20 projects**.
+The unit filter runs **1208 tests across 20 projects**.
 
 Integration tests start SQL Server 2022 through Testcontainers, or target the server named by the
 `LIBRARYMANAGEMENT_TEST_SQLSERVER` environment variable. Each drops its database and applies that

@@ -30,6 +30,21 @@ public static class MembersErrorCodes
     public static readonly ErrorCode MemberErased = new("Members.MemberErased");
 
     /// <summary>
+    /// The record was merged into another and no longer acts. Distinct from an erasure because a
+    /// member of staff acts differently on it: the person is here, under the surviving record.
+    /// </summary>
+    public static readonly ErrorCode MemberMerged = new("Members.MemberMerged");
+
+    /// <summary>A record was asked to absorb itself.</summary>
+    public static readonly ErrorCode MemberCannotAbsorbItself = new("Members.MemberCannotAbsorbItself");
+
+    /// <summary>
+    /// A record already merged into another cannot take part in a second merge — chaining would
+    /// leave a downstream identifier pointing at a pointer.
+    /// </summary>
+    public static readonly ErrorCode MemberAlreadyMerged = new("Members.MemberAlreadyMerged");
+
+    /// <summary>
     /// A child member must have a guardian, always — the invariant holds at enrollment, at a
     /// category change into <c>Child</c>, and against a removal that would leave a minor
     /// unreachable.

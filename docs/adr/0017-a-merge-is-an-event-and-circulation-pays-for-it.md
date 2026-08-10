@@ -134,9 +134,9 @@ tense long after the fact misleads whoever reads it next:
 | 2. Holdings' subscriber | Built — the passage is proved |
 | 3. Circulation's `Loan.EditionId` repointing | Built — live loans only |
 | 4. The queue merge, and `CancelFor` tightened | Built |
-| 5. Members' merge and its own event | Open |
+| 5. Members' merge and its own event | Built — the announcing half; no consumer yet |
 
-Nothing in the decision above changed while steps 1 to 4 were built. What they did not anticipate is
+Nothing in the decision above changed while steps 1 to 5 were built. What they did not anticipate is
 recorded where it belongs rather than here: that all four merge rules want to live together in a
 domain service (`tactical-design-catalog.md` §10); that the consuming side's three tempting guards —
 the copy's status, the survivor's existence, a deduplication table — are all wrong
@@ -151,6 +151,18 @@ loans named the survivor. Placing a hold now asks Catalog whether the identifier
 record — the port already answers no for an absorbed one, which is why this needed no new state. What
 it still cannot do is name the survivor in the refusal, and that is Catalog's port to widen if anyone
 ever needs it (`tactical-design-circulation.md` §10).
+
+**Members' half went in last and cost the least**, which the build order predicted: the same shape
+as step 1, and the guard against new loans and holds attaching to an absorbed identifier was one
+clause in a port Circulation already calls. What it added is recorded in Members' §10 — that the two
+terminal states this context now has are not interchangeable, and that erasure has to stay reachable
+*through* a merge, because a merge does not anonymize and a person's right does not stop at the file
+somebody judged secondary.
+
+What remains after it is the consuming half of *this* merge: Circulation repointing live loans and
+combining a borrower's claims across queues, and Charges having the surviving account absorb the
+other's outstanding charges. Both reuse machinery that now exists, which is what step 5 was placed
+last to be able to say.
 
 **The queue merge went in as decided**, both rules unchanged. What building it added is recorded in
 Circulation's §10 rather than here, and the piece worth reading from this record's perspective is

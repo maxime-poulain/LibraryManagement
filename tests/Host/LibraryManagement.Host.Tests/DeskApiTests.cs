@@ -213,6 +213,19 @@ public sealed class DeskApiTests(SqlServerFixture sqlServer) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task MergingTwoMembers_IsADeskAct()
+    {
+        // Routed, unlike the reactions a subscriber dispatches: the person who notices that two
+        // files are one person is the member of staff with both on screen, and the judgement is
+        // theirs. The body is the command record, so this pins its shape too.
+        var response = await PostAsync(
+            "/members/merge",
+            new { AbsorbedMemberId = Guid.CreateVersion7() });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task AMergeReaction_HasNoRoute()
     {
         // What Circulation does about a merge is dispatched by a subscriber, never asked for at a

@@ -166,4 +166,35 @@ public sealed class MemberPersistenceTests(SqlServerFixture sqlServer)
             .ShouldBeGreaterThanOrEqualTo(2);
     }
 
+    [Fact]
+    public async Task AMergedMember_ComesBackPointingAtItsSurvivor()
+    {
+        var absorbed = AMember(cardNumber: Unique());
+        var surviving = AMember(cardNumber: Unique());
+        new MemberMergeDomainService().Merge(absorbed, surviving);
+
+        await StoredAsync(absorbed);
+        await StoredAsync(surviving);
+
+        await using var reading = sqlServer.NewContext();
+        var found = await reading.Set<Member>().SingleAsync(held => held.Id == absorbed.Id, Token);
+
+        found.MergedInto.ShouldBe(surviving.Id);
+
+        // A merge does not anonymize: the audit trail is the point, and the card stops working by
+        // the entitlement answering "unknown" rather than by the column being emptied.
+        found.Name.ShouldNotBeNull();
+        found.CardNumber.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task AMemberInItsOwnRight_HoldsNoPointer()
+    {
+        var stored = await StoredAsync(AMember(cardNumber: Unique()));
+
+        await using var reading = sqlServer.NewContext();
+        var found = await reading.Set<Member>().SingleAsync(held => held.Id == stored.Id, Token);
+
+        found.MergedInto.ShouldBeNull();
+    }
 }

@@ -368,6 +368,7 @@ flowchart TD
     CAT -->|"Published Language<br/>EditionId + summary"| HLD
     CAT -->|"event<br/>two records became one"| HLD
     CAT -->|"event<br/>two records became one"| CIR
+    MEM -->|"event<br/>two records became one"| CIR
     HLD -->|"Customer / Supplier<br/>may this copy be lent?"| CIR
     MEM -->|"Customer / Supplier + ACL<br/>Member → Borrower"| CIR
     CIR -->|"events<br/>returned, given up on"| CHG
@@ -583,9 +584,12 @@ rule inside the module that owns it.
   [ADR-0017](adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) decides the shape: what
   crosses, what each consumer owes, and which of the queue's rules bends. It is built for editions:
   Catalog announces `EditionsMerged`, Holdings refiles its copies, Circulation points every loan
-  *still out* at the survivor and makes the two hold queues into one. What stays open is the same
-  question asked of **members**, which reaches the queues from the other side and reuses the
-  machinery this one built.
+  *still out* at the survivor and makes the two hold queues into one. Members now announces
+  `MembersMerged` too, and its own half is done — the record becomes a pointer, and the entitlement
+  port stops acknowledging it, which is what keeps new loans and holds off the absorbed identifier.
+  What stays open is what the other two contexts owe *that* announcement: Circulation repointing
+  live loans and combining a borrower's claims across queues, and Charges having the surviving
+  account absorb the other's outstanding charges.
 * Whether a hold may be placed on a *work* — any edition will do — as well as on an edition. Members
   ask for both, and the queue rules differ.
 * Whether a copy's loan history stays in Circulation forever or is archived. It is the only thing in
