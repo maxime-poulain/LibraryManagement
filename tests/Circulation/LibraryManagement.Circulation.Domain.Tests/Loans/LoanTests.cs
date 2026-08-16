@@ -341,6 +341,89 @@ public sealed class LoanTests
     public void RepointTo_DemandsARecordToPointAt()
         => Should.Throw<ArgumentNullException>(() => ALoan().RepointTo(null!));
 
+    // --- Repointing after a merge in Members --------------------------------------------------------
+
+    [Fact]
+    public void RepointBorrowerTo_MovesALiveLoanAndCarriesBothRecords()
+    {
+        var loan = ALoan().Settled();
+        var absorbed = loan.BorrowerId;
+        var surviving = BorrowerId.Generate();
+
+        loan.RepointBorrowerTo(surviving).HasErrors().ShouldBeFalse();
+
+        loan.BorrowerId.ShouldBe(surviving);
+
+        var repointed = loan.Event<LoanBorrowerRepointed>();
+        repointed.LoanId.ShouldBe(loan.Id);
+        repointed.PreviousBorrowerId.ShouldBe(absorbed);
+        repointed.NewBorrowerId.ShouldBe(surviving);
+    }
+
+    [Fact]
+    public void RepointBorrowerTo_AWrittenOffLoanNotYetRecovered_Moves()
+    {
+        // Where this cut parts company with the edition's: a written-off loan still speaks its
+        // borrower the day its copy resurfaces, and the recovery must speak against the account
+        // that now answers for the person.
+        var loan = ALoan();
+        loan.DeclareLost(Today.AddDays(45));
+        loan.Settled();
+        var surviving = BorrowerId.Generate();
+
+        loan.RepointBorrowerTo(surviving).HasErrors().ShouldBeFalse();
+
+        loan.BorrowerId.ShouldBe(surviving);
+        loan.Event<LoanBorrowerRepointed>().NewBorrowerId.ShouldBe(surviving);
+    }
+
+    [Fact]
+    public void RepointBorrowerTo_TheRecordItAlreadyNames_RecordsNothing()
+    {
+        // The ordinary shape of a redelivered announcement. It must not tell a projection to
+        // replace an entry with itself.
+        var loan = ALoan().Settled();
+
+        loan.RepointBorrowerTo(loan.BorrowerId).HasErrors().ShouldBeFalse();
+
+        loan.DomainEvents.ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData("returned")]
+    [InlineData("recovered")]
+    public void RepointBorrowerTo_ALoanAnsweredFor_IsRefused(string ending)
+    {
+        // A returned loan and a recovered one have said all they will ever say about their
+        // borrower; rewriting either would change no answer anyone can act on while making the
+        // record of a completed act disagree with the act. A written-off loan is deliberately not
+        // among them — see the moving case above.
+        var loan = ALoan();
+
+        if (ending == "returned")
+        {
+            loan.Return(Today, Policy);
+        }
+        else
+        {
+            loan.DeclareLost(Today.AddDays(45));
+            loan.RecordRecovery(Today.AddDays(90), Policy);
+        }
+
+        var absorbed = loan.BorrowerId;
+        loan.Settled();
+
+        CodesOf(loan.RepointBorrowerTo(BorrowerId.Generate()))
+            .ShouldContain(CirculationErrorCodes.LoanAlreadyAnsweredFor);
+
+        loan.BorrowerId.ShouldBe(absorbed);
+        loan.DomainEvents.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void RepointBorrowerTo_DemandsARecordToPointAt()
+        => Should.Throw<ArgumentNullException>(() => ALoan().RepointBorrowerTo(null!));
+
     [Fact]
     public void RecordRecovery_ALoanNeverGivenUpOn_IsRefused()
     {

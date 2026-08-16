@@ -908,6 +908,37 @@ contains its parent's — and EF refuses outright to move an owned entity betwee
 constraint violation to work around: a modeling statement, and a correct one. A hold really is
 identified by the queue it is in.
 
+**A merged member reaches this context on the same passage, and costs it differently.** The first
+fact Members states on its own initiative arrives at the same two subscribers-in-shape the edition
+merge left behind: one sweep over loans, one over queues, each dispatching this module's own
+command, each idempotent by the question it asks emptying. What the second merge added is worth
+keeping, because neither half repeated the first merge's answer.
+
+**The loans' scope is a third cut, and the question that decides it is the one already in use.**
+*What does this field still get asked?* A copy's edition is asked forever, so Holdings repoints
+status-blind; a loan's edition dies with the loan, so the edition sweep is live-only. A loan's
+borrower outlives the loan: a written-off loan still speaks its `BorrowerId` the day its copy
+resurfaces — `RecordRecovery` announces `LoanRecovered` with it, and Charges prices the lateness
+against it — and the borrower's file lists that loan among what its holder must still answer for.
+So the member sweep takes the loans *not yet answered for*: active, or declared lost and not
+recovered. A returned loan and a recovered one keep the identifier they were made under, for the
+reason the edition merge already gave — rewriting them changes no answer anyone can act on while
+making the record of a completed act disagree with the act. Leaving the written-off loan behind
+would have been the concrete failure: a copy resurfacing after the merge would bill its lateness to
+an account that no longer answers for anyone.
+
+**The queues' half is the cheap one, and it moved a rule to its right altitude.** No key changes and
+no claim moves between aggregates — each claim changes whose it says it is, inside the queue it was
+always in, and then the survivor is read against the invariant exactly as a merged queue is: a claim
+awaiting pickup always survives, and among the queued claims the earliest does, whichever file it
+came from. No fourth domain service was written, and the absence is the convention applied in the
+negative: the rule spans one aggregate, so it is `HoldQueue.CombineClaimsOf`, public where the
+pair's mutators are internal. Writing it exposed that the deduplication rule had always been about
+one queue's own claims rather than about the pair — it is `HoldQueue.KeepEarliestQueuedClaimOf`
+now, and `HoldQueueMergeDomainService` invokes it instead of holding it, keeping for itself exactly
+what concerns the pair. Members §10's two pre-recorded questions were answered as written there:
+the cap exceeded by a merge needed no code, and the doubled claim needed only the rules above.
+
 So a claim moves as a copy: the surviving queue takes a new object carrying every field, the
 identifier included, and the row travels as a deletion and an insertion. Nothing the domain can
 observe changed — the same identifier, the same placement instant, the same copy set aside — and the

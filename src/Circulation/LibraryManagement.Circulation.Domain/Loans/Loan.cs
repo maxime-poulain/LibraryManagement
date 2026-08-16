@@ -56,7 +56,11 @@ public sealed class Loan : AggregateRoot<LoanId>
     public EditionId EditionId { get; private set; }
 
     /// <summary>Gets who has it. Identity only, never the member.</summary>
-    public BorrowerId BorrowerId { get; }
+    /// <remarks>
+    /// Settable only from inside, and only by <see cref="RepointBorrowerTo"/>: nothing at the desk
+    /// changes whose loan a loan is. It moves when Members reports that two files were one person.
+    /// </remarks>
+    public BorrowerId BorrowerId { get; private set; }
 
     /// <summary>Gets the day the loan started.</summary>
     public DateOnly CheckedOutOn { get; }
@@ -498,6 +502,62 @@ public sealed class Loan : AggregateRoot<LoanId>
         EditionId = survivingEditionId;
 
         AddDomainEvent(new LoanRepointed(Id, previous, survivingEditionId));
+
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Points a loan not yet answered for at the member record that survived a merge of two files.
+    /// </summary>
+    /// <param name="survivingBorrowerId">The record that goes on naming the person.</param>
+    /// <returns>Success, or the reason there was nothing to repoint.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="survivingBorrowerId"/> is null.</exception>
+    /// <remarks>
+    /// <para>
+    /// <strong>The scope is a third cut, and neither of the existing two.</strong> The question is
+    /// the one every repoint answers — will this field be asked again? — and for the borrower the
+    /// answer runs past the end of the loan. A copy's edition is asked forever, so Holdings moves it
+    /// status-blind; a loan's edition dies with the loan, so <see cref="RepointTo"/> moves live
+    /// loans only. A loan's borrower dies later than the loan does: a written-off loan still speaks
+    /// its borrower the day its copy resurfaces — <see cref="RecordRecovery"/> announces
+    /// <see cref="LoanRecovered"/> with it, and Charges prices the lateness against it — and the
+    /// borrower's file lists that loan among what its holder must still answer for. So the loans
+    /// that move are the ones not yet answered for: active, or declared lost and not recovered.
+    /// </para>
+    /// <para>
+    /// <strong>A loan answered for keeps the identifier it was made under</strong>, exactly as an
+    /// ended loan keeps its edition: rewriting it would change no answer anyone can act on while
+    /// making the record of a completed act disagree with the act. The person is the same either
+    /// way — that is what a merge of two files asserts — but the record answers with the identifier
+    /// under which the thing happened.
+    /// </para>
+    /// <para>
+    /// The refusal is unreachable from the one caller there is, which loads the not-yet-answered-for
+    /// only. It is here for the reason <see cref="RepointTo"/> gives: a rule that lives in a
+    /// <c>WHERE</c> clause is a rule the next caller will not find.
+    /// </para>
+    /// </remarks>
+    public Result RepointBorrowerTo(BorrowerId survivingBorrowerId)
+    {
+        ArgumentNullException.ThrowIfNull(survivingBorrowerId);
+
+        if (Status == LoanStatus.Returned || RecoveredOn is not null)
+        {
+            return Result.Failure(
+                CirculationErrorCodes.LoanAlreadyAnsweredFor,
+                "A loan that has been answered for records who borrowed, and a merge of two "
+                + "files does not change what happened.");
+        }
+
+        if (survivingBorrowerId == BorrowerId)
+        {
+            return Result.Success();
+        }
+
+        var previous = BorrowerId;
+        BorrowerId = survivingBorrowerId;
+
+        AddDomainEvent(new LoanBorrowerRepointed(Id, previous, survivingBorrowerId));
 
         return Result.Success();
     }

@@ -19,21 +19,20 @@ using Contract = LibraryManagement.Members.PublishedLanguage.MembersMerged;
 namespace LibraryManagement.Composition.Tests.IntegrationEvents;
 
 /// <summary>
-/// The first fact Members states on its own initiative, travelling as far as it currently goes:
-/// through the aggregate, the outbox row, the drain and the translation into a flat contract.
+/// The first fact Members states on its own initiative, watched at the boundary: through the
+/// aggregate, the outbox row, the drain and the translation into a flat contract.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <strong>Nobody acts on it, and that is what this file records.</strong> Circulation and Charges
-/// are the consumers ADR-0017 names and neither is built, so the announcement ends at a subscriber
-/// this test registers to observe it. Writing the consumers first would have meant writing them
-/// against an intention; announcing first is what let each edition consumer be written against a
-/// fact that already existed.
+/// <strong>What is under test is the announcement, not any reaction to it.</strong> Circulation's
+/// consumers exist now — <c>MembersMergedInCirculationTests</c> proves that passage end to end —
+/// but this composition deliberately registers Members alone, so the contract can be asserted on
+/// as it leaves the module: the two identifiers, and nothing else.
 /// </para>
 /// <para>
-/// A stand-in subscriber rather than a real one is legitimate here for the same reason it is
-/// nowhere else in this folder: there is no production subscriber to displace, so nothing can
-/// silently win by registration order.
+/// A stand-in subscriber is legitimate here because the production subscribers live in a module
+/// this composition deliberately omits: nothing real is displaced, so nothing can silently win by
+/// registration order.
 /// </para>
 /// </remarks>
 [Collection(SqlServerCollection.Name)]

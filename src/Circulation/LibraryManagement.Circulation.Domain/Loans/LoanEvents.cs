@@ -159,3 +159,25 @@ public sealed record LoanRepointed(
     LoanId LoanId,
     EditionId PreviousEditionId,
     EditionId NewEditionId) : DomainEvent;
+
+/// <summary>
+/// A loan not yet answered for now names a different member record, because Members merged two
+/// files for one person.
+/// </summary>
+/// <param name="LoanId">The loan. What was borrowed, and when, did not change.</param>
+/// <param name="PreviousBorrowerId">The record that stopped naming a person of its own.</param>
+/// <param name="NewBorrowerId">
+/// The record the loan answers to from now on — the same person, under the file a member of staff
+/// judged the better one.
+/// </param>
+/// <remarks>
+/// The counterpart of <see cref="LoanRepointed"/> for the other merge ADR-0017 decides, and like it
+/// a report of what this context did in answer to another's fact. It reaches past live loans,
+/// because a borrower is asked about longer than an edition is: a written-off loan not yet
+/// recovered moves too, so that a late recovery speaks against the account that now answers for the
+/// person.
+/// </remarks>
+public sealed record LoanBorrowerRepointed(
+    LoanId LoanId,
+    BorrowerId PreviousBorrowerId,
+    BorrowerId NewBorrowerId) : DomainEvent;

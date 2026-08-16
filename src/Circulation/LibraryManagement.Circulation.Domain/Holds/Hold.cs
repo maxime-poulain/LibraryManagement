@@ -83,6 +83,16 @@ public sealed class Hold
         ExpiryWarningSent = ExpiryWarningSent,
     };
 
+    /// <summary>
+    /// Points the claim at the member record that survived a merge of two files.
+    /// </summary>
+    /// <remarks>
+    /// In place, unlike <see cref="SameClaimInAnotherQueue"/>: the borrower is not part of the
+    /// claim's key, so nothing here asks the store to move a row between owners. The claim stays
+    /// where it is, keeps its place in time, and changes whose it says it is.
+    /// </remarks>
+    internal void RepointTo(BorrowerId survivingBorrowerId) => BorrowerId = survivingBorrowerId;
+
     internal void Trap(CopyId copyId, DateOnly pickupDeadline)
     {
         Status = HoldStatus.AwaitingPickup;

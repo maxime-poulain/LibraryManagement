@@ -39,12 +39,14 @@ hold queues into one, while an ended loan keeps saying what was borrowed. The qu
 was expensive: an invariant had to be restated, and the desk act *cancel my hold* had to start naming
 which hold rather than guessing between two.
 
-**Members now says the same thing about people.** Two files for one person join, the absorbed record
-becomes a pointer without being emptied — an audit has to read which two were judged one, and by
-which name — and `MembersMerged` is announced. Nobody subscribes yet, deliberately: the fact had to
-exist before a consumer could be written against it, which is how each of the edition consumers came
-to be written against something real. A merged card stops working all the same, and it cost one
-clause: the entitlement port answers *unknown*, and Circulation was already asking.
+**Members says the same thing about people, and Circulation now acts on it.** Two files for one
+person join, the absorbed record becomes a pointer without being emptied — an audit has to read
+which two were judged one, and by which name — and `MembersMerged` is announced. Circulation
+repoints the loans the absorbed record has *not yet answered for* — a wider cut than the edition
+merge's live-only sweep, because a written-off loan still speaks its borrower the day its copy
+resurfaces — and combines the person's claims in every queue, under the survival rules the queue
+merge already wrote. A merged card stops working besides, and that cost one clause: the entitlement
+port answers *unknown*, and Circulation was already asking.
 
 **Deliberately absent, each for a recorded reason:**
 
@@ -52,7 +54,7 @@ clause: the entitlement port answers *unknown*, and Circulation was already aski
 |---|---|---|
 | Notifications, Staff access | Generic subdomains, out of the modeled domain | [strategic design §6](docs/strategic-design.md) |
 | MARC import | The Catalog's real feed; the manual commands are the fallback, not the design | [strategic design §6](docs/strategic-design.md) |
-| Consuming a member merge | Members announces it; Circulation must repoint the live loans and combine that borrower's claims in every queue, and Charges must have the surviving account absorb the other's outstanding charges. Both reuse machinery the edition merge built, which is why this step was placed last | [ADR-0017](docs/adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) |
+| Charges' share of a member merge | Members announces it and Circulation consumes it; what remains is the surviving account absorbing the other's outstanding charges, which is Charges' own rule to write | [ADR-0017](docs/adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) |
 | Merging two authority records | The other half of a merge, and the easy one: no module outside Catalog holds an `AuthorId`, so it never crosses a boundary | [ADR-0017](docs/adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) |
 
 ---
@@ -234,9 +236,9 @@ GET  /catalog/search?formPrefix=Ern
 GET  /members/{memberId}/file
 ```
 
-**Only what a librarian does is routed** — 37 of the 52 commands. Seven belong to the daily process,
-and eight exist because one module reacts to another; a route for those would let a request forge a
-fact only the announcing module is entitled to state.
+**Only what a librarian does is routed** — 39 of the 59 commands. Seven belong to the daily process,
+and thirteen exist because one module reacts to another; a route for those would let a request forge
+a fact only the announcing module is entitled to state.
 
 A command answers **204**, a query **200**. A refusal is **422** — the request was understood and
 the domain said no — with **400** for validation and **409** for a concurrency conflict; only a query

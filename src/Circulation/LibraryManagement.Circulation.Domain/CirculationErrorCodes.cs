@@ -78,4 +78,10 @@ public static class CirculationErrorCodes
 
     /// <summary>A hold queue was asked to absorb itself.</summary>
     public static readonly ErrorCode QueueCannotAbsorbItself = new("Circulation.QueueCannotAbsorbItself");
+
+    /// <summary>
+    /// The loan has been answered for — returned, or its written-off copy recovered — and nothing
+    /// will ever be asked of it again, so no merge of member files moves it.
+    /// </summary>
+    public static readonly ErrorCode LoanAlreadyAnsweredFor = new("Circulation.LoanAlreadyAnsweredFor");
 }

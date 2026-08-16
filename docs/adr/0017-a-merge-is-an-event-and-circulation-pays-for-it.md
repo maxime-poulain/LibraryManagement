@@ -122,8 +122,9 @@ an aggregate by a foreign identifier came to be absent from the list of contexts
 An invariant loosens, and the loosening is written down with its reason rather than discovered
 later by someone reading `PlaceHold` and wondering why the queue holds a borrower twice.
 
-The merge stays unbuilt. What changes today is that it is decided, and that the next person to
-start it knows Circulation is the expensive part rather than finding out in the middle.
+On the day of this record the merge was entirely unbuilt; what the decision changed was that the
+next person to start it would know Circulation is the expensive part rather than finding out in
+the middle. What has been built since is tracked below.
 
 **Progress against the build order**, kept here because a record whose consequences read as future
 tense long after the fact misleads whoever reads it next:
@@ -134,7 +135,7 @@ tense long after the fact misleads whoever reads it next:
 | 2. Holdings' subscriber | Built — the passage is proved |
 | 3. Circulation's `Loan.EditionId` repointing | Built — live loans only |
 | 4. The queue merge, and `CancelFor` tightened | Built |
-| 5. Members' merge and its own event | Built — the announcing half; no consumer yet |
+| 5. Members' merge and its own event | Built — announced, and consumed by Circulation; Charges' share remains |
 
 Nothing in the decision above changed while steps 1 to 5 were built. What they did not anticipate is
 recorded where it belongs rather than here: that all four merge rules want to live together in a
@@ -159,10 +160,17 @@ terminal states this context now has are not interchangeable, and that erasure h
 *through* a merge, because a merge does not anonymize and a person's right does not stop at the file
 somebody judged secondary.
 
-What remains after it is the consuming half of *this* merge: Circulation repointing live loans and
-combining a borrower's claims across queues, and Charges having the surviving account absorb the
-other's outstanding charges. Both reuse machinery that now exists, which is what step 5 was placed
-last to be able to say.
+**Circulation's consuming half went in next, on the machinery step 5 was placed last to reuse** —
+and it corrected one word of this record. *"Circulation repoints `Loan.EditionId`"* generalized to
+the borrower as *live loans*, and live undersold it: a borrower is asked about longer than an
+edition is, since a written-off loan still speaks its `BorrowerId` the day its copy resurfaces. So
+the loan sweep takes what is *not yet answered for* — active, or declared lost and unrecovered —
+which is a third scope cut beside Holdings' status-blind one and the edition sweep's live-only one,
+argued where the other two are (`tactical-design-circulation.md` §10). The claims combined without
+a new domain service, and that absence moved a rule to its right altitude — also recorded there.
+
+What remains is Charges' share alone: the surviving account absorbing the other's outstanding
+charges, which is that context's own rule to write, exactly as this record left it.
 
 **The queue merge went in as decided**, both rules unchanged. What building it added is recorded in
 Circulation's §10 rather than here, and the piece worth reading from this record's perspective is

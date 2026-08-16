@@ -66,9 +66,10 @@ the same field and differ only in what they leave behind, which no PATCH body co
 collides on the key instead of minting a second aggregate, so a retry after a timeout is safe by
 construction rather than by a deduplication table.
 
-**Only what a librarian does is routed — 37 commands of 52.** Seven belong to the daily process.
-Eight more exist because one module reacts to another: a replacement charge raised by a write-off, a
-hold released because a copy left service, a lost copy noted as accounted for. Those have no desk
+**Only what a librarian does is routed — 39 commands of 59, as the count stands today.** Seven
+belong to the daily process. Thirteen more exist because one module reacts to another: a replacement
+charge raised by a write-off, a hold released because a copy left service, the sweeps a merge in
+Catalog or Members sets off. Those have no desk
 audience, and a route for them would let a request forge a fact only the announcing module is
 entitled to state. `DeclareCopyLost` is routed despite also being a subscriber's command, because a
 stocktake that fails to find a copy reaches the same fact by a different road.

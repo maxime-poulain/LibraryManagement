@@ -15,12 +15,13 @@ public sealed class LoanPersistenceTests(SqlServerFixture sqlServer)
     private static Loan ALoan(
         CopyId? copyId = null,
         DateOnly? checkedOutOn = null,
-        EditionId? editionId = null)
+        EditionId? editionId = null,
+        BorrowerId? borrowerId = null)
         => Loan.CheckOut(
             LoanId.Generate(),
             copyId ?? CopyId.Generate(),
             editionId ?? EditionId.Generate(),
-            BorrowerId.Generate(),
+            borrowerId ?? BorrowerId.Generate(),
             checkedOutOn ?? Today,
             CirculationPolicy.Current);
 
@@ -222,6 +223,60 @@ public sealed class LoanPersistenceTests(SqlServerFixture sqlServer)
         var found = await reading.Set<Loan>().SingleAsync(stored => stored.Id == loan.Id, Token);
 
         found.EditionId.ShouldBe(surviving);
+    }
+
+    [Fact]
+    public async Task NotYetAnsweredForByBorrower_FindsTheUnsettledAndLeavesTheSettled()
+    {
+        // The third cut, held by the store: wider than the edition sweep's — a written-off loan
+        // still speaks its borrower the day its copy resurfaces — and narrower than everything,
+        // because a returned or recovered loan is settled business.
+        var borrowerId = BorrowerId.Generate();
+        var active = ALoan(borrowerId: borrowerId);
+        var writtenOff = ALoan(borrowerId: borrowerId);
+        var returned = ALoan(borrowerId: borrowerId);
+        var recovered = ALoan(borrowerId: borrowerId);
+        writtenOff.DeclareLost(Today.AddDays(45));
+        returned.Return(Today, CirculationPolicy.Current);
+        recovered.DeclareLost(Today.AddDays(45));
+        recovered.RecordRecovery(Today.AddDays(90), CirculationPolicy.Current);
+
+        await using (var writing = sqlServer.NewContext())
+        {
+            writing.AddRange(active, writtenOff, returned, recovered, ALoan());
+            await writing.SaveChangesAsync(Token);
+        }
+
+        await using var reading = sqlServer.NewContext();
+        var found = await new LoanRepository(reading)
+            .NotYetAnsweredForByBorrowerAsync(borrowerId, Token);
+
+        found.Select(loan => loan.Id).ShouldBe([active.Id, writtenOff.Id], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task ALoanRepointedToItsMergedBorrower_NamesTheSurvivorInTheStore()
+    {
+        // The second property to gain a private setter for a merge, proved the same way: only a
+        // round trip shows the store writes the new value rather than the change tracker holding
+        // it.
+        var loan = await StoredAsync(ALoan());
+        var surviving = BorrowerId.Generate();
+
+        await using (var updating = sqlServer.NewContext())
+        {
+            var repointing = await new LoanRepository(updating)
+                .NotYetAnsweredForByBorrowerAsync(loan.BorrowerId, Token);
+
+            repointing.ShouldHaveSingleItem()
+                .RepointBorrowerTo(surviving).HasErrors().ShouldBeFalse();
+            await updating.SaveChangesAsync(Token);
+        }
+
+        await using var reading = sqlServer.NewContext();
+        var found = await reading.Set<Loan>().SingleAsync(stored => stored.Id == loan.Id, Token);
+
+        found.BorrowerId.ShouldBe(surviving);
     }
 
     [Fact]

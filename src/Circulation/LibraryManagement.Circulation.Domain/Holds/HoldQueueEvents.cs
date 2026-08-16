@@ -207,3 +207,25 @@ public sealed record HoldCancelledAsDuplicate(
     HoldId HoldId,
     BorrowerId BorrowerId,
     HoldId SurvivingHoldId) : DomainEvent;
+
+/// <summary>
+/// A claim now belongs to a different member record, because Members merged two files for one
+/// person.
+/// </summary>
+/// <param name="EditionId">The queue. The claim did not move; its borrower's identifier did.</param>
+/// <param name="HoldId">The claim. It kept its identity and its place in time.</param>
+/// <param name="PreviousBorrowerId">The record that stopped naming a person of its own.</param>
+/// <param name="NewBorrowerId">The record the claim answers to from now on.</param>
+/// <remarks>
+/// The counterpart of <see cref="HoldMovedToMergedQueue"/> for the other merge ADR-0017 decides,
+/// and the cheaper of the two by construction: there the aggregate's own key changed under the
+/// claim, here a field on the claim changes inside the queue it was always in. Informational at
+/// most — the person is the same, their place among the people ahead of them is exactly what it
+/// was, and a message about it would explain a back-office correction to somebody waiting for a
+/// book.
+/// </remarks>
+public sealed record HoldBorrowerRepointed(
+    EditionId EditionId,
+    HoldId HoldId,
+    BorrowerId PreviousBorrowerId,
+    BorrowerId NewBorrowerId) : DomainEvent;

@@ -587,9 +587,11 @@ rule inside the module that owns it.
   *still out* at the survivor and makes the two hold queues into one. Members now announces
   `MembersMerged` too, and its own half is done — the record becomes a pointer, and the entitlement
   port stops acknowledging it, which is what keeps new loans and holds off the absorbed identifier.
-  What stays open is what the other two contexts owe *that* announcement: Circulation repointing
-  live loans and combining a borrower's claims across queues, and Charges having the surviving
-  account absorb the other's outstanding charges.
+  Circulation consumes that announcement as well: it repoints the loans the absorbed record has not
+  yet answered for — a wider scope than the edition merge's, argued in the Circulation document's
+  §10 — and combines the person's claims in every queue under the survival rules the queue merge
+  wrote. What stays open is Charges' share alone: the surviving account absorbing the other's
+  outstanding charges.
 * Whether a hold may be placed on a *work* — any edition will do — as well as on an edition. Members
   ask for both, and the queue rules differ.
 * Whether a copy's loan history stays in Circulation forever or is archived. It is the only thing in

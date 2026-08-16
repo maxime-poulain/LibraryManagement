@@ -467,10 +467,11 @@ public sealed class HoldQueue : AggregateRoot<EditionId>
     /// <param name="absorbed">The queue whose edition stopped being a record of its own.</param>
     /// <remarks>
     /// <para>
-    /// <strong>Deliberately unguarded, and deliberately <c>internal</c>.</strong> Which claims may
-    /// survive a union is decided by <see cref="IHoldQueueMergeDomainService"/>, which holds the
-    /// rules together — a merge is one question, and rules that answer one question drift apart when
-    /// they are kept in two places. This method is what remains once the decision is made.
+    /// <strong>Deliberately unguarded, and deliberately <c>internal</c>.</strong> Whether two
+    /// queues may be joined at all is <see cref="IHoldQueueMergeDomainService"/>'s decision — the
+    /// rule concerns the pair, and belongs to neither queue alone. This method is what remains once
+    /// the decision is made; the collisions the union creates are read afterwards by
+    /// <see cref="KeepEarliestQueuedClaimOf"/>, one borrower at a time.
     /// </para>
     /// <para>
     /// Order needs no rule and gets none: a queue is served by placement instant, and the union
@@ -491,19 +492,114 @@ public sealed class HoldQueue : AggregateRoot<EditionId>
     }
 
     /// <summary>
-    /// Ends a claim the union made redundant, and says which of the borrower's claims remains.
+    /// Makes one borrower's claims out of two borrowers' claims, because Members merged two files
+    /// for one person.
+    /// </summary>
+    /// <param name="absorbedBorrowerId">The record that stopped naming a person of its own.</param>
+    /// <param name="survivingBorrowerId">The record the claims answer to from now on.</param>
+    /// <exception cref="ArgumentNullException">Thrown when a reference argument is null.</exception>
+    /// <remarks>
+    /// <para>
+    /// <strong>Public where the queue-merge mutators are internal, and the difference is the
+    /// convention's own boundary.</strong> Which claims survive a union of two <em>queues</em> is a
+    /// rule about a pair, so it lives in <see cref="IHoldQueueMergeDomainService"/> and this
+    /// aggregate only executes it. Which of one borrower's claims survive in <em>this</em> queue is
+    /// a rule about this aggregate alone, and a service holding it would be a service holding one
+    /// aggregate's invariant — the case the convention exists to refuse. The two merges apply the
+    /// same survival rules; they enter through doors that match what each one spans.
+    /// </para>
+    /// <para>
+    /// Nothing moves and nothing interleaves — the cheap half of what a merged member costs this
+    /// context, as the queue union was the expensive half of a merged edition. Each claim changes
+    /// whose it says it is, in place; then the borrower who may now hold two is read against the
+    /// invariant exactly as a merged queue is.
+    /// </para>
+    /// <para>
+    /// Doing nothing for a pair already combined — or for a queue the absorbed borrower has no
+    /// claim in — is what lets a redelivered announcement cost nothing.
+    /// </para>
+    /// </remarks>
+    public void CombineClaimsOf(BorrowerId absorbedBorrowerId, BorrowerId survivingBorrowerId)
+    {
+        ArgumentNullException.ThrowIfNull(absorbedBorrowerId);
+        ArgumentNullException.ThrowIfNull(survivingBorrowerId);
+
+        if (absorbedBorrowerId == survivingBorrowerId)
+        {
+            return;
+        }
+
+        var theirs = _holds.Where(hold => hold.BorrowerId == absorbedBorrowerId).ToList();
+
+        if (theirs.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var hold in theirs)
+        {
+            hold.RepointTo(survivingBorrowerId);
+
+            AddDomainEvent(
+                new HoldBorrowerRepointed(Id, hold.Id, absorbedBorrowerId, survivingBorrowerId));
+        }
+
+        KeepEarliestQueuedClaimOf(survivingBorrowerId);
+    }
+
+    /// <summary>
+    /// Keeps the earliest of a borrower's queued claims and ends the rest as duplicates naming it.
+    /// </summary>
+    /// <param name="borrowerId">The borrower who may hold more than the invariant permits.</param>
+    /// <remarks>
+    /// <para>
+    /// The queued half of the survival rules, and the enforcement of the invariant as restated:
+    /// <em>at most one queued claim per borrower</em>. A claim awaiting pickup is never touched —
+    /// a copy is physically on the hold shelf with somebody's name on it, and dropping the claim
+    /// would strand the copy and break a promise already made in the world.
+    /// </para>
+    /// <para>
+    /// It lived in <see cref="IHoldQueueMergeDomainService"/> until the member merge asked the same
+    /// question of one queue alone, which is what showed the rule had always been about this
+    /// aggregate's own claims rather than about the pair of queues. <c>internal</c> so the service
+    /// still reaches it; <see cref="CombineClaimsOf"/> is the other caller.
+    /// </para>
+    /// </remarks>
+    internal void KeepEarliestQueuedClaimOf(BorrowerId borrowerId)
+    {
+        ArgumentNullException.ThrowIfNull(borrowerId);
+
+        var queued = _holds
+            .Where(hold => hold.Status == HoldStatus.Queued && hold.BorrowerId == borrowerId)
+            .OrderBy(hold => hold.PlacedOn)
+            .ToList();
+
+        if (queued.Count < 2)
+        {
+            return;
+        }
+
+        var earliest = queued[0];
+
+        foreach (var superseded in queued.Skip(1))
+        {
+            CancelAsDuplicate(superseded, earliest.Id);
+        }
+    }
+
+    /// <summary>
+    /// Ends a claim a merge made redundant, and says which of the borrower's claims remains.
     /// </summary>
     /// <param name="hold">The claim to end.</param>
     /// <param name="survivingHoldId">Their claim that stays — the older of the two.</param>
     /// <remarks>
-    /// <c>internal</c> for the reason <see cref="AbsorbHoldsFrom"/> is: choosing which of two claims
-    /// is redundant is the service's judgement, and this is the removal that follows it.
+    /// The removal that follows <see cref="KeepEarliestQueuedClaimOf"/>'s judgement, and private
+    /// because that judgement is now the only caller: it was <c>internal</c> for the queue-merge
+    /// service while the service chose which claim was redundant, and the choosing moved in here
+    /// with the rule.
     /// </remarks>
-    internal void CancelAsDuplicate(Hold hold, HoldId survivingHoldId)
+    private void CancelAsDuplicate(Hold hold, HoldId survivingHoldId)
     {
-        ArgumentNullException.ThrowIfNull(hold);
-        ArgumentNullException.ThrowIfNull(survivingHoldId);
-
         _holds.Remove(hold);
 
         AddDomainEvent(
