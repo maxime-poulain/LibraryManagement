@@ -130,6 +130,24 @@ public interface ILoanRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the loans a borrower has not yet answered for: out, or written off and not yet
+    /// resurfaced.
+    /// </summary>
+    /// <param name="borrowerId">The borrower whose record was absorbed by a merge.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The loans, empty when everything of theirs is settled.</returns>
+    /// <remarks>
+    /// The scope of the one caller there is, and a different cut from
+    /// <see cref="ActiveOfEditionAsync"/>'s: a loan's edition is asked about only while the loan is
+    /// live, but its borrower is asked about until the loan is answered for — a written-off loan
+    /// still speaks its borrower the day its copy resurfaces, and the borrower's file lists it until
+    /// then. Wide enough to include the declared-lost, narrow enough to leave the past alone.
+    /// </remarks>
+    ValueTask<IReadOnlyList<Loan>> NotYetAnsweredForByBorrowerAsync(
+        BorrowerId borrowerId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the loan a recovered copy concerns: the most recently declared-lost loan carrying
     /// it, or <see langword="null"/> when no declared loss ever involved the copy.
     /// </summary>

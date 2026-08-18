@@ -12,16 +12,17 @@ namespace LibraryManagement.Host.Http;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Six routes out of sixteen commands, and the ten that are missing are missing for two different
-/// reasons. Seven belong to the daily process — reminders, expiries, the reconciliation sweeps —
-/// which the design gives to a scheduled run precisely because the passage of time is not an event
-/// somebody clicks.
+/// Six routes out of twenty commands, and the fourteen that are missing are missing for two
+/// different reasons. Seven belong to the daily process — reminders, expiries, the reconciliation
+/// sweeps — which the design gives to a scheduled run precisely because the passage of time is not
+/// an event somebody clicks.
 /// </para>
 /// <para>
-/// The other three are reactions: a hold released because Holdings said the copy left service, a
+/// The other seven are reactions: a hold released because Holdings said the copy left service, a
 /// borrower's claims cancelled because Charges said they owe money, a loan's frozen lateness priced
-/// because Holdings said the copy turned up. Each is a module answering another module, and a route
-/// would let a request assert a fact its announcer never made.
+/// because Holdings said the copy turned up, and the four sweeps a merge sets off — loans and
+/// queues, for an edition Catalog joined or a person Members did. Each is a module answering
+/// another module, and a route would let a request assert a fact its announcer never made.
 /// </para>
 /// </remarks>
 internal static class CirculationEndpoints

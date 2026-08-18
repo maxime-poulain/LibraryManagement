@@ -28,6 +28,10 @@
              an identifier stored here has stopped naming a record. A published language and nothing
              else, so this buys no dependency on Catalog's model. -->
         <ProjectReference Include="..\..\Catalog\LibraryManagement.Catalog.PublishedLanguage\LibraryManagement.Catalog.PublishedLanguage.csproj" />
+        <!-- And to the same fact from Members: two files were one person. The application already
+             references this language for the entitlement question it asks before every checkout;
+             the subscribers here listen to the first fact Members states without being asked. -->
+        <ProjectReference Include="..\..\Members\LibraryManagement.Members.PublishedLanguage\LibraryManagement.Members.PublishedLanguage.csproj" />
     </ItemGroup>
 
 </Project>

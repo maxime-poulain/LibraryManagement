@@ -27,9 +27,12 @@ begun the merge ADR-0017 decides: two editions join, the absorbed record becomes
 absorbed record under the survivor, and Circulation both points every loan still out at it and makes
 the two hold queues into one, leaving ended loans saying what was borrowed. **Members announces the
 same fact about people** — `MembersMerged`, with the absorbed record kept intact behind a pointer
-and the entitlement port answering *unknown* for it — and nothing subscribes to that one yet. What
-remains is what Circulation and Charges owe a merged member: live loans repointed, a borrower's
-claims combined across queues, and the surviving account absorbing the other's outstanding charges.
+and the entitlement port answering *unknown* for it — **and Circulation consumes it**: the loans the
+absorbed record has not yet answered for are repointed (a wider cut than the edition merge's
+live-only sweep — a written-off loan still speaks its borrower the day its copy resurfaces), and the
+person's claims are combined in every queue under the survival rules the queue merge wrote. What
+remains is Charges' share of a merged member: the surviving account absorbing the other's
+outstanding charges.
 
 ## The documents are the authority
 
@@ -325,10 +328,20 @@ internal behind it.
 **`HoldQueueMergeDomainService` is the second, and it is worth reading next** because it answers the
 question the first one leaves: the two aggregates are of the *same type*. Two `HoldQueue`s become
 one, so no argument about which of them "owns" the rule can be made from the types — the rule is
-about the pair, and that is the whole test. It also shows the shape at its fullest: two `internal`
-mutators on the aggregate (`AbsorbHoldsFrom` and `CancelAsDuplicate`), the service holding every
-decision about which claims survive, and the handler holding only the questions the store must
-answer — do these queues exist, and does the survivor need one opened.
+about the pair, and that is the whole test. The `internal` mutator `AbsorbHoldsFrom` is the way in,
+the handler holds only the questions the store must answer — do these queues exist, and does the
+survivor need one opened — and the service holds what concerns the pair: whether they may be joined,
+and that the union is read against the invariant afterwards.
+
+**The member merge in Circulation is the convention's second counter-example, and the instructive
+one**: the same collision — one borrower, two claims, one queue — reached from Members' merge
+instead of Catalog's, and *no* service was written for it. The rule spans one aggregate, so it lives
+in `HoldQueue.CombineClaimsOf`, public where the pair's mutators are internal. Writing it there
+showed that one of the service's rules had always been the aggregate's own — *among a borrower's
+queued claims, the earliest survives* is `HoldQueue.KeepEarliestQueuedClaimOf` now, invoked by the
+service for the union and by `CombineClaimsOf` for the member merge. A convention that only ever
+adds services is a convention nobody is testing; this is what applying it in the negative looks
+like.
 
 `MemberMergeDomainService` is the third and is not described here on purpose: it is the same shape
 again, and a convention section that grows an entry per instance stops being a convention and

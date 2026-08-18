@@ -84,6 +84,17 @@ internal sealed class InMemoryLoanRepository : ILoanRepository
             .Where(loan => loan.Status == LoanStatus.Active && loan.DueDate < today)
             .ToList());
 
+    // Not yet answered for: out, or written off and not yet resurfaced — the borrower is asked
+    // about until the loan is settled, which is why this cut is wider than the edition sweep's.
+    public ValueTask<IReadOnlyList<Loan>> NotYetAnsweredForByBorrowerAsync(
+        BorrowerId borrowerId,
+        CancellationToken cancellationToken = default)
+        => ValueTask.FromResult<IReadOnlyList<Loan>>(_loans.Values
+            .Where(loan => loan.BorrowerId == borrowerId
+                && loan.Status != LoanStatus.Returned
+                && loan.RecoveredOn == null)
+            .ToList());
+
     public ValueTask<Loan?> MostRecentlyDeclaredLostForCopyAsync(
         CopyId copyId,
         CancellationToken cancellationToken = default)

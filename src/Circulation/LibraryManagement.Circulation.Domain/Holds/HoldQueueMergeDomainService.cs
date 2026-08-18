@@ -28,7 +28,10 @@ namespace LibraryManagement.Circulation.Domain.Holds;
 /// <strong>Among a borrower's queued claims, only the earliest survives.</strong> Their claim on the
 /// work is as old as the first time they asked for it; the later one was a claim on what turns out
 /// to be the same thing. Nothing is lost, and the event says which claim remains so a reader can see
-/// that.
+/// that. This rule no longer lives here: the member merge asks the same question of one queue alone,
+/// which showed it had always been about one aggregate's own claims — it is
+/// <c>HoldQueue.KeepEarliestQueuedClaimOf</c>, and this service invokes it for every borrower the
+/// union may have doubled.
 /// </para>
 /// <para>
 /// So the invariant is restated rather than abandoned: <em>at most one queued claim per borrower</em>.
@@ -40,7 +43,8 @@ namespace LibraryManagement.Circulation.Domain.Holds;
 /// </para>
 /// <para>
 /// Nothing here reaches a store, which is the property that made it a domain service rather than a
-/// handler.
+/// handler; and what remains here is exactly what concerns the pair rather than either queue —
+/// whether they may be joined, and that the union is read against the invariant afterwards.
 /// </para>
 /// </remarks>
 public sealed class HoldQueueMergeDomainService : IHoldQueueMergeDomainService
@@ -60,34 +64,14 @@ public sealed class HoldQueueMergeDomainService : IHoldQueueMergeDomainService
 
         surviving.AbsorbHoldsFrom(absorbed);
 
+        // Per borrower rather than in one sweep so the event can name the surviving claim, which
+        // is the whole difference between "your hold was cancelled" and "your two requests were
+        // one".
         foreach (var borrower in surviving.Holds.Select(hold => hold.BorrowerId).Distinct().ToList())
         {
-            Deduplicate(surviving, borrower);
+            surviving.KeepEarliestQueuedClaimOf(borrower);
         }
 
         return Result.Success();
-    }
-
-    // Queued claims only, and the earliest of them is the one that stays. Taken per borrower rather
-    // than in one sweep so the event can name the surviving claim, which is the whole difference
-    // between "your hold was cancelled" and "your two requests were one".
-    private static void Deduplicate(HoldQueue surviving, BorrowerId borrowerId)
-    {
-        var queued = surviving.Holds
-            .Where(hold => hold.Status == HoldStatus.Queued && hold.BorrowerId == borrowerId)
-            .OrderBy(hold => hold.PlacedOn)
-            .ToList();
-
-        if (queued.Count < 2)
-        {
-            return;
-        }
-
-        var earliest = queued[0];
-
-        foreach (var superseded in queued.Skip(1))
-        {
-            surviving.CancelAsDuplicate(superseded, earliest.Id);
-        }
     }
 }

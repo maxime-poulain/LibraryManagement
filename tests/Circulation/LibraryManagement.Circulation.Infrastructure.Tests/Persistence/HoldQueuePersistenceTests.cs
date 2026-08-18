@@ -295,6 +295,35 @@ public sealed class HoldQueuePersistenceTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public async Task CombiningTheClaimsOfAMergedBorrower_WritesTheRepointAndTheRemovalInOneSave()
+    {
+        // The member merge's half, and the cheap one at the store as in the model: the borrower is
+        // not part of the claim's key, so the repoint is an update in place — no row moves between
+        // owners — and the duplicate the union reveals leaves as an ordinary delete.
+        var absorbedBorrower = BorrowerId.Generate();
+        var survivingBorrower = BorrowerId.Generate();
+        var queue = HoldQueue.For(EditionId.Generate());
+        var earliest = HoldId.Generate();
+        queue.PlaceHold(earliest, absorbedBorrower, ThisMorning);
+        queue.PlaceHold(HoldId.Generate(), survivingBorrower, ThisMorning.AddHours(1));
+        await StoredAsync(queue);
+
+        await using (var updating = sqlServer.NewContext())
+        {
+            var loaded = await new HoldQueueRepository(updating)
+                .GetByEditionAsync(queue.Id, Token);
+
+            loaded!.CombineClaimsOf(absorbedBorrower, survivingBorrower);
+            await updating.SaveChangesAsync(Token);
+        }
+
+        var found = await ReadBackAsync(queue.Id);
+        var remaining = found.Holds.ShouldHaveSingleItem();
+        remaining.Id.ShouldBe(earliest);
+        remaining.BorrowerId.ShouldBe(survivingBorrower);
+    }
+
+    [Fact]
     public async Task TheHoldsComeBackWithTheirQueue_WhenTheDayFindsIt()
     {
         // The query has to include what the aggregate will read, or the expiry would look at an

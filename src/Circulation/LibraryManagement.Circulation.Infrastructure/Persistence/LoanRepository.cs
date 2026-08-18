@@ -152,6 +152,26 @@ public sealed class LoanRepository(CirculationDbContext context) : ILoanReposito
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Tracked, like <see cref="ActiveOfEditionAsync"/> and for the same reason: the caller
+    /// repoints every loan it gets back, and the module's unit of work writes them once the
+    /// command has succeeded. The borrower index the cap count needed serves the sweep too.
+    /// </remarks>
+    public async ValueTask<IReadOnlyList<Loan>> NotYetAnsweredForByBorrowerAsync(
+        BorrowerId borrowerId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(borrowerId);
+
+        return await context.Loans
+            .Where(loan => loan.BorrowerId == borrowerId
+                && loan.Status != LoanStatus.Returned
+                && loan.RecoveredOn == null)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
     public async ValueTask<Loan?> MostRecentlyDeclaredLostForCopyAsync(
         CopyId copyId,
         CancellationToken cancellationToken = default)

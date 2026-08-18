@@ -104,6 +104,17 @@ public static class ServiceCollectionExtensions
             IIntegrationEventSubscriber<Catalog.PublishedLanguage.EditionsMerged>,
             IntegrationEvents.MergeHoldQueuesOnEditionsMerged>();
 
+        // And to the same fact from Members: two files were one person. The same pair of reactions
+        // as Catalog's merge, because this module holds the merged identifier in the same two
+        // places — a loan's field, and the claims of every queue the person waits in.
+        services.AddScoped<
+            IIntegrationEventSubscriber<Members.PublishedLanguage.MembersMerged>,
+            IntegrationEvents.RepointLoansOnMembersMerged>();
+
+        services.AddScoped<
+            IIntegrationEventSubscriber<Members.PublishedLanguage.MembersMerged>,
+            IntegrationEvents.CombineHoldsOnMembersMerged>();
+
         // No JSON converters: this module's events carry identifiers, dates and enums, all of
         // which the shared serializer already speaks. No published-language adapter either — the
         // one port this module declares is implemented on the other side of its edge.

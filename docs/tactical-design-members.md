@@ -431,20 +431,25 @@ Open, and each deferred for a stated reason rather than forgotten:
   (§7). A merge orphans one `MemberId` downstream — the exact shape of the merged-edition problem
   Holdings §10 recorded against Catalog — so what this context publishes is an event its downstream
   consumes rather than an update, as
-  [ADR-0017](adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) settles. What stays open
-  is the consuming half: **Circulation** will repoint the live loans of the absorbed record and
-  combine that borrower's claims in every queue — the same wall a merged edition hits, reached from
-  the other side, and the machinery is already there — and **Charges** will have the surviving
-  account absorb the other's outstanding charges, which that context decides rather than this
-  record. One consequence falls out for free and is worth naming: the survivor's balance moves,
-  Charges announces it, and Circulation already judges that pair against its threshold.
+  [ADR-0017](adr/0017-a-merge-is-an-event-and-circulation-pays-for-it.md) settles.
+  **Circulation's consuming half is now built**: it repoints the loans of the absorbed record and
+  combines that borrower's claims in every queue — the same wall a merged edition hits, reached
+  from the other side, on machinery that was already there. One correction the building made to
+  this paragraph as first written: *live* loans undersold the scope. A loan's borrower is asked
+  about until the loan is answered for — a written-off loan still speaks its `BorrowerId` the day
+  its copy resurfaces — so the sweep is wider than the edition merge's, and the cut is argued in
+  the Circulation document's §10. What stays open is **Charges'** share: the surviving account
+  absorbing the other's outstanding charges, which that context decides rather than this record.
+  One consequence falls out for free and is worth naming: the survivor's balance moves, Charges
+  announces it, and Circulation already judges that pair against its threshold.
 
-  Two questions Circulation's half will have to answer, recorded here so they are not discovered
-  in the middle. **The cap of five** can be exceeded by a merge — two files of three items each
-  make one of six — and the principle is already written where it belongs: the cap constrains the
-  *act*, and a stored count would be an invariant on state, so the survivor simply borrows nothing
-  more until it drains. **And one queue may end up holding two claims of what turns out to be one
-  person**, which is the edition merge's rule read with the words swapped.
+  The two questions recorded here for Circulation's half were answered as anticipated. **The cap
+  of five** exceeded by a merge needed no code at all: the cap constrains the *act*, so the
+  survivor simply borrows nothing more until enough drains. **And one queue holding two claims of
+  what turns out to be one person** is resolved by the edition merge's rules read with the words
+  swapped — a claim awaiting pickup always survives, the earliest queued claim survives, and the
+  rule turned out to live in the queue itself rather than in a fourth domain service, for the
+  reason the Circulation document's §10 records.
 * **Households.** One adult, three children, one visit, one payment someday. Today that is four
   members and a guardian repeated; a `Household` grouping earns its place the day the library
   wants family cards or a single renewal for all four.
